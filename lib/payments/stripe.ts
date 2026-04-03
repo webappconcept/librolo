@@ -1,9 +1,9 @@
 import {
-  getTeamByStripeCustomerId,
   getUser,
-  updateTeamSubscription,
+  getUserByStripeCustomerId,
+  updateUserSubscription,
 } from "@/lib/db/queries";
-import { Team } from "@/lib/db/schema";
+import { User } from "@/lib/db/schema";
 import { redirect } from "next/navigation";
 import Stripe from "stripe";
 
@@ -19,16 +19,15 @@ export function getStripe(): Stripe {
 }
 
 export async function createCheckoutSession({
-  team,
+  user,
   priceId,
 }: {
-  team: Team | null;
+  user: User | null;
   priceId: string;
 }) {
   const stripe = getStripe();
-  const user = await getUser();
 
-  if (!team || !user) {
+  if (!user) {
     redirect(`/sign-up?redirect=checkout&priceId=${priceId}`);
   }
 
@@ -43,7 +42,7 @@ export async function createCheckoutSession({
     mode: "subscription",
     success_url: `${process.env.BASE_URL}/api/stripe/checkout?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${process.env.BASE_URL}/pricing`,
-    customer: team.stripeCustomerId || undefined,
+    customer: user.stripeCustomerId || undefined,
     client_reference_id: user.id.toString(),
     allow_promotion_codes: true,
     subscription_data: {
@@ -54,10 +53,10 @@ export async function createCheckoutSession({
   redirect(session.url!);
 }
 
-export async function createCustomerPortalSession(team: Team) {
+export async function createCustomerPortalSession(user: User) {
   const stripe = getStripe();
 
-  if (!team.stripeCustomerId || !team.stripeProductId) {
+  if (!user.stripeCustomerId || !user.stripeProductId) {
     redirect("/pricing");
   }
 
@@ -67,9 +66,9 @@ export async function createCustomerPortalSession(team: Team) {
   if (configurations.data.length > 0) {
     configuration = configurations.data[0];
   } else {
-    const product = await stripe.products.retrieve(team.stripeProductId);
+    const product = await stripe.products.retrieve(user.stripeProductId);
     if (!product.active) {
-      throw new Error("Team's product is not active in Stripe");
+      throw new Error("User's product is not active in Stripe");
     }
 
     const prices = await stripe.prices.list({
@@ -77,7 +76,7 @@ export async function createCustomerPortalSession(team: Team) {
       active: true,
     });
     if (prices.data.length === 0) {
-      throw new Error("No active prices found for the team's product");
+      throw new Error("No active prices found for the user's product");
     }
 
     configuration = await stripe.billingPortal.configurations.create({
@@ -118,7 +117,7 @@ export async function createCustomerPortalSession(team: Team) {
   }
 
   return stripe.billingPortal.sessions.create({
-    customer: team.stripeCustomerId,
+    customer: user.stripeCustomerId,
     return_url: `${process.env.BASE_URL}/dashboard`,
     configuration: configuration.id,
   });
@@ -127,28 +126,27 @@ export async function createCustomerPortalSession(team: Team) {
 export async function handleSubscriptionChange(
   subscription: Stripe.Subscription,
 ) {
-  const stripe = getStripe();
   const customerId = subscription.customer as string;
   const subscriptionId = subscription.id;
   const status = subscription.status;
 
-  const team = await getTeamByStripeCustomerId(customerId);
+  const user = await getUserByStripeCustomerId(customerId);
 
-  if (!team) {
-    console.error("Team not found for Stripe customer:", customerId);
+  if (!user) {
+    console.error("User not found for Stripe customer:", customerId);
     return;
   }
 
   if (status === "active" || status === "trialing") {
     const plan = subscription.items.data[0]?.plan;
-    await updateTeamSubscription(team.id, {
+    await updateUserSubscription(user.id, {
       stripeSubscriptionId: subscriptionId,
       stripeProductId: plan?.product as string,
       planName: (plan?.product as Stripe.Product).name,
       subscriptionStatus: status,
     });
   } else if (status === "canceled" || status === "unpaid") {
-    await updateTeamSubscription(team.id, {
+    await updateUserSubscription(user.id, {
       stripeSubscriptionId: null,
       stripeProductId: null,
       planName: null,
