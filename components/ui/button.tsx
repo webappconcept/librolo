@@ -11,20 +11,20 @@ const buttonVariants = cva(
       variant: {
         // Arancio — CTA principale
         default:
-          "bg-[#E07A3A] text-white hover:bg-[#C9642A] focus-visible:ring-[#E07A3A]/40",
+          "bg-brand-primary text-white hover:bg-brand-primary-hover focus-visible:ring-primary/40",
         // Verde menta — azioni secondarie positive
         accent:
-          "bg-[#7DBE9E] text-white hover:bg-[#5EA882] focus-visible:ring-[#7DBE9E]/40",
+          "bg-accent text-white hover:bg-accent-hover focus-visible:ring-accent/40",
         // Outline sabbia — azioni secondarie neutre
         outline:
-          "border border-[#DDD6C8] bg-[#FDFAF4] text-[#2C2416] hover:bg-[#F5F0E8] focus-visible:ring-[#DDD6C8]",
+          "border border-border bg-surface text-[#2C2416] hover:bg-[#F5F0E8] focus-visible:ring-border",
         // Ghost — azioni terziarie
-        ghost: "text-[#5C5146] hover:bg-[#F5F0E8] focus-visible:ring-[#DDD6C8]",
+        ghost: "text-label hover:bg-[#F5F0E8] focus-visible:ring-border",
         // Destructive — azioni pericolose
         destructive:
-          "bg-[#D94F3D] text-white hover:bg-[#B83C2C] focus-visible:ring-[#D94F3D]/40",
+          "bg-destructive text-white hover:bg-[#B83C2C] focus-visible:ring-destructive/40",
         // Link
-        link: "text-[#E07A3A] underline-offset-4 hover:underline",
+        link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
         default: "h-10 px-4 py-2.5 has-[>svg]:px-3",

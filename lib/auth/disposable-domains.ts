@@ -3515,5 +3515,4 @@ export const disposableDomains = new Set([
   "meogl.com",
   "zslsz.com",
   "zuilc.com",
-  // ... tutti i domini
 ]);

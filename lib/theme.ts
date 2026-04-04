@@ -1,3 +1,5 @@
+// ⚠️ Tieni sincronizzato con globals.css — CSS variables
+
 export const theme = {
   colors: {
     // Palette sabbia + menta + arancio
