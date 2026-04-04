@@ -5,6 +5,8 @@ import {
   validatedAction,
   validatedActionWithUser,
 } from "@/lib/auth/middleware";
+import { createVerificationCode } from "@/lib/auth/otp";
+import { checkRateLimit, recordLoginAttempt } from "@/lib/auth/rate-limit";
 import { comparePasswords, hashPassword, setSession } from "@/lib/auth/session";
 import { db } from "@/lib/db/drizzle";
 import { getUser } from "@/lib/db/queries";
@@ -16,6 +18,7 @@ import {
   type NewActivityLog,
   type NewUser,
 } from "@/lib/db/schema";
+import { sendSignupVerificationEmail } from "@/lib/email/templates/signup-verification";
 import { eq, sql } from "drizzle-orm";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -42,6 +45,22 @@ const signInSchema = z.object({
 export const signIn = validatedAction(signInSchema, async (data, formData) => {
   const { email, password } = data;
 
+  const headersList = await headers();
+  const ip =
+    headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    headersList.get("x-real-ip") ??
+    "unknown";
+
+  // Controlla rate limit
+  const { blocked, remaining } = await checkRateLimit(email, ip);
+  if (blocked) {
+    return {
+      error: "Troppi tentativi falliti. Riprova tra 15 minuti.",
+      email,
+      password,
+    };
+  }
+
   const [foundUser] = await db
     .select()
     .from(users)
@@ -49,6 +68,7 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
     .limit(1);
 
   if (!foundUser) {
+    await recordLoginAttempt(email, ip, false);
     return {
       error: "Invalid email or password. Please try again.",
       email,
@@ -68,6 +88,8 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
       password,
     };
   }
+
+  await recordLoginAttempt(email, ip, true);
 
   await Promise.all([
     setSession(foundUser),
@@ -121,7 +143,7 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
 
   if (existingUser.length > 0) {
     return {
-      error: "Questa email è gis stata registrata",
+      error: "Questa email è già stata registrata",
       email,
       password,
     };
@@ -145,12 +167,26 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
     };
   }
 
-  await Promise.all([
-    logActivity(createdUser.id, ActivityType.SIGN_UP),
-    setSession(createdUser),
-  ]);
+  // Genera OTP e invia email di verifica
+  const code = await createVerificationCode(createdUser.id);
+  await sendSignupVerificationEmail(createdUser.email, code);
 
-  redirect("/dashboard");
+  await logActivity(createdUser.id, ActivityType.SIGN_UP);
+
+  // Cookie temporaneo per identificare l'utente in attesa di verifica
+  (await cookies()).set(
+    "pending_verification_user_id",
+    String(createdUser.id),
+    {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 20, // 20 minuti
+      path: "/",
+    },
+  );
+
+  redirect("/verify-email");
 });
 
 export async function signOut() {

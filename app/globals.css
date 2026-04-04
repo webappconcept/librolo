@@ -189,6 +189,7 @@
   --brand-surface-card: #ffffff;
   --brand-text: #2c2416;
   --brand-border-focus: #7dbe9e;
+  --brand-error-bg: #fdecea;
 }
 
 /*
@@ -269,6 +270,7 @@
   --color-brand-surface-card: var(--brand-surface-card);
   --color-brand-text: var(--brand-text);
   --color-brand-border-focus: var(--brand-border-focus);
+  --color-brand-error-bg: var(--brand-error-bg);
 }
 
 /*

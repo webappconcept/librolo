@@ -69,21 +69,15 @@ export function Login({ mode = "signin" }: { mode?: "signin" | "signup" }) {
   };
 
   return (
-    <div
-      className="min-h-dvh flex items-center justify-center px-4 py-12"
-      style={{ backgroundColor: "#F5F0E8" }}>
+    <div className="min-h-dvh flex items-center justify-center px-4 py-12 bg-brand-bg">
       <div className="w-full max-w-md">
-        <div
-          className="rounded-2xl p-8 shadow-sm border border-[#DDD6C8]"
-          style={{ backgroundColor: "#FDFAF4" }}>
+        <div className="rounded-2xl p-8 shadow-sm border border-brand-border bg-brand-surface">
           {/* Header */}
           <div className="mb-8">
-            <h1
-              className="text-2xl font-semibold mb-1"
-              style={{ color: "#2C2416" }}>
+            <h1 className="text-2xl font-semibold mb-1 text-brand-text">
               {mode === "signin" ? "Bentornato" : "Crea un account"}
             </h1>
-            <p className="text-sm" style={{ color: "#7A6E5F" }}>
+            <p className="text-sm text-brand-text-muted">
               {mode === "signin"
                 ? "Inserisci le tue credenziali per accedere"
                 : "Compila il modulo per registrarti"}
@@ -98,8 +92,7 @@ export function Login({ mode = "signin" }: { mode?: "signin" | "signup" }) {
             <div className="space-y-1.5">
               <Label
                 htmlFor="email"
-                className="text-xs font-semibold uppercase tracking-wide"
-                style={{ color: "#5C5146" }}>
+                className="text-xs font-semibold uppercase tracking-wide text-brand-label">
                 Email
               </Label>
               <Input
@@ -118,9 +111,7 @@ export function Login({ mode = "signin" }: { mode?: "signin" | "signup" }) {
                 aria-invalid={!!emailError}
               />
               {emailError && (
-                <p
-                  className="text-xs flex items-center gap-1"
-                  style={{ color: "#D94F3D" }}>
+                <p className="text-xs flex items-center gap-1 text-brand-destructive">
                   <X className="h-3 w-3" /> {emailError}
                 </p>
               )}
@@ -130,8 +121,7 @@ export function Login({ mode = "signin" }: { mode?: "signin" | "signup" }) {
             <div className="space-y-1.5">
               <Label
                 htmlFor="password"
-                className="text-xs font-semibold uppercase tracking-wide"
-                style={{ color: "#5C5146" }}>
+                className="text-xs font-semibold uppercase tracking-wide text-brand-label">
                 Password
               </Label>
               <Input
@@ -155,12 +145,14 @@ export function Login({ mode = "signin" }: { mode?: "signin" | "signup" }) {
                 <ul className="mt-2 space-y-1">
                   {passwordRules.map((rule) => {
                     const passed = rule.test(password);
-                    const ruleStyle = { color: passed ? "#5EA882" : "#A89E8F" };
                     return (
                       <li
                         key={rule.id}
-                        className="text-xs flex items-center gap-1.5 transition-colors duration-200"
-                        style={ruleStyle}>
+                        className={`text-xs flex items-center gap-1.5 transition-colors duration-200 ${
+                          passed
+                            ? "text-brand-accent-hover"
+                            : "text-brand-text-light"
+                        }`}>
                         {passed ? (
                           <Check className="h-3 w-3" />
                         ) : (
@@ -174,17 +166,13 @@ export function Login({ mode = "signin" }: { mode?: "signin" | "signup" }) {
               )}
               {mode === "signup" && password.length === 0 && (
                 <ul className="mt-2 space-y-1">
-                  {passwordRules.map((rule) => {
-                    const ruleStyle = { color: "#A89E8F" };
-                    return (
-                      <li
-                        key={rule.id}
-                        className="text-xs flex items-center gap-1.5"
-                        style={ruleStyle}>
-                        <span className="w-3 text-center">•</span> {rule.label}
-                      </li>
-                    );
-                  })}
+                  {passwordRules.map((rule) => (
+                    <li
+                      key={rule.id}
+                      className="text-xs flex items-center gap-1.5 text-brand-text-light">
+                      <span className="w-3 text-center">•</span> {rule.label}
+                    </li>
+                  ))}
                 </ul>
               )}
             </div>
@@ -194,8 +182,7 @@ export function Login({ mode = "signin" }: { mode?: "signin" | "signup" }) {
               <div className="space-y-1.5">
                 <Label
                   htmlFor="confirmPassword"
-                  className="text-xs font-semibold uppercase tracking-wide"
-                  style={{ color: "#5C5146" }}>
+                  className="text-xs font-semibold uppercase tracking-wide text-brand-label">
                   Conferma password
                 </Label>
                 <Input
@@ -214,20 +201,18 @@ export function Login({ mode = "signin" }: { mode?: "signin" | "signup" }) {
                   placeholder="••••••••"
                   aria-invalid={!!confirmError}
                   className={
-                    confirmPassword && !confirmError ? "border-[#7DBE9E]" : ""
+                    confirmPassword && !confirmError
+                      ? "border-brand-accent"
+                      : ""
                   }
                 />
                 {confirmError && (
-                  <p
-                    className="text-xs flex items-center gap-1"
-                    style={{ color: "#D94F3D" }}>
+                  <p className="text-xs flex items-center gap-1 text-brand-destructive">
                     <X className="h-3 w-3" /> {confirmError}
                   </p>
                 )}
                 {confirmPassword && !confirmError && (
-                  <p
-                    className="text-xs flex items-center gap-1"
-                    style={{ color: "#5EA882" }}>
+                  <p className="text-xs flex items-center gap-1 text-brand-accent-hover">
                     <Check className="h-3 w-3" /> Le password coincidono
                   </p>
                 )}
@@ -235,20 +220,16 @@ export function Login({ mode = "signin" }: { mode?: "signin" | "signup" }) {
             )}
 
             {state?.error && (
-              <div
-                className="rounded-xl px-4 py-3 text-sm flex items-center gap-2"
-                style={{ backgroundColor: "#FDECEA", color: "#D94F3D" }}>
+              <div className="rounded-xl px-4 py-3 text-sm flex items-center gap-2 bg-brand-error-bg text-brand-destructive">
                 <X className="h-4 w-4 shrink-0" />
                 {state.error}
               </div>
             )}
 
-            {/* SUBMIT */}
             <Button type="submit" disabled={pending} className="w-full">
               {pending ? (
                 <>
-                  <Loader2 className="animate-spin mr-2 h-4 w-4" />{" "}
-                  Caricamento...
+                  <Loader2 className="animate-spin h-4 w-4" /> Caricamento...
                 </>
               ) : mode === "signin" ? (
                 "Accedi"
@@ -260,15 +241,14 @@ export function Login({ mode = "signin" }: { mode?: "signin" | "signup" }) {
 
           {/* FOOTER */}
           <div className="mt-6 text-center">
-            <span className="text-sm" style={{ color: "#7A6E5F" }}>
+            <span className="text-sm text-brand-text-muted">
               {mode === "signin"
                 ? "Non hai un account? "
                 : "Hai già un account? "}
             </span>
             <Link
               href={`${mode === "signin" ? "/sign-up" : "/sign-in"}${redirect ? `?redirect=${redirect}` : ""}${priceId ? `&priceId=${priceId}` : ""}`}
-              className="text-sm font-semibold underline-offset-2 hover:underline"
-              style={{ color: "#E07A3A" }}>
+              className="text-sm font-semibold underline-offset-2 hover:underline text-brand-primary">
               {mode === "signin" ? "Registrati" : "Accedi"}
             </Link>
           </div>

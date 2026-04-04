@@ -1,0 +1,76 @@
+// app/(login)/verify-email/actions.ts
+"use server";
+
+import { validatedAction } from "@/lib/auth/middleware";
+import { createVerificationCode, verifyOtpCode } from "@/lib/auth/otp";
+import { setSession } from "@/lib/auth/session";
+import { db } from "@/lib/db/drizzle";
+import { users } from "@/lib/db/schema";
+import { sendSignupVerificationEmail } from "@/lib/email/templates/signup-verification";
+import { eq } from "drizzle-orm";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { z } from "zod";
+
+// ─── Helper ────────────────────────────────────────────────────
+async function getPendingUserId(): Promise<number | null> {
+  const cookieStore = await cookies();
+  const raw = cookieStore.get("pending_verification_user_id")?.value;
+  const id = Number(raw);
+  return isNaN(id) || id === 0 ? null : id;
+}
+
+// ─── Verifica codice OTP ────────────────────────────────────────
+const verifySchema = z.object({
+  code: z.string().length(6, "Il codice deve essere di 6 cifre"),
+});
+
+export const verifyEmail = validatedAction(verifySchema, async (data) => {
+  const userId = await getPendingUserId();
+  if (!userId) {
+    return { error: "Sessione scaduta. Registrati di nuovo." };
+  }
+
+  const result = await verifyOtpCode(userId, data.code);
+  if (!result.success) {
+    return { error: result.error };
+  }
+
+  const [user] = await db
+    .update(users)
+    .set({ emailVerified: true })
+    .where(eq(users.id, userId))
+    .returning();
+
+  const cookieStore = await cookies();
+  cookieStore.delete("pending_verification_user_id");
+
+  await setSession(user);
+  redirect("/dashboard");
+});
+
+// ─── Re-invio codice ────────────────────────────────────────────
+export const resendVerificationEmail = validatedAction(
+  z.object({}),
+  async () => {
+    const userId = await getPendingUserId();
+    if (!userId) {
+      return { error: "Sessione scaduta. Registrati di nuovo." };
+    }
+
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    if (!user) {
+      return { error: "Utente non trovato." };
+    }
+
+    const code = await createVerificationCode(user.id);
+    await sendSignupVerificationEmail(user.email, code);
+
+    return { success: "Codice inviato! Controlla la tua email." };
+  },
+);

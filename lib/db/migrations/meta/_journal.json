@@ -36,6 +36,20 @@
       "when": 1775290401635,
       "tag": "0004_plain_cerise",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1775304250044,
+      "tag": "0005_faulty_baron_strucker",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1775305233872,
+      "tag": "0006_lumpy_ronan",
+      "breakpoints": true
     }
   ]
 }
