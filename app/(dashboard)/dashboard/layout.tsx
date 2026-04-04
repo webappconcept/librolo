@@ -48,7 +48,7 @@ export default function DashboardLayout({
             {navItems.map((item) => (
               <Link key={item.href} href={item.href} passHref>
                 <Button
-                  variant={pathname === item.href ? "secondary" : "ghost"}
+                  variant={pathname === item.href ? "outline" : "ghost"}
                   className={`shadow-none my-1 w-full justify-start ${
                     pathname === item.href ? "bg-gray-100" : ""
                   }`}

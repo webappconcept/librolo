@@ -1,5 +1,6 @@
 "use server";
 
+import { isDomainBlacklisted, isIpBlacklisted } from "@/lib/auth/blacklist";
 import {
   validatedAction,
   validatedActionWithUser,
@@ -16,7 +17,7 @@ import {
   type NewUser,
 } from "@/lib/db/schema";
 import { eq, sql } from "drizzle-orm";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
@@ -94,6 +95,23 @@ const signUpSchema = z
 
 export const signUp = validatedAction(signUpSchema, async (data) => {
   const { email, password } = data;
+
+  // Recupera IP
+  const headersList = await headers();
+  const ip =
+    headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    headersList.get("x-real-ip") ??
+    "unknown";
+
+  // Controlla IP blacklist
+  if (await isIpBlacklisted(ip)) {
+    return { error: "Accesso non consentito.", email, password };
+  }
+
+  // Controlla dominio email
+  if (await isDomainBlacklisted(email)) {
+    return { error: "Questo dominio email non è accettato.", email, password };
+  }
 
   const existingUser = await db
     .select()

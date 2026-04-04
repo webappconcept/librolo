@@ -22,6 +22,20 @@
       "when": 1775243493222,
       "tag": "0002_workable_lionheart",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1775289817753,
+      "tag": "0003_chubby_blacklash",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1775290401635,
+      "tag": "0004_plain_cerise",
+      "breakpoints": true
     }
   ]
 }

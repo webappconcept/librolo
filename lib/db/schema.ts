@@ -45,3 +45,10 @@ export enum ActivityType {
   DELETE_ACCOUNT = "DELETE_ACCOUNT",
   UPDATE_ACCOUNT = "UPDATE_ACCOUNT",
 }
+
+export const ipBlacklist = pgTable("ip_blacklist", {
+  id: serial("id").primaryKey(),
+  ip: varchar("ip", { length: 45 }).notNull().unique(), // IPv4 + IPv6
+  reason: text("reason"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
