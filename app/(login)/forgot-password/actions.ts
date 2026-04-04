@@ -50,7 +50,11 @@ export const forgotPassword = validatedAction(
     }
 
     const token = await createPasswordResetToken(user.id);
-    await sendPasswordResetEmail(user.email, token, user.name ?? undefined);
+    await sendPasswordResetEmail(
+      user.email,
+      token,
+      user.firstName ?? undefined,
+    );
 
     return {
       success: "Se l'email è registrata, riceverai le istruzioni a breve.",
