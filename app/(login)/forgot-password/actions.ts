@@ -3,10 +3,12 @@
 
 import { validatedAction } from "@/lib/auth/middleware";
 import { createPasswordResetToken } from "@/lib/auth/password-reset";
+import { checkGeneralRateLimit } from "@/lib/auth/rate-limit";
 import { db } from "@/lib/db/drizzle";
 import { users } from "@/lib/db/schema";
 import { sendPasswordResetEmail } from "@/lib/email/templates/password-reset";
 import { eq } from "drizzle-orm";
+import { headers } from "next/headers";
 import { z } from "zod";
 
 const forgotPasswordSchema = z.object({
@@ -16,6 +18,22 @@ const forgotPasswordSchema = z.object({
 export const forgotPassword = validatedAction(
   forgotPasswordSchema,
   async (data) => {
+    const headersList = await headers();
+    const ip =
+      headersList.get("x-forwarded-for") ??
+      headersList.get("x-real-ip") ??
+      "unknown";
+    // Max 3 richieste per IP ogni 15 minuti
+    const { blocked } = checkGeneralRateLimit(
+      `forgot-password:${ip}`,
+      3,
+      15 * 60,
+    );
+
+    if (blocked) {
+      return { error: "Troppe richieste. Riprova tra qualche minuto." };
+    }
+
     const { email } = data;
 
     const [user] = await db

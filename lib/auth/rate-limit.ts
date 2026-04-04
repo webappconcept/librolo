@@ -44,3 +44,25 @@ export async function recordLoginAttempt(
 ) {
   await db.insert(loginAttempts).values({ email, ip, success });
 }
+
+const generalLimits = new Map<string, { count: number; resetAt: number }>();
+
+export function checkGeneralRateLimit(
+  key: string,
+  maxAttempts: number,
+  windowSeconds: number,
+): { blocked: boolean; remaining: number } {
+  const now = Date.now();
+  const entry = generalLimits.get(key);
+
+  if (!entry || now > entry.resetAt) {
+    generalLimits.set(key, { count: 1, resetAt: now + windowSeconds * 1000 });
+    return { blocked: false, remaining: maxAttempts - 1 };
+  }
+
+  entry.count += 1;
+  return {
+    blocked: entry.count > maxAttempts,
+    remaining: Math.max(0, maxAttempts - entry.count),
+  };
+}
