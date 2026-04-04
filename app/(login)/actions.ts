@@ -96,11 +96,13 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
     logActivity(foundUser.id, ActivityType.SIGN_IN),
   ]);
 
-  redirect("/dashboard");
+  redirect("/");
 });
 
 const signUpSchema = z
   .object({
+    firstName: z.string().min(1, "Il nome è obbligatorio").max(100),
+    lastName: z.string().min(1, "Il cognome è obbligatorio").max(100),
     email: z.email(),
     password: z
       .string()
@@ -116,7 +118,7 @@ const signUpSchema = z
   });
 
 export const signUp = validatedAction(signUpSchema, async (data) => {
-  const { email, password } = data;
+  const { firstName, lastName, email, password } = data;
 
   // Recupera IP
   const headersList = await headers();
@@ -152,6 +154,8 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
   const passwordHash = await hashPassword(password);
 
   const newUser: NewUser = {
+    firstName,
+    lastName,
     email,
     passwordHash,
     role: "owner",
@@ -169,7 +173,11 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
 
   // Genera OTP e invia email di verifica
   const code = await createVerificationCode(createdUser.id);
-  await sendSignupVerificationEmail(createdUser.email, code);
+  await sendSignupVerificationEmail(
+    createdUser.email,
+    code,
+    createdUser.firstName ?? undefined,
+  );
 
   await logActivity(createdUser.id, ActivityType.SIGN_UP);
 
@@ -285,20 +293,24 @@ export const deleteAccount = validatedActionWithUser(
 );
 
 const updateAccountSchema = z.object({
-  name: z.string().min(1, "Name is required").max(100),
+  firstName: z.string().min(1, "Il nome è richiesto").max(100),
+  lastName: z.string().min(1, "Il cognome è richiesto").max(100),
   email: z.email("Email non valida"),
 });
 
 export const updateAccount = validatedActionWithUser(
   updateAccountSchema,
   async (data, _, user) => {
-    const { name, email } = data;
+    const { firstName, lastName, email } = data;
 
     await Promise.all([
-      db.update(users).set({ name, email }).where(eq(users.id, user.id)),
+      db
+        .update(users)
+        .set({ firstName, lastName, email })
+        .where(eq(users.id, user.id)),
       logActivity(user.id, ActivityType.UPDATE_ACCOUNT),
     ]);
 
-    return { name, success: "Account updated successfully." };
+    return { firstName, success: "Account updated successfully." };
   },
 );

@@ -57,6 +57,13 @@
       "when": 1775333588575,
       "tag": "0007_hot_robbie_robertson",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1775334893298,
+      "tag": "0008_lively_silver_surfer",
+      "breakpoints": true
     }
   ]
 }

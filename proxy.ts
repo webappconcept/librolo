@@ -2,12 +2,14 @@ import { signToken, verifyToken } from "@/lib/auth/session";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
-const protectedRoutes = "/dashboard";
+const protectedRoutes = ["/", "/esplora", "/libreria", "/account", "/profilo"];
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const sessionCookie = request.cookies.get("session");
-  const isProtectedRoute = pathname.startsWith(protectedRoutes);
+  const isProtectedRoute = protectedRoutes.some(
+    (route) => pathname === route || pathname.startsWith(route + "/"),
+  );
 
   if (isProtectedRoute && !sessionCookie) {
     return NextResponse.redirect(new URL("/sign-in", request.url));

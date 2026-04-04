@@ -46,7 +46,7 @@ export const verifyEmail = validatedAction(verifySchema, async (data) => {
   cookieStore.delete("pending_verification_user_id");
 
   await setSession(user);
-  redirect("/dashboard");
+  redirect("/");
 });
 
 // ─── Re-invio codice ────────────────────────────────────────────
