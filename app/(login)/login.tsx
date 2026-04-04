@@ -219,6 +219,16 @@ export function Login({ mode = "signin" }: { mode?: "signin" | "signup" }) {
               </div>
             )}
 
+            {mode === "signin" && (
+              <div className="text-right">
+                <Link
+                  href="/forgot-password"
+                  className="text-xs text-brand-text-muted hover:text-brand-primary underline-offset-2 hover:underline">
+                  Password dimenticata?
+                </Link>
+              </div>
+            )}
+
             {state?.error && (
               <div className="rounded-xl px-4 py-3 text-sm flex items-center gap-2 bg-brand-error-bg text-brand-destructive">
                 <X className="h-4 w-4 shrink-0" />

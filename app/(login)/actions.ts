@@ -70,7 +70,7 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
   if (!foundUser) {
     await recordLoginAttempt(email, ip, false);
     return {
-      error: "Invalid email or password. Please try again.",
+      error: "Email o password errate, riprova.",
       email,
       password,
     };
@@ -83,7 +83,7 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
 
   if (!isPasswordValid) {
     return {
-      error: "Invalid email or password. Please try again.",
+      error: "Email o password errate, riprova.",
       email,
       password,
     };
@@ -286,7 +286,7 @@ export const deleteAccount = validatedActionWithUser(
 
 const updateAccountSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
-  email: z.string().email("Invalid email address"),
+  email: z.email("Email non valida"),
 });
 
 export const updateAccount = validatedActionWithUser(
