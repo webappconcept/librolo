@@ -34,8 +34,8 @@ async function logActivity(
 }
 
 const signInSchema = z.object({
-  email: z.string().email().min(3).max(255),
-  password: z.string().min(8).max(100),
+  email: z.email().min(3).max(255),
+  password: z.string().min(8).max(30),
 });
 
 export const signIn = validatedAction(signInSchema, async (data, formData) => {
@@ -76,10 +76,21 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
   redirect("/dashboard");
 });
 
-const signUpSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
-});
+const signUpSchema = z
+  .object({
+    email: z.email(),
+    password: z
+      .string()
+      .min(8, "La password deve contenere almeno 8 caratteri")
+      .max(30)
+      .regex(/[A-Z]/, "La password deve contenere almeno una lettera maiuscola")
+      .regex(/[0-9]/, "La password deve contenere almeno un numero"),
+    confirmPassword: z.string().min(8).max(30),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Le password non sono uguali",
+    path: ["confirmPassword"],
+  });
 
 export const signUp = validatedAction(signUpSchema, async (data) => {
   const { email, password } = data;
@@ -92,7 +103,7 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
 
   if (existingUser.length > 0) {
     return {
-      error: "Failed to create user. Please try again.",
+      error: "Questa email è gis stata registrata",
       email,
       password,
     };

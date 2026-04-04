@@ -4,68 +4,136 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ActionState } from "@/lib/auth/middleware";
-import { CircleIcon, Loader2 } from "lucide-react";
+import { Check, Loader2, X } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { signIn, signUp } from "./actions";
+
+const passwordRules = [
+  {
+    id: "min",
+    label: "Almeno 8 caratteri",
+    test: (p: string) => p.length >= 8,
+  },
+  {
+    id: "max",
+    label: "Massimo 30 caratteri",
+    test: (p: string) => p.length <= 30,
+  },
+  {
+    id: "upper",
+    label: "Almeno una lettera maiuscola",
+    test: (p: string) => /[A-Z]/.test(p),
+  },
+  {
+    id: "number",
+    label: "Almeno un numero",
+    test: (p: string) => /[0-9]/.test(p),
+  },
+];
 
 export function Login({ mode = "signin" }: { mode?: "signin" | "signup" }) {
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect");
   const priceId = searchParams.get("priceId");
-  const inviteId = searchParams.get("inviteId");
   const [state, formAction, pending] = useActionState<ActionState, FormData>(
     mode === "signin" ? signIn : signUp,
     { error: "" },
   );
 
-  return (
-    <div className="min-h-dvh flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-50">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="flex justify-center">
-          <CircleIcon className="h-12 w-12 text-orange-500" />
-        </div>
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-          {mode === "signin"
-            ? "Sign in to your account"
-            : "Create your account"}
-        </h2>
-      </div>
+  const [email, setEmail] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [confirmError, setConfirmError] = useState("");
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <form className="space-y-6" action={formAction}>
-          <input type="hidden" name="redirect" value={redirect || ""} />
-          <input type="hidden" name="priceId" value={priceId || ""} />
-          <input type="hidden" name="inviteId" value={inviteId || ""} />
-          <div>
-            <Label
-              htmlFor="email"
-              className="block text-sm font-medium text-gray-700">
-              Email
-            </Label>
-            <div className="mt-1">
+  const validateEmail = (value: string) => {
+    if (!value) {
+      setEmailError("");
+      return;
+    }
+    setEmailError(
+      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+        ? ""
+        : "Inserisci un indirizzo email valido",
+    );
+  };
+
+  const validateConfirm = (value: string) => {
+    if (!value) {
+      setConfirmError("");
+      return;
+    }
+    setConfirmError(value === password ? "" : "Le password non coincidono");
+  };
+
+  return (
+    <div
+      className="min-h-dvh flex items-center justify-center px-4 py-12"
+      style={{ backgroundColor: "#F5F0E8" }}>
+      <div className="w-full max-w-md">
+        <div
+          className="rounded-2xl p-8 shadow-sm border border-[#DDD6C8]"
+          style={{ backgroundColor: "#FDFAF4" }}>
+          {/* Header */}
+          <div className="mb-8">
+            <h1
+              className="text-2xl font-semibold mb-1"
+              style={{ color: "#2C2416" }}>
+              {mode === "signin" ? "Bentornato" : "Crea un account"}
+            </h1>
+            <p className="text-sm" style={{ color: "#7A6E5F" }}>
+              {mode === "signin"
+                ? "Inserisci le tue credenziali per accedere"
+                : "Compila il modulo per registrarti"}
+            </p>
+          </div>
+
+          <form className="space-y-5" action={formAction}>
+            <input type="hidden" name="redirect" value={redirect || ""} />
+            <input type="hidden" name="priceId" value={priceId || ""} />
+
+            {/* EMAIL */}
+            <div className="space-y-1.5">
+              <Label
+                htmlFor="email"
+                className="text-xs font-semibold uppercase tracking-wide"
+                style={{ color: "#5C5146" }}>
+                Email
+              </Label>
               <Input
                 id="email"
                 name="email"
                 type="email"
                 autoComplete="email"
-                defaultValue={state.email}
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  validateEmail(e.target.value);
+                }}
                 required
                 maxLength={50}
-                className="appearance-none rounded-full relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-orange-500 focus:border-orange-500 focus:z-10 sm:text-sm"
-                placeholder="Enter your email"
+                placeholder="nome@esempio.com"
+                aria-invalid={!!emailError}
               />
+              {emailError && (
+                <p
+                  className="text-xs flex items-center gap-1"
+                  style={{ color: "#D94F3D" }}>
+                  <X className="h-3 w-3" /> {emailError}
+                </p>
+              )}
             </div>
-          </div>
 
-          <div>
-            <Label
-              htmlFor="password"
-              className="block text-sm font-medium text-gray-700">
-              Password
-            </Label>
-            <div className="mt-1">
+            {/* PASSWORD */}
+            <div className="space-y-1.5">
+              <Label
+                htmlFor="password"
+                className="text-xs font-semibold uppercase tracking-wide"
+                style={{ color: "#5C5146" }}>
+                Password
+              </Label>
               <Input
                 id="password"
                 name="password"
@@ -73,62 +141,135 @@ export function Login({ mode = "signin" }: { mode?: "signin" | "signup" }) {
                 autoComplete={
                   mode === "signin" ? "current-password" : "new-password"
                 }
-                defaultValue={state.password}
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (confirmPassword) validateConfirm(confirmPassword);
+                }}
                 required
                 minLength={8}
-                maxLength={100}
-                className="appearance-none rounded-full relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-orange-500 focus:border-orange-500 focus:z-10 sm:text-sm"
-                placeholder="Enter your password"
+                maxLength={30}
+                placeholder="••••••••"
               />
+              {mode === "signup" && password.length > 0 && (
+                <ul className="mt-2 space-y-1">
+                  {passwordRules.map((rule) => {
+                    const passed = rule.test(password);
+                    const ruleStyle = { color: passed ? "#5EA882" : "#A89E8F" };
+                    return (
+                      <li
+                        key={rule.id}
+                        className="text-xs flex items-center gap-1.5 transition-colors duration-200"
+                        style={ruleStyle}>
+                        {passed ? (
+                          <Check className="h-3 w-3" />
+                        ) : (
+                          <X className="h-3 w-3" />
+                        )}
+                        {rule.label}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+              {mode === "signup" && password.length === 0 && (
+                <ul className="mt-2 space-y-1">
+                  {passwordRules.map((rule) => {
+                    const ruleStyle = { color: "#A89E8F" };
+                    return (
+                      <li
+                        key={rule.id}
+                        className="text-xs flex items-center gap-1.5"
+                        style={ruleStyle}>
+                        <span className="w-3 text-center">•</span> {rule.label}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
             </div>
-          </div>
 
-          {state?.error && (
-            <div className="text-red-500 text-sm">{state.error}</div>
-          )}
+            {/* CONFERMA PASSWORD */}
+            {mode === "signup" && (
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="confirmPassword"
+                  className="text-xs font-semibold uppercase tracking-wide"
+                  style={{ color: "#5C5146" }}>
+                  Conferma password
+                </Label>
+                <Input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type="password"
+                  autoComplete="new-password"
+                  value={confirmPassword}
+                  onChange={(e) => {
+                    setConfirmPassword(e.target.value);
+                    validateConfirm(e.target.value);
+                  }}
+                  required
+                  minLength={8}
+                  maxLength={30}
+                  placeholder="••••••••"
+                  aria-invalid={!!confirmError}
+                  className={
+                    confirmPassword && !confirmError ? "border-[#7DBE9E]" : ""
+                  }
+                />
+                {confirmError && (
+                  <p
+                    className="text-xs flex items-center gap-1"
+                    style={{ color: "#D94F3D" }}>
+                    <X className="h-3 w-3" /> {confirmError}
+                  </p>
+                )}
+                {confirmPassword && !confirmError && (
+                  <p
+                    className="text-xs flex items-center gap-1"
+                    style={{ color: "#5EA882" }}>
+                    <Check className="h-3 w-3" /> Le password coincidono
+                  </p>
+                )}
+              </div>
+            )}
 
-          <div>
-            <Button
-              type="submit"
-              className="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-full shadow-sm text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
-              disabled={pending}>
+            {state?.error && (
+              <div
+                className="rounded-xl px-4 py-3 text-sm flex items-center gap-2"
+                style={{ backgroundColor: "#FDECEA", color: "#D94F3D" }}>
+                <X className="h-4 w-4 shrink-0" />
+                {state.error}
+              </div>
+            )}
+
+            {/* SUBMIT */}
+            <Button type="submit" disabled={pending} className="w-full">
               {pending ? (
                 <>
-                  <Loader2 className="animate-spin mr-2 h-4 w-4" />
-                  Loading...
+                  <Loader2 className="animate-spin mr-2 h-4 w-4" />{" "}
+                  Caricamento...
                 </>
               ) : mode === "signin" ? (
-                "Sign in"
+                "Accedi"
               ) : (
-                "Sign up"
+                "Registrati"
               )}
             </Button>
-          </div>
-        </form>
+          </form>
 
-        <div className="mt-6">
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300" />
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-gray-50 text-gray-500">
-                {mode === "signin"
-                  ? "New to our platform?"
-                  : "Already have an account?"}
-              </span>
-            </div>
-          </div>
-
-          <div className="mt-6">
-            <Link
-              href={`${mode === "signin" ? "/sign-up" : "/sign-in"}${
-                redirect ? `?redirect=${redirect}` : ""
-              }${priceId ? `&priceId=${priceId}` : ""}`}
-              className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-full shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500">
+          {/* FOOTER */}
+          <div className="mt-6 text-center">
+            <span className="text-sm" style={{ color: "#7A6E5F" }}>
               {mode === "signin"
-                ? "Create an account"
-                : "Sign in to existing account"}
+                ? "Non hai un account? "
+                : "Hai già un account? "}
+            </span>
+            <Link
+              href={`${mode === "signin" ? "/sign-up" : "/sign-in"}${redirect ? `?redirect=${redirect}` : ""}${priceId ? `&priceId=${priceId}` : ""}`}
+              className="text-sm font-semibold underline-offset-2 hover:underline"
+              style={{ color: "#E07A3A" }}>
+              {mode === "signin" ? "Registrati" : "Accedi"}
             </Link>
           </div>
         </div>
