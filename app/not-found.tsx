@@ -12,7 +12,7 @@ export default function NotFound() {
             height="107"
             fill="none"
             aria-hidden="true">
-            {/* Libro sinistra */}
+            {/* Libro sinistra 3 */}
             <rect
               x="8"
               y="28"
