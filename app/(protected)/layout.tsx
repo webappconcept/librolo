@@ -11,7 +11,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         }>
         <AppNav />
       </Suspense>
-      <main className="pt-16 pb-20 md:pb-0">{children}</main>
+      <main className="pt-16 pb-20 md:pb-0">
+        <Suspense fallback={null}>{children}</Suspense>
+      </main>
     </div>
   );
 }

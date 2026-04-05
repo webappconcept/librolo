@@ -1,4 +1,4 @@
-// app/(dashboard)/page.tsx
+// app/(protected)/page.tsx
 "use client";
 
 import type { User } from "@/lib/db/schema";
