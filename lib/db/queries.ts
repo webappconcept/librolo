@@ -67,7 +67,7 @@ export async function updateUserSubscription(
 export async function getActivityLogs() {
   const user = await getUser();
   if (!user) {
-    throw new Error("User not authenticated");
+    throw new Error("Utente non loggato");
   }
 
   return await db
