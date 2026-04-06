@@ -32,14 +32,6 @@ export async function saveAppSettings(formData: FormData) {
     }),
   );
 
-  // Sincronizza il cookie per il proxy
-  const cookieStore = await cookies();
-  cookieStore.set("maintenance_mode", formData.get("maintenance_mode") as string ?? "false", {
-    httpOnly: true,
-    path: "/",
-    sameSite: "lax",
-  });
-
   revalidatePath("/admin/settings");
   revalidatePath("/");
 }

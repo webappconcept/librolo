@@ -18,6 +18,7 @@ import {
   type NewActivityLog,
   type NewUser,
 } from "@/lib/db/schema";
+import { getAppSettings } from "@/lib/db/settings-queries";
 import { sendSignupVerificationEmail } from "@/lib/email/templates/signup-verification";
 import { eq, sql } from "drizzle-orm";
 import { cookies, headers } from "next/headers";
@@ -127,6 +128,15 @@ const signUpSchema = z
 
 export const signUp = validatedAction(signUpSchema, async (data) => {
   const { firstName, lastName, email, password } = data;
+
+  const settings = await getAppSettings();
+  if (settings.registrations_enabled === "false") {
+    return {
+      error: "Le registrazioni sono temporaneamente chiuse.",
+      email,
+      password,
+    };
+  }
 
   // Recupera IP
   const headersList = await headers();
