@@ -100,15 +100,11 @@ async function UserContent({ id }: { id: number }) {
                   {isPremium ? "Premium" : "Free"}
                 </span>
                 <span
-                  className="text-[11px] font-medium"
-                  style={{
-                    color: user.emailVerified
-                      ? undefined
-                      : "var(--admin-text-faint)",
-                  }}
-                  {...(user.emailVerified
-                    ? { className: "text-[11px] font-medium text-emerald-600" }
-                    : {})}>
+                  className={`text-[11px] font-medium ${
+                    user.emailVerified
+                      ? "text-emerald-600"
+                      : "text-[var(--admin-text-faint)]"
+                  }`}>
                   {user.emailVerified
                     ? "✓ Email verificata"
                     : "Email non verificata"}
