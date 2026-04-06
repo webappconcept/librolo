@@ -13,7 +13,10 @@ export async function getDashboardStats() {
     premiumUsers,
     verifiedUsers,
   ] = await Promise.all([
-    db.select({ count: count() }).from(users).where(isNull(users.deletedAt)),
+    db
+      .select({ count: count() })
+      .from(users)
+      .where(and(isNull(users.deletedAt), sql`${users.role} != 'admin'`)),
 
     db
       .select({ count: count() })
@@ -21,6 +24,7 @@ export async function getDashboardStats() {
       .where(
         and(
           isNull(users.deletedAt),
+          sql`${users.role} != 'admin'`,
           sql`${users.createdAt} >= NOW() - INTERVAL '30 days'`,
         ),
       ),
@@ -31,6 +35,7 @@ export async function getDashboardStats() {
       .where(
         and(
           isNull(users.deletedAt),
+          sql`${users.role} != 'admin'`,
           sql`${users.createdAt} >= NOW() - INTERVAL '60 days'`,
           sql`${users.createdAt} < NOW() - INTERVAL '30 days'`,
         ),
@@ -42,6 +47,7 @@ export async function getDashboardStats() {
       .where(
         and(
           isNull(users.deletedAt),
+          sql`${users.role} != 'admin'`,
           isNotNull(users.stripeSubscriptionId),
           sql`${users.subscriptionStatus} = 'active'`,
         ),
@@ -50,7 +56,13 @@ export async function getDashboardStats() {
     db
       .select({ count: count() })
       .from(users)
-      .where(and(isNull(users.deletedAt), sql`${users.emailVerified} = true`)),
+      .where(
+        and(
+          isNull(users.deletedAt),
+          sql`${users.role} != 'admin'`,
+          sql`${users.emailVerified} = true`,
+        ),
+      ),
   ]);
 
   const total = totalUsers[0].count;
@@ -87,6 +99,7 @@ export async function getUserGrowthChart() {
       COUNT(*) AS total
     FROM users
     WHERE deleted_at IS NULL
+      AND role != 'admin'        
       AND created_at >= NOW() - INTERVAL '7 months'
     GROUP BY DATE_TRUNC('month', created_at)
     ORDER BY DATE_TRUNC('month', created_at) ASC
