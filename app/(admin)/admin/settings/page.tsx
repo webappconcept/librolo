@@ -1,10 +1,11 @@
+// app/(admin)/admin/settings/page.tsx
 import { getAppSettings } from "@/lib/db/settings-queries";
 import { Suspense } from "react";
-import { SettingsForm } from "./settings-form";
+import { SettingsTabs } from "./settings-tabs";
 
 async function SettingsContent() {
   const settings = await getAppSettings();
-  return <SettingsForm settings={settings} />;
+  return <SettingsTabs settings={settings} />;
 }
 
 export default function AdminSettingsPage() {
@@ -25,11 +26,22 @@ export default function AdminSettingsPage() {
 
       <Suspense
         fallback={
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 space-y-4">
+          <div
+            className="rounded-xl p-6 space-y-4"
+            style={{
+              background: "var(--admin-card-bg)",
+              border: "1px solid var(--admin-card-border)",
+            }}>
             {[1, 2].map((i) => (
               <div key={i} className="space-y-2">
-                <div className="h-3 w-24 bg-gray-100 rounded animate-pulse" />
-                <div className="h-9 bg-gray-50 rounded-lg animate-pulse" />
+                <div
+                  className="h-3 w-24 rounded animate-pulse"
+                  style={{ background: "var(--admin-card-border)" }}
+                />
+                <div
+                  className="h-9 rounded-lg animate-pulse"
+                  style={{ background: "var(--admin-page-bg)" }}
+                />
               </div>
             ))}
           </div>

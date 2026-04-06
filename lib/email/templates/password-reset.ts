@@ -1,5 +1,6 @@
 // lib/email/templates/password-reset.ts
-import { resend } from "@/lib/email/resend";
+import { getAppSettings } from "@/lib/db/settings-queries";
+import { sendEmail } from "@/lib/email/resend";
 import { emailTheme as t } from "@/lib/email/theme";
 
 export async function sendPasswordResetEmail(
@@ -7,21 +8,22 @@ export async function sendPasswordResetEmail(
   token: string,
   userName?: string,
 ) {
+  const { app_name } = await getAppSettings();
   const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL}/reset-password?token=${token}`;
   const greeting = userName ? `Ciao ${userName},` : "Ciao,";
 
-  const { error } = await resend.emails.send({
-    from: process.env.RESEND_FROM_EMAIL!,
+  await sendEmail({
     to,
-    subject: "Reimposta la tua password — Librolo",
-    html: buildHtml(resetUrl, greeting),
-    text: `Reimposta la tua password Librolo: ${resetUrl}\nIl link scade tra 30 minuti.`,
+    subject: `Reimposta la tua password — ${app_name}`,
+    html: buildHtml(resetUrl, greeting, app_name),
   });
-
-  if (error) throw new Error(`Errore invio email: ${error.message}`);
 }
 
-function buildHtml(resetUrl: string, greeting: string): string {
+function buildHtml(
+  resetUrl: string,
+  greeting: string,
+  appName = "Librolo",
+): string {
   return `
 <!DOCTYPE html>
 <html lang="it">
@@ -41,7 +43,7 @@ function buildHtml(resetUrl: string, greeting: string): string {
           <tr>
             <td style="background:${t.brandPrimary};padding:32px 40px;">
               <h1 style="margin:0;color:${t.textInverse};font-size:22px;font-weight:700;letter-spacing:-0.3px;">
-                📚 Librolo
+                📚 ${appName}
               </h1>
             </td>
           </tr>
@@ -51,7 +53,7 @@ function buildHtml(resetUrl: string, greeting: string): string {
             <td style="padding:40px;">
               <p style="margin:0 0 8px;color:${t.textPrimary};font-size:16px;">${greeting}</p>
               <p style="margin:0 0 32px;color:${t.textMuted};font-size:15px;line-height:1.6;">
-                Hai richiesto di reimpostare la password del tuo account Librolo.
+                Hai richiesto di reimpostare la password del tuo account ${appName}.
                 Clicca il pulsante qui sotto per procedere.
                 Il link è valido per <strong>30 minuti</strong>.
               </p>
@@ -94,7 +96,7 @@ function buildHtml(resetUrl: string, greeting: string): string {
           <tr>
             <td style="background:${t.bgPage};padding:20px 40px;border-top:1px solid ${t.border};">
               <p style="margin:0;color:${t.textLight};font-size:12px;">
-                © ${new Date().getFullYear()} Librolo · Tutti i diritti riservati
+                © ${new Date().getFullYear()} ${appName} · Tutti i diritti riservati
               </p>
             </td>
           </tr>

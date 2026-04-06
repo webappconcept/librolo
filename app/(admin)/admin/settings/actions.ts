@@ -53,3 +53,32 @@ export async function saveAppSettings(
     };
   }
 }
+
+export async function saveEmailSettings(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  try {
+    await requireAdmin();
+
+    const fields: SettingKey[] = [
+      "resend_api_key",
+      "email_from_name",
+      "email_from_address",
+    ];
+
+    await Promise.all(
+      fields.map((key) => {
+        const value = formData.get(key);
+        if (typeof value === "string" && value.trim()) {
+          return updateAppSetting(key, value.trim());
+        }
+      }),
+    );
+
+    revalidatePath("/admin/settings");
+    return { success: "Impostazioni email salvate.", timestamp: Date.now() };
+  } catch {
+    return { error: "Errore durante il salvataggio.", timestamp: Date.now() };
+  }
+}

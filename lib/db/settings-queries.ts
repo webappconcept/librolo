@@ -1,34 +1,43 @@
 // lib/db/settings-queries.ts
 import { db } from "@/lib/db/drizzle";
 import { appSettings } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
 import { cache } from "react";
 
-// Chiavi note — type safety
 export type SettingKey =
   | "app_name"
   | "app_description"
   | "maintenance_mode"
-  | "registrations_enabled";
+  | "registrations_enabled"
+  | "resend_api_key"
+  | "email_from_name"
+  | "email_from_address";
 
-export type AppSettings = Record<SettingKey, string>;
+export type AppSettings = {
+  app_name: string;
+  app_description: string;
+  maintenance_mode: string;
+  registrations_enabled: string;
+  resend_api_key: string | null;
+  email_from_name: string | null;
+  email_from_address: string | null;
+};
 
-// Valori di fallback se la tabella è vuota
 const DEFAULTS: AppSettings = {
   app_name: "Librolo",
   app_description: "La tua libreria digitale",
   maintenance_mode: "false",
   registrations_enabled: "true",
+  resend_api_key: null,
+  email_from_name: null,
+  email_from_address: null,
 };
 
-// Cached — una sola query per render
 async function fetchAppSettings(): Promise<AppSettings> {
   const rows = await db.select().from(appSettings);
-  const result = { ...DEFAULTS };
+  const result: AppSettings = { ...DEFAULTS };
   for (const row of rows) {
     if (row.key in result) {
-      result[row.key as SettingKey] =
-        row.value ?? DEFAULTS[row.key as SettingKey];
+      (result as Record<string, string | null>)[row.key] = row.value ?? null;
     }
   }
   return result;
@@ -36,8 +45,7 @@ async function fetchAppSettings(): Promise<AppSettings> {
 
 export const getAppSettings = cache(fetchAppSettings);
 
-// Aggiorna una singola impostazione
-export async function updateAppSetting(key: SettingKey, value: string) {
+export async function updateAppSetting(key: SettingKey, value: string | null) {
   await db
     .insert(appSettings)
     .values({ key, value, updatedAt: new Date() })

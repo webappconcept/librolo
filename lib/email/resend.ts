@@ -1,4 +1,17 @@
 // lib/email/resend.ts
-import { Resend } from "resend";
+import { getEmailFrom, getResendClient } from "./client";
 
-export const resend = new Resend(process.env.RESEND_API_KEY);
+export async function sendEmail({
+  to,
+  subject,
+  html,
+}: {
+  to: string;
+  subject: string;
+  html: string;
+}) {
+  const resend = await getResendClient();
+  const from = await getEmailFrom();
+
+  return resend.emails.send({ from, to, subject, html });
+}

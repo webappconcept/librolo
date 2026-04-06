@@ -1,5 +1,6 @@
 // lib/email/templates/signup-verification.ts
-import { resend } from "@/lib/email/resend";
+import { getAppSettings } from "@/lib/db/settings-queries";
+import { sendEmail } from "@/lib/email/resend";
 import { emailTheme as t } from "@/lib/email/theme";
 
 export async function sendSignupVerificationEmail(
@@ -7,18 +8,16 @@ export async function sendSignupVerificationEmail(
   code: string,
   userName?: string,
 ) {
-  const { error } = await resend.emails.send({
-    from: process.env.RESEND_FROM_EMAIL!,
-    to,
-    subject: "Verifica la tua email — Librolo",
-    html: buildHtml(code, userName),
-    text: `Il tuo codice di verifica Librolo è: ${code}. Scade tra 15 minuti.`,
-  });
+  const { app_name } = await getAppSettings();
 
-  if (error) throw new Error(`Errore invio email: ${error.message}`);
+  await sendEmail({
+    to,
+    subject: `Verifica la tua email — ${app_name}`,
+    html: buildHtml(code, userName, app_name),
+  });
 }
 
-function buildHtml(code: string, name?: string): string {
+function buildHtml(code: string, name?: string, appName = "Librolo"): string {
   const greeting = name ? `Ciao ${name},` : "Ciao,";
   return `
 <!DOCTYPE html>
@@ -39,7 +38,7 @@ function buildHtml(code: string, name?: string): string {
           <tr>
             <td style="background:${t.brandPrimary};padding:32px 40px;">
               <h1 style="margin:0;color:${t.textInverse};font-size:22px;font-weight:700;letter-spacing:-0.3px;">
-                📚 Librolo
+                📚 ${appName}
               </h1>
             </td>
           </tr>
@@ -77,7 +76,7 @@ function buildHtml(code: string, name?: string): string {
               </table>
 
               <p style="margin:0;color:${t.textLight};font-size:13px;line-height:1.5;">
-                Se non hai creato un account su Librolo, puoi ignorare questa email.<br/>
+                Se non hai creato un account, puoi ignorare questa email.<br/>
                 Non condividere questo codice con nessuno.
               </p>
             </td>
@@ -87,7 +86,7 @@ function buildHtml(code: string, name?: string): string {
           <tr>
             <td style="background:${t.bgPage};padding:20px 40px;border-top:1px solid ${t.border};">
               <p style="margin:0;color:${t.textLight};font-size:12px;">
-                © ${new Date().getFullYear()} Librolo · Tutti i diritti riservati
+                © ${new Date().getFullYear()} ${appName} · Tutti i diritti riservati
               </p>
             </td>
           </tr>
