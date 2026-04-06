@@ -2,15 +2,16 @@
 "use client";
 
 import type { AppSettings } from "@/lib/db/settings-queries";
+import { Mail, Settings, SlidersHorizontal } from "lucide-react";
 import { useState } from "react";
 import { BehaviourTab } from "./tabs/behaviour-tab";
 import { EmailTab } from "./tabs/email-tab";
 import { GeneralTab } from "./tabs/general-tab";
 
 const TABS = [
-  { id: "general", label: "Generale" },
-  { id: "behaviour", label: "Comportamento" },
-  { id: "email", label: "Email" },
+  { id: "general", label: "Generale", icon: Settings },
+  { id: "behaviour", label: "Comportamento", icon: SlidersHorizontal },
+  { id: "email", label: "Email", icon: Mail },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
@@ -27,18 +28,19 @@ export function SettingsTabs({ settings }: { settings: AppSettings }) {
           background: "var(--admin-card-bg)",
           border: "1px solid var(--admin-card-border)",
         }}>
-        {TABS.map((tab) => {
-          const isActive = active === tab.id;
+        {TABS.map(({ id, label, icon: Icon }) => {
+          const isActive = active === id;
           return (
             <button
-              key={tab.id}
-              onClick={() => setActive(tab.id)}
-              className="px-4 py-1.5 text-sm font-medium rounded-lg transition-all"
+              key={id}
+              onClick={() => setActive(id)}
+              className="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium rounded-lg transition-all"
               style={{
                 background: isActive ? "var(--admin-accent)" : "transparent",
                 color: isActive ? "#fff" : "var(--admin-text-muted)",
               }}>
-              {tab.label}
+              <Icon size={14} />
+              {label}
             </button>
           );
         })}
