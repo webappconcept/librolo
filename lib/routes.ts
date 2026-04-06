@@ -2,6 +2,7 @@
 
 export const PUBLIC_ROUTES = [
   "/",
+  "/maintenance",
   "/sign-in",
   "/sign-up",
   "/forgot-password",

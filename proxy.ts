@@ -18,6 +18,13 @@ export async function proxy(request: NextRequest) {
     (route) => pathname === route || pathname.startsWith(route + "/"),
   );
 
+  if (pathname !== "/maintenance" && !isAdminRoute) {
+    const maintenanceMode = request.cookies.get("maintenance_mode")?.value;
+    if (maintenanceMode === "true") {
+      return NextResponse.rewrite(new URL("/maintenance", request.url));
+    }
+  }
+
   if (isPublicRoute && !isAuthRoute) {
     return NextResponse.next();
   }
@@ -55,7 +62,7 @@ export async function proxy(request: NextRequest) {
         value: await signToken({
           user: {
             id: parsed.user.id,
-            role: parsed.user.role ?? "member", // ← fallback per token vecchi
+            role: parsed.user.role ?? "member",
           },
           expires: expiresInOneDay.toISOString(),
         }),

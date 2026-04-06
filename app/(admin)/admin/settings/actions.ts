@@ -4,6 +4,7 @@
 import { getUser } from "@/lib/db/queries";
 import { updateAppSetting, type SettingKey } from "@/lib/db/settings-queries";
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 async function requireAdmin() {
@@ -15,17 +16,30 @@ async function requireAdmin() {
 export async function saveAppSettings(formData: FormData) {
   await requireAdmin();
 
-  const fields: SettingKey[] = ["app_name", "app_description"];
+  const fields: SettingKey[] = [
+    "app_name",
+    "app_description",
+    "maintenance_mode",
+    "registrations_enabled",
+  ];
 
   await Promise.all(
     fields.map((key) => {
       const value = formData.get(key);
-      if (typeof value === "string" && value.trim()) {
+      if (typeof value === "string") {
         return updateAppSetting(key, value.trim());
       }
     }),
   );
 
+  // Sincronizza il cookie per il proxy
+  const cookieStore = await cookies();
+  cookieStore.set("maintenance_mode", formData.get("maintenance_mode") as string ?? "false", {
+    httpOnly: true,
+    path: "/",
+    sameSite: "lax",
+  });
+
   revalidatePath("/admin/settings");
-  revalidatePath("/"); // aggiorna anche il frontend
+  revalidatePath("/");
 }
