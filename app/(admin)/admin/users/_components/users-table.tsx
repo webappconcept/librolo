@@ -210,10 +210,8 @@ export default function UsersTable({ users }: { users: AdminUser[] }) {
 
   return (
     <div className="overflow-x-auto">
-      {" "}
       {/* ← scroll orizzontale */}
       <table className="w-full min-w-[640px]">
-        {" "}
         {/* ← larghezza minima */}
         <thead>
           <tr className="border-b border-gray-100">
