@@ -4,19 +4,27 @@ import { useState } from "react";
 import MobileMenuButton from "./mobile-menu-button";
 import AdminSidebar from "./sidebar";
 
+type AdminShellClientProps = {
+  children: React.ReactNode;
+  header: React.ReactNode;
+  appName: string; // ← mancava questo
+};
+
 export default function AdminShellClient({
   children,
   header,
-}: {
-  children: React.ReactNode;
-  header: React.ReactNode;
-}) {
+  appName, // ← destruttura qui
+}: AdminShellClientProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#f1f5f9]">
       {/* Sidebar — desktop sempre visibile, mobile drawer */}
-      <AdminSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <AdminSidebar
+        appName={appName}
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
 
       <div className="flex flex-col flex-1 overflow-hidden min-w-0">
         {/* Header con bottone hamburger iniettato */}

@@ -1,13 +1,15 @@
 // app/(admin)/admin/page.tsx
 import { getDashboardStats, getUserGrowthChart } from "@/lib/db/admin-queries";
+import { getAppSettings } from "@/lib/db/settings-queries";
 import { CreditCard, ShieldCheck, TrendingUp, Users } from "lucide-react";
 import { GrowthChart, PlanDonutChart } from "./_components/charts";
 import KpiCard from "./_components/kpi-card";
 
 export default async function AdminDashboardPage() {
-  const [stats, growthData] = await Promise.all([
+  const [stats, growthData, settings] = await Promise.all([
     getDashboardStats(),
     getUserGrowthChart(),
+    getAppSettings(),
   ]);
 
   return (
@@ -15,7 +17,7 @@ export default async function AdminDashboardPage() {
       <div>
         <h2 className="text-xl font-bold text-gray-800">Dashboard</h2>
         <p className="text-sm text-gray-400 mt-0.5">
-          Panoramica in tempo reale di Librolo
+          Panoramica in tempo reale di {settings.app_name}
         </p>
       </div>
 

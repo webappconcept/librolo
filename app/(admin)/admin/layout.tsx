@@ -1,16 +1,20 @@
 // app/(admin)/admin/layout.tsx
 import { getUser } from "@/lib/db/queries";
+import { getAppSettings } from "@/lib/db/settings-queries";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import AdminShellClient from "./_components/admin-shell-client";
 import AdminHeaderRight from "./_components/header";
 
 async function AdminShell({ children }: { children: React.ReactNode }) {
+  const settings = await getAppSettings();
   const user = await getUser();
   if (!user || user.role !== "admin") redirect("/");
 
   return (
-    <AdminShellClient header={<AdminHeaderRight user={user} />}>
+    <AdminShellClient
+      appName={settings.app_name}
+      header={<AdminHeaderRight user={user} />}>
       <Suspense
         fallback={
           <div className="flex items-center justify-center h-32">

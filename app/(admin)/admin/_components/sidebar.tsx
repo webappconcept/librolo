@@ -1,5 +1,3 @@
-"use client";
-
 import {
   BarChart2,
   BookOpen,
@@ -21,11 +19,16 @@ const NAV = [
 ];
 
 interface AdminSidebarProps {
+  appName: string;
   open?: boolean;
   onClose?: () => void;
 }
 
-export default function AdminSidebar({ open, onClose }: AdminSidebarProps) {
+export default function AdminSidebar({
+  appName,
+  open,
+  onClose,
+}: AdminSidebarProps) {
   const pathname = usePathname();
 
   function isActive(href: string, exact?: boolean) {
@@ -44,7 +47,7 @@ export default function AdminSidebar({ open, onClose }: AdminSidebarProps) {
             <BookOpen size={16} className="text-white" />
           </div>
           <div>
-            <span className="font-bold text-sm tracking-wide">Librolo</span>
+            <span className="font-bold text-sm tracking-wide">{appName}</span>
             <span className="block text-[10px] text-white/40 uppercase tracking-widest">
               Admin Panel
             </span>
