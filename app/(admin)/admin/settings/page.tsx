@@ -11,8 +11,14 @@ export default function AdminSettingsPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-xl font-bold text-gray-800">Impostazioni</h2>
-        <p className="text-sm text-gray-400 mt-0.5">
+        <h2
+          className="text-xl font-bold"
+          style={{ color: "var(--admin-text)" }}>
+          Impostazioni
+        </h2>
+        <p
+          className="text-sm mt-0.5"
+          style={{ color: "var(--admin-text-muted)" }}>
           Configurazione generale dell'app
         </p>
       </div>

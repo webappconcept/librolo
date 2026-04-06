@@ -19,8 +19,47 @@
   /* Layout */
   --admin-header-height: 3.5rem;
   --admin-page-bg: #f1f5f9;
+  --admin-header-bg: #ffffff;
+  --admin-header-border: #e5e7eb;
+  --admin-header-text: #1f2937;
+
+  /* Superfici */
+  --admin-card-bg: #ffffff;
+  --admin-card-border: #f3f4f6;
+  --admin-text: #1f2937;
+  --admin-text-muted: #6b7280;
+  --admin-text-faint: #9ca3af;
+  --admin-divider: #f3f4f6;
+  --admin-input-border: #e5e7eb;
+  --admin-hover-bg: #f9fafb;
+  --admin-icon-color: #6b7280;
 }
+
+.dark {
+  --admin-page-bg: #0f172a;
+  --admin-header-bg: #1e293b;
+  --admin-header-border: #334155;
+  --admin-header-text: #f1f5f9;
+
+  --admin-card-bg: #1e293b;
+  --admin-card-border: #334155;
+  --admin-text: #f1f5f9;
+  --admin-text-muted: #94a3b8;
+  --admin-text-faint: #64748b;
+  --admin-divider: #334155;
+  --admin-input-border: #334155;
+  --admin-hover-bg: #334155;
+  --admin-icon-color: #94a3b8;
+}
+
 @layer components {
+  .admin-breadcrumb-link {
+    color: var(--admin-text-faint);
+    transition: color 180ms;
+  }
+  .admin-breadcrumb-link:hover {
+    color: var(--admin-text-muted);
+  }
   .admin-nav-item {
     color: var(--admin-sidebar-text);
   }

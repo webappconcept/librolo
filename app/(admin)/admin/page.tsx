@@ -15,8 +15,14 @@ export default async function AdminDashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold text-gray-800">Dashboard</h2>
-        <p className="text-sm text-gray-400 mt-0.5">
+        <h2
+          className="text-xl font-bold"
+          style={{ color: "var(--admin-text)" }}>
+          Dashboard
+        </h2>
+        <p
+          className="text-sm mt-0.5"
+          style={{ color: "var(--admin-text-muted)" }}>
           Panoramica in tempo reale di {settings.app_name}
         </p>
       </div>

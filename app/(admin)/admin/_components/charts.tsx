@@ -1,17 +1,16 @@
-// app/(admin)/admin/_components/charts.tsx
 "use client";
 
 import {
-    Area,
-    AreaChart,
-    CartesianGrid,
-    Cell,
-    Pie,
-    PieChart,
-    ResponsiveContainer,
-    Tooltip,
-    XAxis,
-    YAxis,
+  Area,
+  AreaChart,
+  CartesianGrid,
+  Cell,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
 } from "recharts";
 
 interface GrowthChartProps {
@@ -20,8 +19,15 @@ interface GrowthChartProps {
 
 export function GrowthChart({ data }: GrowthChartProps) {
   return (
-    <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-      <h3 className="text-sm font-semibold text-gray-700 mb-4">
+    <div
+      className="rounded-xl p-5 shadow-sm"
+      style={{
+        background: "var(--admin-card-bg)",
+        border: "1px solid var(--admin-card-border)",
+      }}>
+      <h3
+        className="text-sm font-semibold mb-4"
+        style={{ color: "var(--admin-text)" }}>
         Crescita utenti
       </h3>
       <ResponsiveContainer width="100%" height={220}>
@@ -30,32 +36,40 @@ export function GrowthChart({ data }: GrowthChartProps) {
           margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
           <defs>
             <linearGradient id="gradUtenti" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#e07a3a" stopOpacity={0.15} />
-              <stop offset="95%" stopColor="#e07a3a" stopOpacity={0} />
+              <stop
+                offset="5%"
+                stopColor="var(--admin-accent)"
+                stopOpacity={0.15}
+              />
+              <stop
+                offset="95%"
+                stopColor="var(--admin-accent)"
+                stopOpacity={0}
+              />
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--admin-divider)" />
           <XAxis
             dataKey="month"
-            tick={{ fontSize: 11, fill: "#94a3b8" }}
+            tick={{ fontSize: 11, fill: "var(--admin-text-faint)" }}
             axisLine={false}
             tickLine={false}
           />
           <YAxis
-            tick={{ fontSize: 11, fill: "#94a3b8" }}
+            tick={{ fontSize: 11, fill: "var(--admin-text-faint)" }}
             axisLine={false}
             tickLine={false}
           />
           <Tooltip
             contentStyle={{
-              background: "#1c2434",
+              background: "var(--admin-sidebar-bg)",
               border: "none",
               borderRadius: 8,
               color: "#fff",
               fontSize: 12,
             }}
             cursor={{
-              stroke: "#e07a3a",
+              stroke: "var(--admin-accent)",
               strokeWidth: 1,
               strokeDasharray: "4 4",
             }}
@@ -63,11 +77,11 @@ export function GrowthChart({ data }: GrowthChartProps) {
           <Area
             type="monotone"
             dataKey="utenti"
-            stroke="#e07a3a"
+            stroke="var(--admin-accent)"
             strokeWidth={2}
             fill="url(#gradUtenti)"
-            dot={{ fill: "#e07a3a", r: 3, strokeWidth: 0 }}
-            activeDot={{ r: 5, fill: "#e07a3a" }}
+            dot={{ fill: "var(--admin-accent)", r: 3, strokeWidth: 0 }}
+            activeDot={{ r: 5, fill: "var(--admin-accent)" }}
           />
         </AreaChart>
       </ResponsiveContainer>
@@ -80,8 +94,6 @@ interface DonutChartProps {
   premium: number;
 }
 
-const COLORS = ["#e2e8f0", "#e07a3a"];
-
 export function PlanDonutChart({ free, premium }: DonutChartProps) {
   const data = [
     { name: "Free", value: free },
@@ -91,8 +103,15 @@ export function PlanDonutChart({ free, premium }: DonutChartProps) {
   const premiumPct = total > 0 ? Math.round((premium / total) * 100) : 0;
 
   return (
-    <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-      <h3 className="text-sm font-semibold text-gray-700 mb-4">
+    <div
+      className="rounded-xl p-5 shadow-sm"
+      style={{
+        background: "var(--admin-card-bg)",
+        border: "1px solid var(--admin-card-border)",
+      }}>
+      <h3
+        className="text-sm font-semibold mb-4"
+        style={{ color: "var(--admin-text)" }}>
         Free vs Premium
       </h3>
       <div className="flex items-center gap-6">
@@ -107,35 +126,59 @@ export function PlanDonutChart({ free, premium }: DonutChartProps) {
                 outerRadius={62}
                 dataKey="value"
                 strokeWidth={0}>
-                {data.map((_, i) => (
-                  <Cell key={i} fill={COLORS[i]} />
-                ))}
+                <Cell fill="var(--admin-divider)" />
+                <Cell fill="var(--admin-accent)" />
               </Pie>
             </PieChart>
           </ResponsiveContainer>
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-            <span className="text-xl font-bold text-gray-800">
+            <span
+              className="text-xl font-bold"
+              style={{ color: "var(--admin-text)" }}>
               {premiumPct}%
             </span>
-            <span className="text-[10px] text-gray-400">premium</span>
+            <span
+              className="text-[10px]"
+              style={{ color: "var(--admin-text-faint)" }}>
+              premium
+            </span>
           </div>
         </div>
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#e07a3a]" />
-            <span className="text-xs text-gray-600">
-              Premium — <strong>{premium}</strong>
+            <span
+              className="w-2.5 h-2.5 rounded-full"
+              style={{ background: "var(--admin-accent)" }}
+            />
+            <span
+              className="text-xs"
+              style={{ color: "var(--admin-text-muted)" }}>
+              Premium —{" "}
+              <strong style={{ color: "var(--admin-text)" }}>{premium}</strong>
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#e2e8f0]" />
-            <span className="text-xs text-gray-600">
-              Free — <strong>{free}</strong>
+            <span
+              className="w-2.5 h-2.5 rounded-full"
+              style={{ background: "var(--admin-divider)" }}
+            />
+            <span
+              className="text-xs"
+              style={{ color: "var(--admin-text-muted)" }}>
+              Free —{" "}
+              <strong style={{ color: "var(--admin-text)" }}>{free}</strong>
             </span>
           </div>
-          <div className="pt-1 border-t border-gray-100">
-            <span className="text-xs text-gray-400">
-              Totale: <strong className="text-gray-600">{total}</strong>
+          <div
+            className="pt-1"
+            style={{ borderTop: "1px solid var(--admin-divider)" }}>
+            <span
+              className="text-xs"
+              style={{ color: "var(--admin-text-faint)" }}>
+              Totale:{" "}
+              <strong style={{ color: "var(--admin-text-muted)" }}>
+                {total}
+              </strong>
             </span>
           </div>
         </div>

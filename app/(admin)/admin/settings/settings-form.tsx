@@ -8,13 +8,11 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { saveAppSettings, type ActionState } from "./actions";
 import { SettingToggle } from "./toggles";
 
-// Wrapper esterno — forza il reset di useActionState ad ogni visita
 export function SettingsForm({ settings }: { settings: AppSettings }) {
   const pathname = usePathname();
   return <SettingsFormInner key={pathname} settings={settings} />;
 }
 
-// Componente interno — viene ricreato da zero ad ogni navigazione
 function SettingsFormInner({ settings }: { settings: AppSettings }) {
   const [state, formAction, isPending] = useActionState<ActionState, FormData>(
     saveAppSettings,
@@ -42,17 +40,26 @@ function SettingsFormInner({ settings }: { settings: AppSettings }) {
     <>
       <form action={formAction} className="space-y-6">
         {/* Identità app */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+        <div
+          className="rounded-xl shadow-sm p-6"
+          style={{
+            background: "var(--admin-card-bg)",
+            border: "1px solid var(--admin-card-border)",
+          }}>
           <div className="flex items-center gap-2 mb-5">
-            <Settings size={16} className="text-gray-400" />
-            <h3 className="text-sm font-semibold text-gray-700">
+            <Settings size={16} style={{ color: "var(--admin-text-faint)" }} />
+            <h3
+              className="text-sm font-semibold"
+              style={{ color: "var(--admin-text)" }}>
               Identità dell'app
             </h3>
           </div>
 
           <div className="space-y-4 max-w-lg">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1.5">
+              <label
+                className="block text-xs font-medium mb-1.5"
+                style={{ color: "var(--admin-text-muted)" }}>
                 Nome dell'app
               </label>
               <input
@@ -60,15 +67,24 @@ function SettingsFormInner({ settings }: { settings: AppSettings }) {
                 defaultValue={settings.app_name}
                 maxLength={60}
                 required
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e07a3a]/30 focus:border-[#e07a3a]"
+                className="w-full px-3 py-2 text-sm rounded-lg focus:outline-none transition-colors"
+                style={{
+                  background: "var(--admin-page-bg)",
+                  border: "1px solid var(--admin-input-border)",
+                  color: "var(--admin-text)",
+                }}
               />
-              <p className="text-[11px] text-gray-400 mt-1">
+              <p
+                className="text-[11px] mt-1"
+                style={{ color: "var(--admin-text-faint)" }}>
                 Usato nell'header, nelle email e nei meta tag.
               </p>
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1.5">
+              <label
+                className="block text-xs font-medium mb-1.5"
+                style={{ color: "var(--admin-text-muted)" }}>
                 Descrizione breve
               </label>
               <textarea
@@ -76,9 +92,16 @@ function SettingsFormInner({ settings }: { settings: AppSettings }) {
                 defaultValue={settings.app_description}
                 maxLength={160}
                 rows={2}
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e07a3a]/30 focus:border-[#e07a3a] resize-none"
+                className="w-full px-3 py-2 text-sm rounded-lg focus:outline-none transition-colors resize-none"
+                style={{
+                  background: "var(--admin-page-bg)",
+                  border: "1px solid var(--admin-input-border)",
+                  color: "var(--admin-text)",
+                }}
               />
-              <p className="text-[11px] text-gray-400 mt-1">
+              <p
+                className="text-[11px] mt-1"
+                style={{ color: "var(--admin-text-faint)" }}>
                 Mostrata come sottotitolo e nei meta description. Max 160
                 caratteri.
               </p>
@@ -87,15 +110,24 @@ function SettingsFormInner({ settings }: { settings: AppSettings }) {
         </div>
 
         {/* Comportamento */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+        <div
+          className="rounded-xl shadow-sm p-6"
+          style={{
+            background: "var(--admin-card-bg)",
+            border: "1px solid var(--admin-card-border)",
+          }}>
           <div className="flex items-center gap-2 mb-3">
-            <Settings size={16} className="text-gray-400" />
-            <h3 className="text-sm font-semibold text-gray-700">
+            <Settings size={16} style={{ color: "var(--admin-text-faint)" }} />
+            <h3
+              className="text-sm font-semibold"
+              style={{ color: "var(--admin-text)" }}>
               Comportamento
             </h3>
           </div>
 
-          <div className="divide-y divide-gray-100 max-w-lg">
+          <div
+            className="max-w-lg"
+            style={{ borderTop: "1px solid var(--admin-divider)" }}>
             <SettingToggle
               name="registrations_enabled"
               label="Registrazioni aperte"
@@ -118,7 +150,19 @@ function SettingsFormInner({ settings }: { settings: AppSettings }) {
           <button
             type="submit"
             disabled={isPending}
-            className="flex items-center gap-2 px-5 py-2.5 bg-[#e07a3a] text-white text-sm font-medium rounded-lg hover:bg-[#c9642a] transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
+            className="flex items-center gap-2 px-5 py-2.5 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            style={{
+              background: isPending
+                ? "var(--admin-accent)"
+                : "var(--admin-accent)",
+            }}
+            onMouseEnter={(e) =>
+              !isPending &&
+              (e.currentTarget.style.background = "var(--admin-accent-hover)")
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.background = "var(--admin-accent)")
+            }>
             {isPending ? (
               <Loader2 size={15} className="animate-spin" />
             ) : (
