@@ -18,58 +18,6 @@ export async function proxy(request: NextRequest) {
     (route) => pathname === route || pathname.startsWith(route + "/"),
   );
 
-  // ── Maintenance mode ──────────────────────────────────────────────────
-  // Salta il check per /maintenance stesso, route admin e API
-  if (
-    pathname !== "/maintenance" &&
-    !isAdminRoute &&
-    !pathname.startsWith("/api")
-  ) {
-    let maintenanceEnabled = false;
-    try {
-      const res = await fetch(new URL("/api/maintenance", request.url), {
-        next: { revalidate: 60 }, // cache 60s — evita query DB ad ogni richiesta
-      });
-      const data = await res.json();
-      maintenanceEnabled = data.enabled === true;
-    } catch {
-      maintenanceEnabled = false; // fail open — in caso di errore non bloccare
-    }
-
-    if (maintenanceEnabled) {
-      // Admin loggato bypassa sempre
-      if (sessionCookie) {
-        try {
-          const parsed = await verifyToken(sessionCookie.value);
-          if (parsed.user.role === "admin") {
-            // admin → lascia passare, non fare nulla qui
-          } else {
-            return NextResponse.rewrite(new URL("/maintenance", request.url));
-          }
-        } catch {
-          return NextResponse.rewrite(new URL("/maintenance", request.url));
-        }
-      } else {
-        // Non loggato → blocca sempre
-        return NextResponse.rewrite(new URL("/maintenance", request.url));
-      }
-    }
-  }
-
-  // Redirect da /maintenance → / quando maintenance è OFF
-  if (pathname === "/maintenance") {
-    try {
-      const res = await fetch(new URL("/api/maintenance", request.url), {
-        next: { revalidate: 60 },
-      });
-      const data = await res.json();
-      if (data.enabled !== true) {
-        return NextResponse.redirect(new URL("/", request.url));
-      }
-    } catch {}
-  }
-  // ─────────────────────────────────────────────────────────────────────
-
   if (isPublicRoute && !isAuthRoute) {
     return NextResponse.next();
   }

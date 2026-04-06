@@ -1,7 +1,9 @@
+import { DynamicWrapper } from "@/components/dynamic-wrapper";
 import { getUser } from "@/lib/db/queries";
+import { getAppSettings } from "@/lib/db/settings-queries";
 import type { Metadata, Viewport } from "next";
 import { Manrope } from "next/font/google";
-import { SWRConfig } from "swr";
+import { Suspense } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -15,7 +17,7 @@ export const viewport: Viewport = {
 
 const manrope = Manrope({ subsets: ["latin"] });
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -25,14 +27,9 @@ export default function RootLayout({
       lang="en"
       className={`bg-white dark:bg-gray-950 text-black dark:text-white ${manrope.className}`}>
       <body className="min-h-[100dvh] bg-gray-50">
-        <SWRConfig
-          value={{
-            fallback: {
-              "/api/user": getUser(),
-            },
-          }}>
-          {children}
-        </SWRConfig>
+        <Suspense>
+          <DynamicWrapper>{children}</DynamicWrapper>
+        </Suspense>
       </body>
     </html>
   );
