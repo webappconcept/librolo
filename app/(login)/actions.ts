@@ -76,6 +76,14 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
     };
   }
 
+  if (foundUser.bannedAt !== null) {
+    return {
+      error: "Il tuo account è stato sospeso. Contatta il supporto.",
+      email,
+      password,
+    };
+  }
+
   const isPasswordValid = await comparePasswords(
     password,
     foundUser.passwordHash,
@@ -96,7 +104,7 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
     logActivity(foundUser.id, ActivityType.SIGN_IN),
   ]);
 
-  redirect("/");
+  redirect(foundUser.role === "admin" ? "/admin" : "/");
 });
 
 const signUpSchema = z

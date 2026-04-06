@@ -31,3 +31,5 @@ export const FOOTER_LINKS = [
   { href: "/condizioni", label: "Condizioni" },
   { href: "/cookie", label: "Cookie" },
 ] as const;
+
+export const ADMIN_ROUTES = ["/admin"];

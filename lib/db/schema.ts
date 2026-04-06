@@ -15,6 +15,8 @@ export const users = pgTable("users", {
   email: varchar("email", { length: 255 }).notNull().unique(),
   passwordHash: text("password_hash").notNull(),
   role: varchar("role", { length: 20 }).notNull().default("member"),
+  bannedAt: timestamp("banned_at"),
+  bannedReason: varchar("banned_reason", { length: 255 }),
   // Stripe
   stripeCustomerId: varchar("stripe_customer_id", { length: 255 }),
   stripeSubscriptionId: varchar("stripe_subscription_id", { length: 255 }),
