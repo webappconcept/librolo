@@ -4,7 +4,6 @@ export default function NotFound() {
   return (
     <div className="flex items-center justify-center min-h-[100dvh] bg-[var(--brand-bg)] px-4">
       <div className="max-w-sm w-full text-center space-y-8">
-        {/* Illustrazione libri */}
         <div className="flex justify-center">
           <svg
             viewBox="0 0 120 80"

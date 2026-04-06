@@ -1,0 +1,35 @@
+/* app/(admin)/admin.css */
+
+:root {
+  /* Brand */
+  --admin-accent: #e07a3a;
+  --admin-accent-hover: #c9642a;
+
+  /* Sidebar */
+  --admin-sidebar-bg: #1c2434;
+  --admin-sidebar-text: rgba(255, 255, 255, 0.6);
+  --admin-sidebar-text-faint: rgba(255, 255, 255, 0.3);
+  --admin-sidebar-text-active: #ffffff;
+  --admin-sidebar-icon-inactive: rgba(255, 255, 255, 0.4);
+  --admin-sidebar-item-active-bg: rgba(255, 255, 255, 0.1);
+  --admin-sidebar-item-hover-bg: rgba(255, 255, 255, 0.05);
+  --admin-sidebar-border: rgba(255, 255, 255, 0.1);
+  --admin-sidebar-width: 16rem;
+
+  /* Layout */
+  --admin-header-height: 3.5rem;
+  --admin-page-bg: #f1f5f9;
+}
+@layer components {
+  .admin-nav-item {
+    color: var(--admin-sidebar-text);
+  }
+  .admin-nav-item:hover {
+    background: var(--admin-sidebar-item-hover-bg);
+    color: var(--admin-sidebar-text-active);
+  }
+  .admin-nav-item.active {
+    background: var(--admin-sidebar-item-active-bg);
+    color: var(--admin-sidebar-text-active);
+  }
+}
