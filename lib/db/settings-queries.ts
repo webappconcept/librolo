@@ -6,6 +6,7 @@ import { cache } from "react";
 export type SettingKey =
   | "app_name"
   | "app_description"
+  | "app_domain"
   | "maintenance_mode"
   | "registrations_enabled"
   | "resend_api_key"
@@ -15,6 +16,7 @@ export type SettingKey =
 export type AppSettings = {
   app_name: string;
   app_description: string;
+  app_domain: string;
   maintenance_mode: string;
   registrations_enabled: string;
   resend_api_key: string | null;
@@ -25,6 +27,7 @@ export type AppSettings = {
 const DEFAULTS: AppSettings = {
   app_name: "Librolo",
   app_description: "La tua libreria digitale",
+  app_domain: "",
   maintenance_mode: "false",
   registrations_enabled: "true",
   resend_api_key: null,
