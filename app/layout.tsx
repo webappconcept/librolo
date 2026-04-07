@@ -2,6 +2,7 @@ import { DynamicWrapper } from "@/components/dynamic-wrapper";
 import { getAppSettings } from "@/lib/db/settings-queries";
 import type { Metadata, Viewport } from "next";
 import { Manrope } from "next/font/google";
+import { headers } from "next/headers";
 import { Suspense } from "react";
 import "./globals.css";
 
@@ -17,6 +18,20 @@ export const viewport: Viewport = {
 const manrope = Manrope({ subsets: ["latin"] });
 
 async function MaintenanceOverlay() {
+  const headersList = await headers();
+  const pathname = headersList.get("x-pathname") ?? "/";
+
+  // Non mostrare l'overlay su sign-in, sign-up e admin
+  const skipOverlay =
+    pathname === "/sign-in" ||
+    pathname.startsWith("/sign-in/") ||
+    pathname === "/sign-up" ||
+    pathname.startsWith("/sign-up/") ||
+    pathname === "/admin" ||
+    pathname.startsWith("/admin/");
+
+  if (skipOverlay) return null;
+
   const settings = await getAppSettings();
   if (settings.maintenance_mode !== "true") return null;
 
