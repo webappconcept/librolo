@@ -35,6 +35,20 @@ export async function upsertSeoPage(data: NewSeoPage): Promise<void> {
     });
 }
 
+/**
+ * Quando il pathname cambia in modifica: elimina il vecchio record
+ * e inserisce quello nuovo con i dati aggiornati.
+ */
+export async function renameSeoPage(
+  oldPathname: string,
+  data: NewSeoPage,
+): Promise<void> {
+  await db.transaction(async (tx) => {
+    await tx.delete(seoPages).where(eq(seoPages.pathname, oldPathname));
+    await tx.insert(seoPages).values(data);
+  });
+}
+
 export async function deleteSeoPage(pathname: string): Promise<void> {
   await db.delete(seoPages).where(eq(seoPages.pathname, pathname));
 }
