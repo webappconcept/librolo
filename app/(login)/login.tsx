@@ -35,10 +35,12 @@ const passwordRules = [
 
 export function Login({
   mode = "signin",
-  registrationsEnabled = true, // ← aggiungi prop
+  registrationsEnabled = true,
+  isMaintenance = false,
 }: {
   mode?: "signin" | "signup";
   registrationsEnabled?: boolean;
+  isMaintenance?: boolean;
 }) {
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect");
@@ -79,7 +81,7 @@ export function Login({
       <div className="w-full max-w-md">
         <div className="rounded-2xl p-8 shadow-sm border border-brand-border bg-brand-surface">
           {/* Header */}
-          <div className="mb-8">
+          <div className="mb-6">
             <h1 className="text-2xl font-semibold mb-1 text-brand-text">
               {mode === "signin" ? "Bentornato" : "Crea un account"}
             </h1>
@@ -89,6 +91,22 @@ export function Login({
                 : "Compila il modulo per registrarti"}
             </p>
           </div>
+
+          {/* Banner manutenzione — solo sign-in, tra header e form */}
+          {mode === "signin" && isMaintenance && (
+            <div className="mb-6 rounded-xl px-4 py-3 flex items-start gap-3 bg-amber-50 border border-amber-200">
+              <span className="text-lg leading-none mt-0.5">🔧</span>
+              <div>
+                <p className="text-sm font-semibold text-amber-800">
+                  Sito in manutenzione
+                </p>
+                <p className="text-xs text-amber-700 mt-0.5">
+                  Solo gli amministratori possono accedere in questo momento.
+                </p>
+              </div>
+            </div>
+          )}
+
           {mode === "signup" && !registrationsEnabled ? (
             <div className="rounded-xl px-4 py-8 text-center bg-amber-50 border border-amber-200">
               <p className="text-sm font-medium text-amber-800">
