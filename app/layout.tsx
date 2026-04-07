@@ -16,27 +16,32 @@ export const viewport: Viewport = {
 
 const manrope = Manrope({ subsets: ["latin"] });
 
-export default async function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+// Componente async separato: legge headers dentro Suspense
+async function AppShell({ children }: { children: React.ReactNode }) {
   const headersList = await headers();
   const pathname = headersList.get("x-pathname") ?? "/";
   const isAdminPath = pathname === "/admin" || pathname.startsWith("/admin/");
 
+  if (isAdminPath) {
+    return <>{children}</>;
+  }
+
+  return <DynamicWrapper>{children}</DynamicWrapper>;
+}
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html
       lang="en"
       className={`bg-white dark:bg-gray-950 text-black dark:text-white ${manrope.className}`}>
       <body className="min-h-[100dvh] bg-gray-50">
-        {isAdminPath ? (
-          children
-        ) : (
-          <Suspense>
-            <DynamicWrapper>{children}</DynamicWrapper>
-          </Suspense>
-        )}
+        <Suspense>
+          <AppShell>{children}</AppShell>
+        </Suspense>
       </body>
     </html>
   );
