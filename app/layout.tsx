@@ -1,8 +1,9 @@
 import { DynamicWrapper } from "@/components/dynamic-wrapper";
-import { getUser } from "@/lib/db/queries";
 import { getAppSettings } from "@/lib/db/settings-queries";
 import type { Metadata, Viewport } from "next";
 import { Manrope } from "next/font/google";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import "./globals.css";
 
@@ -22,6 +23,21 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const headersList = await headers();
+  const pathname = headersList.get("x-pathname") ?? "/";
+
+  // --- MAINTENANCE MODE ---
+  // Bypassa per /maintenance stessa e per tutto /admin/*
+  const isMaintenance = pathname === "/maintenance";
+  const isAdminPath = pathname.startsWith("/admin");
+
+  if (!isMaintenance && !isAdminPath) {
+    const settings = await getAppSettings();
+    if (settings.maintenance_mode === "true") {
+      redirect("/maintenance");
+    }
+  }
+
   return (
     <html
       lang="en"

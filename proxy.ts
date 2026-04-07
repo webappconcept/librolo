@@ -4,18 +4,6 @@ import { ADMIN_ROUTES, ADMIN_SIGNIN_ROUTE, AUTH_ROUTES, PUBLIC_ROUTES } from "@/
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
-async function isMaintenanceEnabled(request: NextRequest): Promise<boolean> {
-  try {
-    const url = new URL("/api/maintenance", request.url);
-    const res = await fetch(url, { next: { revalidate: 30 } });
-    if (!res.ok) return false;
-    const data = await res.json();
-    return data.enabled === true;
-  } catch {
-    return false;
-  }
-}
-
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const sessionCookie = request.cookies.get("session");
@@ -34,21 +22,9 @@ export async function proxy(request: NextRequest) {
   );
   const isAdminSignIn = pathname === ADMIN_SIGNIN_ROUTE;
 
-  // --- MAINTENANCE MODE ---
-  // Lascia passare sempre: /maintenance, /api/*, /admin/*
-  const isMaintenance = pathname === "/maintenance";
-  const isApiRoute = pathname.startsWith("/api/");
-
-  if (!isMaintenance && !isApiRoute && !isAdminRoute) {
-    const maintenance = await isMaintenanceEnabled(request);
-    if (maintenance) {
-      return NextResponse.redirect(new URL("/maintenance", request.url));
-    }
-  }
-
-  // --- ADMIN SIGN-IN: lascia passare sempre, senza check sessione admin ---
+  // --- ADMIN SIGN-IN: gestito prima di tutto il resto ---
+  // /admin/sign-in è pubblica ma separata dalle route admin protette
   if (isAdminSignIn) {
-    // Se è già loggato come admin, redirect alla dashboard admin
     if (sessionCookie) {
       try {
         const parsed = await verifyToken(sessionCookie.value);
@@ -56,7 +32,7 @@ export async function proxy(request: NextRequest) {
           return NextResponse.redirect(new URL("/admin", request.url));
         }
       } catch {
-        // token non valido, lascia andare alla pagina
+        // token non valido, lascia passare
       }
     }
     return NextResponse.next({ request: { headers: requestHeaders } });
@@ -64,19 +40,17 @@ export async function proxy(request: NextRequest) {
 
   // --- ROUTE PUBBLICHE ---
   if (isPublicRoute && !isAuthRoute) {
-    return NextResponse.next({
-      request: { headers: requestHeaders },
-    });
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
   const isLoggedIn = !!sessionCookie;
 
-  // Utente loggato che tenta di andare su /sign-in o /sign-up
+  // Utente loggato su /sign-in o /sign-up → home
   if (isAuthRoute && isLoggedIn) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
-  // Utente non loggato su route protetta
+  // Utente non loggato su route protetta → sign-in
   if (!isPublicRoute && !isLoggedIn) {
     return NextResponse.redirect(new URL("/sign-in", request.url));
   }
@@ -94,9 +68,7 @@ export async function proxy(request: NextRequest) {
   }
 
   // --- REFRESH SESSION ---
-  let res = NextResponse.next({
-    request: { headers: requestHeaders },
-  });
+  let res = NextResponse.next({ request: { headers: requestHeaders } });
 
   if (sessionCookie && request.method === "GET") {
     try {
