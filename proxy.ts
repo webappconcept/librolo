@@ -1,24 +1,8 @@
 // proxy.ts
 import { signToken, verifyToken } from "@/lib/auth/session";
-import { db } from "@/lib/db/drizzle";
-import { appSettings } from "@/lib/db/schema";
-import { AUTH_ROUTES, PUBLIC_ROUTES } from "@/lib/routes";
-import { eq } from "drizzle-orm";
+import { ADMIN_ROUTES, ADMIN_SIGNIN_ROUTE, AUTH_ROUTES, PUBLIC_ROUTES } from "@/lib/routes";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-
-async function getMaintenanceMode(): Promise<boolean> {
-  try {
-    const [row] = await db
-      .select({ value: appSettings.value })
-      .from(appSettings)
-      .where(eq(appSettings.key, "maintenance_mode"))
-      .limit(1);
-    return row?.value === "true";
-  } catch {
-    return false;
-  }
-}
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -27,25 +11,16 @@ export async function proxy(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-pathname", pathname);
 
-  const isAdminPath = pathname === "/admin" || pathname.startsWith("/admin/");
-  const isAdminSignIn = pathname === "/admin/sign-in";
-
-  // --- MAINTENANCE MODE ---
-  // Bypass: /maintenance, /api/*, /admin/*, /_next/*, file statici
-  const skipMaintenance =
-    isAdminPath ||
-    pathname === "/maintenance" ||
-    pathname.startsWith("/api/") ||
-    pathname.startsWith("/_next/") ||
-    pathname.startsWith("/favicon") ||
-    pathname.match(/\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js)$/) !== null;
-
-  if (!skipMaintenance) {
-    const maintenance = await getMaintenanceMode();
-    if (maintenance) {
-      return NextResponse.redirect(new URL("/maintenance", request.url));
-    }
-  }
+  const isPublicRoute = PUBLIC_ROUTES.some(
+    (route) => pathname === route || pathname.startsWith(route + "/"),
+  );
+  const isAuthRoute = AUTH_ROUTES.some(
+    (route) => pathname === route || pathname.startsWith(route + "/"),
+  );
+  const isAdminRoute = ADMIN_ROUTES.some(
+    (route) => pathname === route || pathname.startsWith(route + "/"),
+  );
+  const isAdminSignIn = pathname === ADMIN_SIGNIN_ROUTE;
 
   // --- ADMIN SIGN-IN: sempre accessibile ---
   if (isAdminSignIn) {
@@ -62,18 +37,12 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
-  const isPublicRoute = PUBLIC_ROUTES.some(
-    (route) => pathname === route || pathname.startsWith(route + "/"),
-  );
-  const isAuthRoute = AUTH_ROUTES.some(
-    (route) => pathname === route || pathname.startsWith(route + "/"),
-  );
-  const isLoggedIn = !!sessionCookie;
-
   // --- ROUTE PUBBLICHE ---
   if (isPublicRoute && !isAuthRoute) {
     return NextResponse.next({ request: { headers: requestHeaders } });
   }
+
+  const isLoggedIn = !!sessionCookie;
 
   // Utente loggato su /sign-in o /sign-up → home
   if (isAuthRoute && isLoggedIn) {
@@ -86,7 +55,7 @@ export async function proxy(request: NextRequest) {
   }
 
   // --- ROUTE ADMIN: richiede ruolo admin ---
-  if (isAdminPath && isLoggedIn) {
+  if (isAdminRoute && isLoggedIn) {
     try {
       const parsed = await verifyToken(sessionCookie!.value);
       if (parsed.user.role !== "admin") {
@@ -107,7 +76,10 @@ export async function proxy(request: NextRequest) {
       res.cookies.set({
         name: "session",
         value: await signToken({
-          user: { id: parsed.user.id, role: parsed.user.role ?? "member" },
+          user: {
+            id: parsed.user.id,
+            role: parsed.user.role ?? "member",
+          },
           expires: expiresInOneDay.toISOString(),
         }),
         httpOnly: true,
