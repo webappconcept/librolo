@@ -1,15 +1,18 @@
 import { DynamicWrapper } from "@/components/dynamic-wrapper";
 import { getAppSettings } from "@/lib/db/settings-queries";
+import { generatePageMetadata } from "@/lib/seo";
 import type { Metadata, Viewport } from "next";
 import { Manrope } from "next/font/google";
 import { headers } from "next/headers";
 import { Suspense } from "react";
 import "./globals.css";
 
-export const metadata: Metadata = {
-  title: "Next.js SaaS Starter",
-  description: "Get started quickly with Next.js, Postgres, and Stripe.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return generatePageMetadata("/", {
+    title: "Librolo",
+    description: "Benvenuto su Librolo.",
+  });
+}
 
 export const viewport: Viewport = {
   maximumScale: 1,
@@ -21,7 +24,6 @@ async function MaintenanceOverlay() {
   const headersList = await headers();
   const pathname = headersList.get("x-pathname") ?? "/";
 
-  // Non mostrare l'overlay su sign-in, sign-up e admin
   const skipOverlay =
     pathname === "/sign-in" ||
     pathname.startsWith("/sign-in/") ||

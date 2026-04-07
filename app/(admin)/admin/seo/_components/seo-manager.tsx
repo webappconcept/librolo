@@ -2,7 +2,7 @@
 
 import type { SeoPage } from "@/lib/db/schema";
 import { FileText, Pencil, Plus, Search, Trash2, X } from "lucide-react";
-import { useActionState, useState, useTransition } from "react";
+import { useActionState, useEffect, useState, useTransition } from "react";
 import { deleteSeoPageAction, upsertSeoPageAction } from "../actions";
 
 function charClass(len: number, max: number) {
@@ -54,11 +54,16 @@ function SeoForm({
   onClose: () => void;
 }) {
   const isEdit = !!page;
-  const [state, action] = useActionState(upsertSeoPageAction, {});
+  const [state, action, isPending] = useActionState(upsertSeoPageAction, {});
 
   const [title, setTitle] = useState(page?.title ?? "");
   const [description, setDescription] = useState(page?.description ?? "");
   const [pathname, setPathname] = useState(page?.pathname ?? "");
+
+  // Chiudi automaticamente il modal al successo
+  useEffect(() => {
+    if (state?.success) onClose();
+  }, [state?.success, onClose]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
@@ -212,12 +217,17 @@ function SeoForm({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+              disabled={isPending}
+              className="px-4 py-2 text-sm rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors disabled:opacity-50">
               Annulla
             </button>
             <button
               type="submit"
-              className="px-4 py-2 text-sm rounded-lg bg-[#e07a3a] hover:bg-[#c96830] text-white font-medium transition-colors">
+              disabled={isPending}
+              className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-[#e07a3a] hover:bg-[#c96830] text-white font-medium transition-colors disabled:opacity-60">
+              {isPending && (
+                <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+              )}
               {isEdit ? "Salva modifiche" : "Aggiungi pagina"}
             </button>
           </div>
@@ -281,7 +291,7 @@ export default function SeoManager({
             {search ? "Nessuna pagina trovata" : "Nessuna pagina configurata"}
           </p>
           <p className="text-xs text-gray-400 mt-1">
-            {!search && "Clicca \"Aggiungi pagina\" per iniziare."}
+            {!search && 'Clicca "Aggiungi pagina" per iniziare.'}
           </p>
         </div>
       ) : (
