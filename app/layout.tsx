@@ -18,7 +18,7 @@ export const viewport: Viewport = {
 
 const manrope = Manrope({ subsets: ["latin"] });
 
-export default async function RootLayout({
+async function MaintenanceGuard({
   children,
 }: {
   children: React.ReactNode;
@@ -26,8 +26,6 @@ export default async function RootLayout({
   const headersList = await headers();
   const pathname = headersList.get("x-pathname") ?? "/";
 
-  // --- MAINTENANCE MODE ---
-  // Bypassa per /maintenance stessa e per tutto /admin/*
   const isMaintenance = pathname === "/maintenance";
   const isAdminPath = pathname.startsWith("/admin");
 
@@ -38,13 +36,23 @@ export default async function RootLayout({
     }
   }
 
+  return <>{children}</>;
+}
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html
       lang="en"
       className={`bg-white dark:bg-gray-950 text-black dark:text-white ${manrope.className}`}>
       <body className="min-h-[100dvh] bg-gray-50">
         <Suspense>
-          <DynamicWrapper>{children}</DynamicWrapper>
+          <MaintenanceGuard>
+            <DynamicWrapper>{children}</DynamicWrapper>
+          </MaintenanceGuard>
         </Suspense>
       </body>
     </html>
