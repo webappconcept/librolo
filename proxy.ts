@@ -14,10 +14,8 @@ async function getMaintenanceMode(): Promise<boolean> {
       .from(appSettings)
       .where(eq(appSettings.key, "maintenance_mode"))
       .limit(1);
-    console.log("[proxy] maintenance_mode row:", row);
     return row?.value === "true";
-  } catch (e) {
-    console.error("[proxy] getMaintenanceMode error:", e);
+  } catch {
     return false;
   }
 }
@@ -32,25 +30,25 @@ export async function proxy(request: NextRequest) {
   const isAdminPath = pathname === "/admin" || pathname.startsWith("/admin/");
   const isAdminSignIn = pathname === "/admin/sign-in";
 
-  console.log("[proxy] pathname:", pathname);
-  console.log("[proxy] isAdminPath:", isAdminPath);
-  console.log("[proxy] isAdminSignIn:", isAdminSignIn);
-
   // --- MAINTENANCE MODE ---
-  if (!isAdminPath && pathname !== "/maintenance" && !pathname.startsWith("/api/")) {
+  // Bypass: /maintenance, /api/*, /admin/*, /_next/*, file statici
+  const skipMaintenance =
+    isAdminPath ||
+    pathname === "/maintenance" ||
+    pathname.startsWith("/api/") ||
+    pathname.startsWith("/_next/") ||
+    pathname.startsWith("/favicon") ||
+    pathname.match(/\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js)$/) !== null;
+
+  if (!skipMaintenance) {
     const maintenance = await getMaintenanceMode();
-    console.log("[proxy] maintenance check result:", maintenance);
     if (maintenance) {
-      console.log("[proxy] redirecting to /maintenance");
       return NextResponse.redirect(new URL("/maintenance", request.url));
     }
-  } else {
-    console.log("[proxy] skipping maintenance check (isAdminPath or /maintenance or /api)");
   }
 
-  // --- ADMIN SIGN-IN ---
+  // --- ADMIN SIGN-IN: sempre accessibile ---
   if (isAdminSignIn) {
-    console.log("[proxy] handling admin sign-in");
     if (sessionCookie) {
       try {
         const parsed = await verifyToken(sessionCookie.value);
@@ -58,7 +56,7 @@ export async function proxy(request: NextRequest) {
           return NextResponse.redirect(new URL("/admin", request.url));
         }
       } catch {
-        // token non valido
+        // token non valido, lascia passare
       }
     }
     return NextResponse.next({ request: { headers: requestHeaders } });
@@ -72,18 +70,22 @@ export async function proxy(request: NextRequest) {
   );
   const isLoggedIn = !!sessionCookie;
 
+  // --- ROUTE PUBBLICHE ---
   if (isPublicRoute && !isAuthRoute) {
     return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
+  // Utente loggato su /sign-in o /sign-up → home
   if (isAuthRoute && isLoggedIn) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
+  // Utente non loggato su route protetta → /sign-in
   if (!isPublicRoute && !isLoggedIn) {
     return NextResponse.redirect(new URL("/sign-in", request.url));
   }
 
+  // --- ROUTE ADMIN: richiede ruolo admin ---
   if (isAdminPath && isLoggedIn) {
     try {
       const parsed = await verifyToken(sessionCookie!.value);
@@ -95,6 +97,7 @@ export async function proxy(request: NextRequest) {
     }
   }
 
+  // --- REFRESH SESSION ---
   let res = NextResponse.next({ request: { headers: requestHeaders } });
 
   if (sessionCookie && request.method === "GET") {
