@@ -80,28 +80,30 @@ function SeoForm({
         </div>
 
         <form action={action} className="px-6 py-5 space-y-5">
+          {/* In modifica, passa il pathname originale come riferimento per il rename */}
           {isEdit && (
-            <input type="hidden" name="pathname" value={page!.pathname} />
+            <input type="hidden" name="originalPathname" value={page!.pathname} />
           )}
 
           <div className="grid grid-cols-2 gap-4">
-            {!isEdit && (
-              <div className="col-span-2 space-y-1.5">
-                <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  Pathname
-                </label>
-                <input
-                  name="pathname"
-                  value={pathname}
-                  onChange={(e) => setPathname(e.target.value)}
-                  placeholder="/esplora"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#e07a3a]/40 focus:border-[#e07a3a]"
-                />
-                <p className="text-xs text-gray-400">
-                  Deve corrispondere a una pagina esistente nell&apos;app.
-                </p>
-              </div>
-            )}
+            {/* Pathname: visibile e modificabile sia in creazione che in modifica */}
+            <div className="col-span-2 space-y-1.5">
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                Pathname
+              </label>
+              <input
+                name="pathname"
+                value={pathname}
+                onChange={(e) => setPathname(e.target.value)}
+                placeholder="/esplora"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#e07a3a]/40 focus:border-[#e07a3a]"
+              />
+              <p className="text-xs text-gray-400">
+                {isEdit
+                  ? "Modifica il percorso URL della pagina. Attenzione: il vecchio pathname verrà rimosso."
+                  : "Deve corrispondere a una pagina esistente nell&apos;app."}
+              </p>
+            </div>
 
             <div className="col-span-2 space-y-1.5">
               <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
@@ -120,7 +122,7 @@ function SeoForm({
           <Serp
             title={title}
             description={description}
-            pathname={isEdit ? page!.pathname : pathname}
+            pathname={pathname}
           />
 
           <div className="space-y-1.5">
