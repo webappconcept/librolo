@@ -8,6 +8,9 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const sessionCookie = request.cookies.get("session");
 
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-pathname", pathname);
+
   const isPublicRoute = PUBLIC_ROUTES.some(
     (route) => pathname === route || pathname.startsWith(route + "/"),
   );
@@ -19,7 +22,10 @@ export async function proxy(request: NextRequest) {
   );
 
   if (isPublicRoute && !isAuthRoute) {
-    return NextResponse.next();
+    // ← prima era NextResponse.next() senza headers — ecco perché x-pathname non arrivava
+    return NextResponse.next({
+      request: { headers: requestHeaders },
+    });
   }
 
   const isLoggedIn = !!sessionCookie;
@@ -29,10 +35,9 @@ export async function proxy(request: NextRequest) {
   }
 
   if (!isPublicRoute && !isLoggedIn) {
-    return NextResponse.redirect(new URL("/", request.url));
+    return NextResponse.redirect(new URL("/sign-in", request.url));
   }
 
-  // Check ruolo admin
   if (isAdminRoute && isLoggedIn) {
     try {
       const parsed = await verifyToken(sessionCookie!.value);
@@ -44,8 +49,10 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  // Refresh token su GET
-  let res = NextResponse.next();
+  let res = NextResponse.next({
+    request: { headers: requestHeaders },
+  });
+
   if (sessionCookie && request.method === "GET") {
     try {
       const parsed = await verifyToken(sessionCookie.value);

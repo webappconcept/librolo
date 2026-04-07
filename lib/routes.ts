@@ -8,6 +8,7 @@ export const PUBLIC_ROUTES = [
   "/forgot-password",
   "/reset-password",
   "/verify-email",
+  "/admin/sign-in",
 ];
 
 // Route che un utente già loggato non dovrebbe vedere
