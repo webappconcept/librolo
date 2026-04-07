@@ -8,7 +8,9 @@ import { Suspense } from "react";
 import "./globals.css";
 
 export async function generateMetadata(): Promise<Metadata> {
-  return generatePageMetadata("/", {
+  const headersList = await headers();
+  const pathname = headersList.get("x-pathname") ?? "/";
+  return generatePageMetadata(pathname, {
     title: "Librolo",
     description: "Benvenuto su Librolo.",
   });
