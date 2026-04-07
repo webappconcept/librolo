@@ -26,6 +26,7 @@ export async function saveAppSettings(
     const fields: SettingKey[] = [
       "app_name",
       "app_description",
+      "app_domain",
       "maintenance_mode",
       "registrations_enabled",
     ];
