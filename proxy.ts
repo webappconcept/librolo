@@ -1,9 +1,8 @@
 // proxy.ts
-// Next.js 16 gira su Node.js runtime — Drizzle è importabile direttamente
 import { signToken, verifyToken } from "@/lib/auth/session";
 import { db } from "@/lib/db/drizzle";
 import { appSettings } from "@/lib/db/schema";
-import { ADMIN_ROUTES, ADMIN_SIGNIN_ROUTE, AUTH_ROUTES, PUBLIC_ROUTES } from "@/lib/routes";
+import { AUTH_ROUTES, PUBLIC_ROUTES } from "@/lib/routes";
 import { eq } from "drizzle-orm";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
@@ -28,18 +27,21 @@ export async function proxy(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-pathname", pathname);
 
-  const isPublicRoute = PUBLIC_ROUTES.some(
-    (route) => pathname === route || pathname.startsWith(route + "/"),
-  );
-  const isAuthRoute = AUTH_ROUTES.some(
-    (route) => pathname === route || pathname.startsWith(route + "/"),
-  );
-  const isAdminRoute = ADMIN_ROUTES.some(
-    (route) => pathname === route || pathname.startsWith(route + "/"),
-  );
-  const isAdminSignIn = pathname === ADMIN_SIGNIN_ROUTE;
+  // Tutto ciò che inizia con /admin è escluso dal maintenance
+  // e /admin/sign-in è sempre pubblica
+  const isAdminPath = pathname === "/admin" || pathname.startsWith("/admin/");
+  const isAdminSignIn = pathname === "/admin/sign-in";
 
-  // --- ADMIN SIGN-IN: sempre accessibile, gestita prima di tutto ---
+  // --- MAINTENANCE MODE ---
+  // Lascia passare: /maintenance, /api/*, tutto /admin/*
+  if (!isAdminPath && pathname !== "/maintenance" && !pathname.startsWith("/api/")) {
+    const maintenance = await getMaintenanceMode();
+    if (maintenance) {
+      return NextResponse.redirect(new URL("/maintenance", request.url));
+    }
+  }
+
+  // --- ADMIN SIGN-IN: sempre accessibile ---
   if (isAdminSignIn) {
     if (sessionCookie) {
       try {
@@ -54,26 +56,18 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
-  // --- MAINTENANCE MODE ---
-  // Bypass: /maintenance stessa, /api/*, /admin/*
-  const skipMaintenance =
-    pathname === "/maintenance" ||
-    pathname.startsWith("/api/") ||
-    isAdminRoute;
-
-  if (!skipMaintenance) {
-    const maintenance = await getMaintenanceMode();
-    if (maintenance) {
-      return NextResponse.redirect(new URL("/maintenance", request.url));
-    }
-  }
+  const isPublicRoute = PUBLIC_ROUTES.some(
+    (route) => pathname === route || pathname.startsWith(route + "/"),
+  );
+  const isAuthRoute = AUTH_ROUTES.some(
+    (route) => pathname === route || pathname.startsWith(route + "/"),
+  );
+  const isLoggedIn = !!sessionCookie;
 
   // --- ROUTE PUBBLICHE ---
   if (isPublicRoute && !isAuthRoute) {
     return NextResponse.next({ request: { headers: requestHeaders } });
   }
-
-  const isLoggedIn = !!sessionCookie;
 
   // Utente loggato su /sign-in o /sign-up → home
   if (isAuthRoute && isLoggedIn) {
@@ -86,7 +80,7 @@ export async function proxy(request: NextRequest) {
   }
 
   // --- ROUTE ADMIN: richiede ruolo admin ---
-  if (isAdminRoute && isLoggedIn) {
+  if (isAdminPath && isLoggedIn) {
     try {
       const parsed = await verifyToken(sessionCookie!.value);
       if (parsed.user.role !== "admin") {
