@@ -17,7 +17,6 @@ export const users = pgTable("users", {
   role: varchar("role", { length: 20 }).notNull().default("member"),
   bannedAt: timestamp("banned_at"),
   bannedReason: varchar("banned_reason", { length: 255 }),
-  // Stripe
   stripeCustomerId: varchar("stripe_customer_id", { length: 255 }),
   stripeSubscriptionId: varchar("stripe_subscription_id", { length: 255 }),
   stripeProductId: varchar("stripe_product_id", { length: 255 }),
@@ -39,7 +38,7 @@ export const activityLogs = pgTable("activity_logs", {
 
 export const ipBlacklist = pgTable("ip_blacklist", {
   id: serial("id").primaryKey(),
-  ip: varchar("ip", { length: 45 }).notNull().unique(), // IPv4 + IPv6
+  ip: varchar("ip", { length: 45 }).notNull().unique(),
   reason: text("reason"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
@@ -78,12 +77,25 @@ export const appSettings = pgTable("app_settings", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+export const seoPages = pgTable("seo_pages", {
+  pathname: varchar("pathname", { length: 255 }).primaryKey(),
+  label: varchar("label", { length: 100 }).notNull(),
+  title: varchar("title", { length: 70 }),
+  description: varchar("description", { length: 160 }),
+  ogTitle: varchar("og_title", { length: 70 }),
+  ogDescription: varchar("og_description", { length: 200 }),
+  ogImage: text("og_image"),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type ActivityLog = typeof activityLogs.$inferSelect;
 export type NewActivityLog = typeof activityLogs.$inferInsert;
 export type EmailVerification = typeof emailVerifications.$inferSelect;
 export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
+export type SeoPage = typeof seoPages.$inferSelect;
+export type NewSeoPage = typeof seoPages.$inferInsert;
 
 export enum ActivityType {
   SIGN_UP = "SIGN_UP",
@@ -92,51 +104,36 @@ export enum ActivityType {
   UPDATE_PASSWORD = "UPDATE_PASSWORD",
   DELETE_ACCOUNT = "DELETE_ACCOUNT",
   UPDATE_ACCOUNT = "UPDATE_ACCOUNT",
-  // Email
   EMAIL_VERIFIED = "EMAIL_VERIFIED",
   EMAIL_CHANGED = "EMAIL_CHANGED",
   PASSWORD_RESET_REQUESTED = "PASSWORD_RESET_REQUESTED",
   PASSWORD_RESET_COMPLETED = "PASSWORD_RESET_COMPLETED",
-
-  // Subscription / Stripe
   SUBSCRIPTION_STARTED = "SUBSCRIPTION_STARTED",
   SUBSCRIPTION_CANCELLED = "SUBSCRIPTION_CANCELLED",
   SUBSCRIPTION_RENEWED = "SUBSCRIPTION_RENEWED",
   SUBSCRIPTION_UPGRADED = "SUBSCRIPTION_UPGRADED",
   SUBSCRIPTION_DOWNGRADED = "SUBSCRIPTION_DOWNGRADED",
   PAYMENT_FAILED = "PAYMENT_FAILED",
-
-  // Admin actions
   ADMIN_BAN_USER = "ADMIN_BAN_USER",
   ADMIN_UNBAN_USER = "ADMIN_UNBAN_USER",
   ADMIN_CHANGE_ROLE = "ADMIN_CHANGE_ROLE",
   ADMIN_DELETE_USER = "ADMIN_DELETE_USER",
-
-  // Profilo
   AVATAR_UPDATED = "AVATAR_UPDATED",
   BIO_UPDATED = "BIO_UPDATED",
   PROFILE_VIEWED = "PROFILE_VIEWED",
-
-  // Contenuti
   POST_CREATED = "POST_CREATED",
   POST_EDITED = "POST_EDITED",
   POST_DELETED = "POST_DELETED",
   COMMENT_CREATED = "COMMENT_CREATED",
   COMMENT_DELETED = "COMMENT_DELETED",
-
-  // Interazioni sociali
   LIKE_ADDED = "LIKE_ADDED",
   LIKE_REMOVED = "LIKE_REMOVED",
   FOLLOW_USER = "FOLLOW_USER",
   UNFOLLOW_USER = "UNFOLLOW_USER",
   BLOCK_USER = "BLOCK_USER",
   UNBLOCK_USER = "UNBLOCK_USER",
-
-  // Notifiche & messaggi
   NOTIFICATION_READ = "NOTIFICATION_READ",
   MESSAGE_SENT = "MESSAGE_SENT",
-
-  // Moderazione
   CONTENT_REPORTED = "CONTENT_REPORTED",
   CONTENT_REMOVED = "CONTENT_REMOVED",
 }

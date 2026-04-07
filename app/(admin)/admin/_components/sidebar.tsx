@@ -4,6 +4,7 @@ import {
   BarChart2,
   BookOpen,
   LayoutDashboard,
+  Search,
   Settings,
   ShieldAlert,
   Users,
@@ -16,8 +17,9 @@ const NAV = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/admin/users", label: "Utenti", icon: Users },
   { href: "/admin/moderation", label: "Moderazione", icon: ShieldAlert },
-  { href: "/admin/settings", label: "Impostazioni", icon: Settings },
   { href: "/admin/analytics", label: "Analytics", icon: BarChart2 },
+  { href: "/admin/seo", label: "SEO", icon: Search },
+  { href: "/admin/settings", label: "Impostazioni", icon: Settings },
 ];
 
 interface AdminSidebarProps {
@@ -142,7 +144,7 @@ export default function AdminSidebar({
           href="/"
           className="text-xs transition-colors"
           style={{ color: "var(--admin-sidebar-text-faint)" }}>
-          ← Torna all'app
+          ← Torna all’app
         </Link>
       </div>
     </aside>
