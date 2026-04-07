@@ -8,11 +8,17 @@ export const PUBLIC_ROUTES = [
   "/forgot-password",
   "/reset-password",
   "/verify-email",
-  "/admin/sign-in",
 ];
 
 // Route che un utente già loggato non dovrebbe vedere
 export const AUTH_ROUTES = ["/sign-in", "/sign-up"];
+
+// Sign-in dedicato agli amministratori — gestito separatamente nel middleware
+export const ADMIN_SIGNIN_ROUTE = "/admin/sign-in";
+
+// Route admin protette (richiedono ruolo admin)
+// NOTA: /admin/sign-in è esclusa — viene gestita da ADMIN_SIGNIN_ROUTE
+export const ADMIN_ROUTES = ["/admin"];
 
 // Navigazione principale — unica fonte di verità
 export const NAV_ITEMS = [
@@ -33,5 +39,3 @@ export const FOOTER_LINKS = [
   { href: "/condizioni", label: "Condizioni" },
   { href: "/cookie", label: "Cookie" },
 ] as const;
-
-export const ADMIN_ROUTES = ["/admin"];

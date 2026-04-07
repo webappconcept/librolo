@@ -1,4 +1,7 @@
 // app/(admin)/layout.tsx
+// Questo layout wrappa TUTTO il gruppo (admin):
+// - /admin/sign-in  → solo font + bg, NESSUNA shell/sidebar
+// - /admin/*        → la shell completa è nel layout interno app/(admin)/admin/layout.tsx
 import { Manrope } from "next/font/google";
 import "./admin.css";
 
