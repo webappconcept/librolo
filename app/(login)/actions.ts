@@ -53,7 +53,7 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
     "unknown";
 
   // Controlla rate limit
-  const { blocked, remaining } = await checkRateLimit(email, ip);
+  const { blocked } = await checkRateLimit(email, ip);
   if (blocked) {
     return {
       error: "Troppi tentativi falliti. Riprova tra 15 minuti.",
@@ -91,11 +91,24 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
   );
 
   if (!isPasswordValid) {
+    await recordLoginAttempt(email, ip, false);
     return {
       error: "Email o password errate, riprova.",
       email,
       password,
     };
+  }
+
+  // Blocca utenti non-admin durante la manutenzione
+  if (foundUser.role !== "admin") {
+    const settings = await getAppSettings();
+    if (settings.maintenance_mode === "true") {
+      return {
+        error: "Il sito è in manutenzione. Solo gli amministratori possono accedere.",
+        email,
+        password,
+      };
+    }
   }
 
   await recordLoginAttempt(email, ip, true);
