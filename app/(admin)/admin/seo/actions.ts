@@ -33,7 +33,7 @@ export async function upsertSeoPageAction(
 
   const parsed = schema.safeParse(raw);
   if (!parsed.success) {
-    return { error: parsed.error.errors[0]?.message ?? "Dati non validi" };
+    return { error: parsed.error.issues[0]?.message ?? "Dati non validi" };
   }
 
   await upsertSeoPage(parsed.data);
