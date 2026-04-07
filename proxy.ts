@@ -1,8 +1,25 @@
 // proxy.ts
+// Next.js 16 gira su Node.js runtime — Drizzle è importabile direttamente
 import { signToken, verifyToken } from "@/lib/auth/session";
+import { db } from "@/lib/db/drizzle";
+import { appSettings } from "@/lib/db/schema";
 import { ADMIN_ROUTES, ADMIN_SIGNIN_ROUTE, AUTH_ROUTES, PUBLIC_ROUTES } from "@/lib/routes";
+import { eq } from "drizzle-orm";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+
+async function getMaintenanceMode(): Promise<boolean> {
+  try {
+    const [row] = await db
+      .select({ value: appSettings.value })
+      .from(appSettings)
+      .where(eq(appSettings.key, "maintenance_mode"))
+      .limit(1);
+    return row?.value === "true";
+  } catch {
+    return false;
+  }
+}
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -22,8 +39,7 @@ export async function proxy(request: NextRequest) {
   );
   const isAdminSignIn = pathname === ADMIN_SIGNIN_ROUTE;
 
-  // --- ADMIN SIGN-IN: gestito prima di tutto il resto ---
-  // /admin/sign-in è pubblica ma separata dalle route admin protette
+  // --- ADMIN SIGN-IN: sempre accessibile, gestita prima di tutto ---
   if (isAdminSignIn) {
     if (sessionCookie) {
       try {
@@ -38,6 +54,20 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
+  // --- MAINTENANCE MODE ---
+  // Bypass: /maintenance stessa, /api/*, /admin/*
+  const skipMaintenance =
+    pathname === "/maintenance" ||
+    pathname.startsWith("/api/") ||
+    isAdminRoute;
+
+  if (!skipMaintenance) {
+    const maintenance = await getMaintenanceMode();
+    if (maintenance) {
+      return NextResponse.redirect(new URL("/maintenance", request.url));
+    }
+  }
+
   // --- ROUTE PUBBLICHE ---
   if (isPublicRoute && !isAuthRoute) {
     return NextResponse.next({ request: { headers: requestHeaders } });
@@ -50,7 +80,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
-  // Utente non loggato su route protetta → sign-in
+  // Utente non loggato su route protetta → /sign-in
   if (!isPublicRoute && !isLoggedIn) {
     return NextResponse.redirect(new URL("/sign-in", request.url));
   }

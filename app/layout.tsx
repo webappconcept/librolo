@@ -1,9 +1,6 @@
 import { DynamicWrapper } from "@/components/dynamic-wrapper";
-import { getAppSettings } from "@/lib/db/settings-queries";
 import type { Metadata, Viewport } from "next";
 import { Manrope } from "next/font/google";
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import "./globals.css";
 
@@ -18,27 +15,6 @@ export const viewport: Viewport = {
 
 const manrope = Manrope({ subsets: ["latin"] });
 
-async function MaintenanceGuard({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const headersList = await headers();
-  const pathname = headersList.get("x-pathname") ?? "/";
-
-  const isMaintenance = pathname === "/maintenance";
-  const isAdminPath = pathname.startsWith("/admin");
-
-  if (!isMaintenance && !isAdminPath) {
-    const settings = await getAppSettings();
-    if (settings.maintenance_mode === "true") {
-      redirect("/maintenance");
-    }
-  }
-
-  return <>{children}</>;
-}
-
 export default function RootLayout({
   children,
 }: {
@@ -50,9 +26,7 @@ export default function RootLayout({
       className={`bg-white dark:bg-gray-950 text-black dark:text-white ${manrope.className}`}>
       <body className="min-h-[100dvh] bg-gray-50">
         <Suspense>
-          <MaintenanceGuard>
-            <DynamicWrapper>{children}</DynamicWrapper>
-          </MaintenanceGuard>
+          <DynamicWrapper>{children}</DynamicWrapper>
         </Suspense>
       </body>
     </html>
