@@ -216,11 +216,10 @@ function SeoForm({
                       <option key={r} value={r}>{r}</option>
                     ))}
                   </select>
-                  {/* Avviso provenienza lista */}
                   <div className="flex items-start gap-2 rounded-lg bg-blue-50 border border-blue-100 px-3 py-2.5">
                     <Info size={13} className="text-blue-400 mt-0.5 shrink-0" />
                     <p className="text-xs text-blue-600 leading-relaxed">
-                      La lista dei percorsi è definita in{" "}
+                      La lista dei percorsi \u00e8 definita in{" "}
                       <code className="font-mono bg-blue-100 px-1 py-0.5 rounded text-blue-700">lib/routes.ts</code>
                       {" "}(voci di navigazione, footer e route pubbliche).{" "}
                       Se una pagina non compare, aggiungila prima a quel file.
@@ -474,6 +473,9 @@ export default function SeoManager({
             const hasTitle = !!page.title;
             const hasDesc = !!page.description;
             const complete = hasTitle && hasDesc;
+            // Risolve {appName} anche nella lista per coerenza con l'anteprima Google
+            const displayTitle = resolvePreview(page.title ?? "", appName);
+            const displayDesc = resolvePreview(page.description ?? "", appName);
             return (
               <div
                 key={page.pathname}
@@ -489,13 +491,13 @@ export default function SeoManager({
                   <p className="text-xs text-gray-400 font-mono">{page.pathname}</p>
                 </div>
                 <div className="hidden sm:block flex-1 min-w-0">
-                  {page.title ? (
-                    <p className="text-xs text-gray-600 truncate">{page.title}</p>
+                  {displayTitle ? (
+                    <p className="text-xs text-gray-600 truncate">{displayTitle}</p>
                   ) : (
                     <p className="text-xs text-gray-300 italic">Nessun titolo</p>
                   )}
-                  {page.description ? (
-                    <p className="text-xs text-gray-400 truncate">{page.description}</p>
+                  {displayDesc ? (
+                    <p className="text-xs text-gray-400 truncate">{displayDesc}</p>
                   ) : (
                     <p className="text-xs text-gray-300 italic">Nessuna descrizione</p>
                   )}
