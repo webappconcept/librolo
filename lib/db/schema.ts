@@ -85,6 +85,12 @@ export const seoPages = pgTable("seo_pages", {
   ogTitle: varchar("og_title", { length: 70 }),
   ogDescription: varchar("og_description", { length: 200 }),
   ogImage: text("og_image"),
+  /**
+   * Valore opzionale per il meta robots.
+   * Se null/undefined non viene emesso nessun tag robots (default del browser: index,follow).
+   * Valori supportati: "noindex,nofollow" | "noindex,follow"
+   */
+  robots: varchar("robots", { length: 50 }),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
