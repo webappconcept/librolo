@@ -36,7 +36,7 @@ type Props = {
   rolePermsMap: Record<number, number[]>;
 };
 
-// ─── Tab bar ───────────────────────────────────────────────────────────────────
+// ─── Tab bar ─────────────────────────────────────────────────────────────────
 function TabBar({
   active,
   onChange,
@@ -69,7 +69,7 @@ function TabBar({
   );
 }
 
-// ─── Lock icon ─────────────────────────────────────────────────────────────────
+// ─── Lock icon ────────────────────────────────────────────────────────────────
 function SystemLockIcon() {
   return (
     <span title="Permesso di sistema" style={{ display: "inline-flex" }}>
@@ -78,7 +78,7 @@ function SystemLockIcon() {
   );
 }
 
-// ─── Legenda permessi di sistema ───────────────────────────────────────────────
+// ─── Legenda permessi di sistema ──────────────────────────────────────────────
 function SystemPermissionsLegend() {
   const [open, setOpen] = useState(false);
   const grouped = useMemo(() => groupedSystemPermissions(), []);
@@ -137,7 +137,7 @@ function SystemPermissionsLegend() {
   );
 }
 
-// ─── Matrice ruoli ─────────────────────────────────────────────────────────────
+// ─── Matrice ruoli ────────────────────────────────────────────────────────────
 function PermissionsMatrix({ permissions, roles, rolePermsMap }: Props) {
   const [search, setSearch] = useState("");
   const [pending, startTransition] = useTransition();
@@ -214,8 +214,9 @@ function PermissionsMatrix({ permissions, roles, rolePermsMap }: Props) {
               perms.map((perm) => (
                 <div
                   key={perm.id}
-                  className="flex items-center gap-3 px-4 py-2.5"
+                  className="flex items-center gap-3 px-4 py-3"
                   style={{ borderTop: "1px solid var(--admin-card-border)", background: "var(--admin-bg)" }}>
+                  {/* Info permesso */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
                       <code className="font-mono text-[11px]" style={{ color: "var(--admin-text)" }}>{perm.key}</code>
@@ -224,28 +225,58 @@ function PermissionsMatrix({ permissions, roles, rolePermsMap }: Props) {
                     <p className="text-[11px] truncate" style={{ color: "var(--admin-text-faint)" }}>{perm.label}</p>
                   </div>
 
+                  {/* Colonne ruoli */}
                   {roles.map((role) => {
                     const granted = (rolePermsMap[role.id] ?? []).includes(perm.id);
                     const isPending = togglingKey === `${role.id}-${perm.id}`;
                     return (
-                      <div key={role.id} className="flex flex-col items-center gap-0.5" style={{ minWidth: 56 }}>
-                        <span className="text-[9px] font-semibold uppercase tracking-wide" style={{ color: role.color }}>
+                      <div key={role.id} className="flex flex-col items-center gap-1" style={{ minWidth: 64 }}>
+                        {/* Label ruolo */}
+                        <span
+                          className="text-[9px] font-bold uppercase tracking-wide"
+                          style={{ color: role.color, opacity: 0.85 }}>
                           {role.label}
                         </span>
+                        {/* Toggle button */}
                         <button
                           onClick={() => handleToggle(role.id, perm.id, granted)}
                           disabled={isPending || pending}
-                          className="w-7 h-7 rounded-lg flex items-center justify-center transition-all border"
+                          title={granted ? `Rimuovi da ${role.label}` : `Assegna a ${role.label}`}
+                          className="w-8 h-8 rounded-lg flex items-center justify-center transition-all border-2 disabled:opacity-50"
                           style={{
-                            background: granted ? role.color + "18" : "transparent",
-                            borderColor: granted ? role.color + "40" : "var(--admin-card-border)",
+                            background: granted ? role.color + "18" : "oklch(0 0 0 / 0.04)",
+                            borderColor: granted ? role.color + "80" : "oklch(0 0 0 / 0.18)",
+                            cursor: "pointer",
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!granted) {
+                              e.currentTarget.style.background = role.color + "14";
+                              e.currentTarget.style.borderColor = role.color + "70";
+                            } else {
+                              e.currentTarget.style.background = role.color + "30";
+                              e.currentTarget.style.borderColor = role.color;
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = granted ? role.color + "18" : "oklch(0 0 0 / 0.04)";
+                            e.currentTarget.style.borderColor = granted ? role.color + "80" : "oklch(0 0 0 / 0.18)";
                           }}>
                           {isPending ? (
-                            <div className="w-3 h-3 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: role.color, borderTopColor: "transparent" }} />
+                            <div
+                              className="w-3 h-3 border-2 border-t-transparent rounded-full animate-spin"
+                              style={{ borderColor: role.color, borderTopColor: "transparent" }}
+                            />
                           ) : granted ? (
-                            <Check size={13} style={{ color: role.color }} />
+                            <Check size={14} style={{ color: role.color }} />
                           ) : (
-                            <X size={11} style={{ color: "var(--admin-text-faint)" }} />
+                            <div
+                              style={{
+                                width: 12,
+                                height: 12,
+                                borderRadius: "50%",
+                                border: "2px dashed oklch(0 0 0 / 0.28)",
+                              }}
+                            />
                           )}
                         </button>
                       </div>
@@ -260,7 +291,7 @@ function PermissionsMatrix({ permissions, roles, rolePermsMap }: Props) {
   );
 }
 
-// ─── Drawer "Chi ha questo permesso?" ──────────────────────────────────────────
+// ─── Drawer "Chi ha questo permesso?" ─────────────────────────────────────────
 type UserWithPermission = {
   id: number;
   email: string;
@@ -328,7 +359,7 @@ function UsersDrawer({
           boxShadow: "-12px 0 40px oklch(0 0 0 / 0.18)",
         }}>
 
-        {/* ── Header ─────────────────────────────────────────────────── */}
+        {/* ── Header ─────────────────────────────────────────────────────── */}
         <div
           className="flex items-center gap-3 px-5 py-4 shrink-0"
           style={{ borderBottom: "1px solid var(--admin-card-border)" }}>
@@ -353,7 +384,7 @@ function UsersDrawer({
           </button>
         </div>
 
-        {/* ── Barra ricerca + contatore ───────────────────────────────── */}
+        {/* ── Barra ricerca + contatore ──────────────────────────────────── */}
         {!loading && data && (
           <div
             className="px-4 pt-3 pb-2 shrink-0 space-y-2"
@@ -403,7 +434,7 @@ function UsersDrawer({
           </div>
         )}
 
-        {/* ── Corpo ──────────────────────────────────────────────────── */}
+        {/* ── Corpo ──────────────────────────────────────────────────────── */}
         <div className="flex-1 overflow-y-auto p-3 space-y-1.5">
           {loading ? (
             <div className="flex items-center justify-center py-16">
@@ -474,7 +505,7 @@ function UsersDrawer({
           )}
         </div>
 
-        {/* ── Footer permesso ─────────────────────────────────────────── */}
+        {/* ── Footer permesso ──────────────────────────────────────────────── */}
         {!loading && data && data.users.length > 0 && (
           <div
             className="px-5 py-3 shrink-0 text-xs truncate"
@@ -490,7 +521,7 @@ function UsersDrawer({
   );
 }
 
-// ─── Dialog conferma eliminazione ──────────────────────────────────────────────
+// ─── Dialog conferma eliminazione ─────────────────────────────────────────────
 type ImpactData = {
   id: number;
   key: string;
@@ -585,7 +616,7 @@ function DeleteConfirmDialog({
   );
 }
 
-// ─── Catalogo permessi ─────────────────────────────────────────────────────────
+// ─── Catalogo permessi ────────────────────────────────────────────────────────
 function PermissionsCatalog({ permissions, roles, rolePermsMap }: Props) {
   const [showCreate, setShowCreate] = useState(false);
   const [search, setSearch] = useState("");
@@ -838,7 +869,7 @@ function PermissionsCatalog({ permissions, roles, rolePermsMap }: Props) {
   );
 }
 
-// ─── Root ───────────────────────────────────────────────────────────────────────
+// ─── Root ──────────────────────────────────────────────────────────────────────
 export function PermissionsManager({ permissions, roles, rolePermsMap }: Props) {
   const [tab, setTab] = useState<"matrix" | "catalog">("catalog");
 
