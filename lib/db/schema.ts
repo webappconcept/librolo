@@ -2,6 +2,7 @@ import {
   boolean,
   integer,
   pgTable,
+  primaryKey,
   serial,
   text,
   timestamp,
@@ -42,10 +43,73 @@ export const roles = pgTable("roles", {
   isStaff: boolean("is_staff").notNull().default(false),
   /** I ruoli di sistema non possono essere eliminati dall'UI */
   isSystem: boolean("is_system").notNull().default(false),
+  /** Gerarchia: un admin può assegnare solo ruoli con level <= proprio */
+  level: integer("level").notNull().default(0),
+  /** Ruolo assegnato automaticamente ai nuovi utenti */
+  isDefault: boolean("is_default").notNull().default(false),
   sortOrder: integer("sort_order").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
+
+// ---------------------------------------------------------------------------
+// RBAC — Permessi
+// ---------------------------------------------------------------------------
+
+/** Catalogo completo dei permessi disponibili nell'app */
+export const permissions = pgTable("permissions", {
+  id: serial("id").primaryKey(),
+  /** Chiave univoca: pattern "risorsa:azione" es. "posts:publish", "admin:access" */
+  key: varchar("key", { length: 100 }).notNull().unique(),
+  label: varchar("label", { length: 150 }).notNull(),
+  description: text("description"),
+  /** Gruppo per raggruppare nella UI: "Contenuti", "Utenti", "Admin"… */
+  group: varchar("group", { length: 100 }).notNull().default("Generale"),
+  /** I permessi di sistema non possono essere eliminati dall'UI */
+  isSystem: boolean("is_system").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+/** Matrice ruolo → permessi */
+export const rolePermissions = pgTable(
+  "role_permissions",
+  {
+    roleId: integer("role_id")
+      .notNull()
+      .references(() => roles.id, { onDelete: "cascade" }),
+    permissionId: integer("permission_id")
+      .notNull()
+      .references(() => permissions.id, { onDelete: "cascade" }),
+  },
+  (t) => [primaryKey({ columns: [t.roleId, t.permissionId] })],
+);
+
+/** Override individuali per utente (grant o revoca) */
+export const userPermissions = pgTable(
+  "user_permissions",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    permissionId: integer("permission_id")
+      .notNull()
+      .references(() => permissions.id, { onDelete: "cascade" }),
+    /** true = concesso esplicitamente, false = revocato esplicitamente */
+    granted: boolean("granted").notNull().default(true),
+    /** Admin che ha applicato l'override */
+    grantedBy: integer("granted_by").references(() => users.id),
+    /** Motivazione opzionale */
+    reason: text("reason"),
+    /** null = permanente */
+    expiresAt: timestamp("expires_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+);
+
+// ---------------------------------------------------------------------------
+// Resto delle tabelle
+// ---------------------------------------------------------------------------
 
 export const activityLogs = pgTable("activity_logs", {
   id: serial("id").primaryKey(),
@@ -110,10 +174,18 @@ export const seoPages = pgTable("seo_pages", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Role = typeof roles.$inferSelect;
 export type NewRole = typeof roles.$inferInsert;
+export type Permission = typeof permissions.$inferSelect;
+export type NewPermission = typeof permissions.$inferInsert;
+export type RolePermission = typeof rolePermissions.$inferSelect;
+export type UserPermission = typeof userPermissions.$inferSelect;
 export type ActivityLog = typeof activityLogs.$inferSelect;
 export type NewActivityLog = typeof activityLogs.$inferInsert;
 export type EmailVerification = typeof emailVerifications.$inferSelect;
@@ -160,4 +232,9 @@ export enum ActivityType {
   MESSAGE_SENT = "MESSAGE_SENT",
   CONTENT_REPORTED = "CONTENT_REPORTED",
   CONTENT_REMOVED = "CONTENT_REMOVED",
+  // RBAC
+  PERMISSION_GRANTED = "PERMISSION_GRANTED",
+  PERMISSION_REVOKED = "PERMISSION_REVOKED",
+  ROLE_PERMISSION_ADDED = "ROLE_PERMISSION_ADDED",
+  ROLE_PERMISSION_REMOVED = "ROLE_PERMISSION_REMOVED",
 }
