@@ -1,6 +1,12 @@
+import { generatePageMetadata } from "@/lib/seo";
 import { getAppSettings } from "@/lib/db/settings-queries";
 import { Suspense } from "react";
 import { Login } from "../login";
+import type { Metadata } from "next";
+
+export async function generateMetadata(): Promise<Metadata> {
+  return generatePageMetadata("/sign-in");
+}
 
 async function SignInContent() {
   const settings = await getAppSettings();
