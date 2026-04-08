@@ -14,9 +14,11 @@ import {
   ChevronDown,
   ChevronRight,
   HelpCircle,
+  LayoutGrid,
   Lock,
   Plus,
   Search,
+  Table2,
   Trash2,
   Users,
   X,
@@ -37,6 +39,11 @@ type Props = {
 };
 
 // ─── Tab bar ─────────────────────────────────────────────────────────────────
+const PERMISSION_TABS = [
+  { id: "catalog" as const, label: "Catalogo permessi", icon: LayoutGrid },
+  { id: "matrix" as const, label: "Matrice ruoli", icon: Table2 },
+] as const;
+
 function TabBar({
   active,
   onChange,
@@ -44,27 +51,29 @@ function TabBar({
   active: "matrix" | "catalog";
   onChange: (t: "matrix" | "catalog") => void;
 }) {
-  const tabs = [
-    { id: "catalog" as const, label: "Catalogo permessi" },
-    { id: "matrix" as const, label: "Matrice ruoli" },
-  ];
   return (
     <div
       className="flex items-center gap-1 p-1 rounded-xl w-fit"
-      style={{ background: "var(--admin-hover-bg)" }}>
-      {tabs.map((t) => (
-        <button
-          key={t.id}
-          onClick={() => onChange(t.id)}
-          className="px-4 py-1.5 text-sm rounded-lg font-medium transition-all"
-          style={{
-            background: active === t.id ? "var(--admin-card-bg)" : "transparent",
-            color: active === t.id ? "var(--admin-text)" : "var(--admin-text-muted)",
-            boxShadow: active === t.id ? "0 1px 3px oklch(0 0 0 / 0.08)" : "none",
-          }}>
-          {t.label}
-        </button>
-      ))}
+      style={{
+        background: "var(--admin-card-bg)",
+        border: "1px solid var(--admin-card-border)",
+      }}>
+      {PERMISSION_TABS.map(({ id, label, icon: Icon }) => {
+        const isActive = active === id;
+        return (
+          <button
+            key={id}
+            onClick={() => onChange(id)}
+            className="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium rounded-lg transition-all"
+            style={{
+              background: isActive ? "var(--admin-accent)" : "transparent",
+              color: isActive ? "#fff" : "var(--admin-text-muted)",
+            }}>
+            <Icon size={14} />
+            {label}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -86,7 +95,7 @@ function SystemPermissionsLegend() {
   return (
     <div
       className="rounded-xl overflow-hidden"
-      style={{ border: "1px solid var(--admin-card-border)" }}>
+      style={{ border: "1px solid oklch(0 0 0 / 0.13)" }}>
       <button
         onClick={() => setOpen((v) => !v)}
         className="w-full flex items-center gap-2 px-4 py-3 text-left transition-colors"
@@ -192,7 +201,7 @@ function PermissionsMatrix({ permissions, roles, rolePermsMap }: Props) {
       {Array.from(groups.entries()).map(([group, perms]) => {
         const isExpanded = expandedGroups.has(group);
         return (
-          <div key={group} className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--admin-card-border)" }}>
+          <div key={group} className="rounded-xl overflow-hidden" style={{ border: "1px solid oklch(0 0 0 / 0.13)" }}>
             <button
               onClick={() => toggleGroup(group)}
               className="w-full flex items-center gap-2 px-4 py-3"
@@ -359,7 +368,7 @@ function UsersDrawer({
           boxShadow: "-12px 0 40px oklch(0 0 0 / 0.18)",
         }}>
 
-        {/* ── Header ─────────────────────────────────────────────────────── */}
+        {/* ── Header ───────────────────────────────────────────────────────────── */}
         <div
           className="flex items-center gap-3 px-5 py-4 shrink-0"
           style={{ borderBottom: "1px solid var(--admin-card-border)" }}>
@@ -384,7 +393,7 @@ function UsersDrawer({
           </button>
         </div>
 
-        {/* ── Barra ricerca + contatore ──────────────────────────────────── */}
+        {/* ── Barra ricerca + contatore ─────────────────────────────────────────── */}
         {!loading && data && (
           <div
             className="px-4 pt-3 pb-2 shrink-0 space-y-2"
@@ -434,7 +443,7 @@ function UsersDrawer({
           </div>
         )}
 
-        {/* ── Corpo ──────────────────────────────────────────────────────── */}
+        {/* ── Corpo ──────────────────────────────────────────────────────────────── */}
         <div className="flex-1 overflow-y-auto p-3 space-y-1.5">
           {loading ? (
             <div className="flex items-center justify-center py-16">
@@ -505,7 +514,7 @@ function UsersDrawer({
           )}
         </div>
 
-        {/* ── Footer permesso ──────────────────────────────────────────────── */}
+        {/* ── Footer permesso ────────────────────────────────────────────────────── */}
         {!loading && data && data.users.length > 0 && (
           <div
             className="px-5 py-3 shrink-0 text-xs truncate"
@@ -758,7 +767,7 @@ function PermissionsCatalog({ permissions, roles, rolePermsMap }: Props) {
         <form
           onSubmit={handleCreate}
           className="rounded-xl p-4 space-y-3"
-          style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-card-border)" }}>
+          style={{ background: "var(--admin-card-bg)", border: "1px solid oklch(0 0 0 / 0.13)" }}>
           <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--admin-text-muted)" }}>Nuovo permesso</p>
           <datalist id={datalistId}>
             {SYSTEM_PERMISSIONS.map((p) => (
@@ -792,7 +801,7 @@ function PermissionsCatalog({ permissions, roles, rolePermsMap }: Props) {
       )}
 
       {Array.from(groups.entries()).map(([group, perms]) => (
-        <div key={group} className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--admin-card-border)" }}>
+        <div key={group} className="rounded-xl overflow-hidden" style={{ border: "1px solid oklch(0 0 0 / 0.13)" }}>
           <div
             className="px-4 py-2 text-[10px] font-bold uppercase tracking-widest"
             style={{ background: "var(--admin-hover-bg)", color: "var(--admin-text-faint)", borderBottom: "1px solid var(--admin-card-border)" }}>
@@ -869,7 +878,7 @@ function PermissionsCatalog({ permissions, roles, rolePermsMap }: Props) {
   );
 }
 
-// ─── Root ──────────────────────────────────────────────────────────────────────
+// ─── Root ─────────────────────────────────────────────────────────────────────
 export function PermissionsManager({ permissions, roles, rolePermsMap }: Props) {
   const [tab, setTab] = useState<"matrix" | "catalog">("catalog");
 
