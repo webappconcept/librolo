@@ -6,7 +6,7 @@ import {
   removePermissionFromRole,
 } from "@/lib/rbac/permissions-queries";
 import { db } from "@/lib/db/drizzle";
-import { permissions } from "@/lib/db/schema";
+import { permissions, rolePermissions, userPermissions } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -63,7 +63,42 @@ export async function createPermission(formData: FormData) {
   return { success: true };
 }
 
-// Elimina un permesso (solo non-system)
+/**
+ * Restituisce il numero di assegnazioni collegate a un permesso
+ * (ruoli + override individuali). Usato dal dialog di conferma.
+ */
+export async function getPermissionImpact(permissionId: number) {
+  const perm = await db
+    .select({ isSystem: permissions.isSystem, key: permissions.key, label: permissions.label })
+    .from(permissions)
+    .where(eq(permissions.id, permissionId))
+    .limit(1);
+
+  if (!perm[0]) return { error: "Permesso non trovato." };
+  if (perm[0].isSystem) return { error: "I permessi di sistema non possono essere eliminati." };
+
+  const roleCount = await db
+    .select({ id: rolePermissions.roleId })
+    .from(rolePermissions)
+    .where(eq(rolePermissions.permissionId, permissionId));
+
+  const userCount = await db
+    .select({ id: userPermissions.id })
+    .from(userPermissions)
+    .where(eq(userPermissions.permissionId, permissionId));
+
+  return {
+    key: perm[0].key,
+    label: perm[0].label,
+    roleAssignments: roleCount.length,
+    userOverrides: userCount.length,
+  };
+}
+
+/**
+ * Elimina un permesso con cascade:
+ * rimuove prima tutte le assegnazioni su ruoli e override individuali.
+ */
 export async function deletePermission(permissionId: number) {
   const perm = await db
     .select({ isSystem: permissions.isSystem })
@@ -75,7 +110,14 @@ export async function deletePermission(permissionId: number) {
     return { error: "I permessi di sistema non possono essere eliminati." };
   }
 
+  // Cascade: rimuovi assegnazioni su ruoli
+  await db.delete(rolePermissions).where(eq(rolePermissions.permissionId, permissionId));
+  // Cascade: rimuovi override individuali
+  await db.delete(userPermissions).where(eq(userPermissions.permissionId, permissionId));
+  // Elimina il permesso
   await db.delete(permissions).where(eq(permissions.id, permissionId));
+
   revalidatePath("/admin/permissions");
+  revalidatePath("/admin/users");
   return { success: true };
 }

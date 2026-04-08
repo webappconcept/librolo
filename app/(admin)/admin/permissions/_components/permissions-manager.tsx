@@ -9,6 +9,7 @@ import {
   type SystemPermission,
 } from "@/lib/rbac/system-permissions";
 import {
+  AlertTriangle,
   Check,
   ChevronDown,
   ChevronRight,
@@ -23,6 +24,7 @@ import { useTransition, useState, useMemo } from "react";
 import {
   createPermission,
   deletePermission,
+  getPermissionImpact,
   toggleRolePermission,
 } from "../actions";
 
@@ -119,41 +121,29 @@ function SystemPermissionsLegend() {
             <div key={group}>
               {/* Intestazione gruppo */}
               <div
-                className="px-4 py-1.5"
-                style={{ background: "var(--admin-bg)" }}>
-                <span
-                  className="text-[10px] font-bold uppercase tracking-widest"
-                  style={{ color: "var(--admin-text-faint)" }}>
-                  {group}
-                </span>
+                className="px-4 py-2 text-[10px] font-bold uppercase tracking-widest"
+                style={{
+                  background: "var(--admin-hover-bg)",
+                  color: "var(--admin-text-faint)",
+                }}>
+                {group}
               </div>
-              {/* Righe permesso */}
+              {/* Righe permessi */}
               {perms.map((p) => (
                 <div
                   key={p.key}
-                  className="grid gap-x-4 px-4 py-2"
-                  style={{
-                    gridTemplateColumns: "180px 1fr",
-                    background: "var(--admin-card-bg)",
-                    borderTop: "1px solid var(--admin-card-border)",
-                  }}>
+                  className="flex items-start gap-3 px-4 py-2"
+                  style={{ borderTop: "1px solid var(--admin-card-border)" }}>
                   <code
-                    className="text-[11px] font-mono self-start pt-0.5"
+                    className="font-mono text-[11px] shrink-0 mt-0.5"
                     style={{ color: "var(--admin-accent)" }}>
                     {p.key}
                   </code>
-                  <div>
-                    <p
-                      className="text-[11px] font-medium"
-                      style={{ color: "var(--admin-text)" }}>
-                      {p.label}
-                    </p>
-                    <p
-                      className="text-[10px] mt-0.5"
-                      style={{ color: "var(--admin-text-faint)" }}>
-                      {p.description}
-                    </p>
-                  </div>
+                  <span
+                    className="text-xs"
+                    style={{ color: "var(--admin-text-muted)" }}>
+                    {p.description}
+                  </span>
                 </div>
               ))}
             </div>
@@ -164,12 +154,12 @@ function SystemPermissionsLegend() {
   );
 }
 
-// ─── Matrice ruoli → permessi ─────────────────────────────────────────
+// ─── Matrice ruoli ────────────────────────────────────────────────────
 function PermissionsMatrix({ permissions, roles, rolePermsMap }: Props) {
-  const [pendingKey, setPendingKey] = useState<string | null>(null);
-  const [, startTransition] = useTransition();
   const [search, setSearch] = useState("");
-  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const [pending, startTransition] = useTransition();
+  const [togglingKey, setTogglingKey] = useState<string | null>(null);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
   const groups = useMemo(() => {
     const filtered = permissions.filter(
@@ -187,28 +177,25 @@ function PermissionsMatrix({ permissions, roles, rolePermsMap }: Props) {
   }, [permissions, search]);
 
   function toggleGroup(group: string) {
-    setCollapsedGroups((prev) => {
+    setExpandedGroups((prev) => {
       const next = new Set(prev);
       next.has(group) ? next.delete(group) : next.add(group);
       return next;
     });
   }
 
-  function handleToggle(
-    roleId: number,
-    permissionId: number,
-    currentlyGranted: boolean,
-  ) {
-    const key = `${roleId}-${permissionId}`;
-    setPendingKey(key);
+  function handleToggle(roleId: number, permId: number, granted: boolean) {
+    const key = `${roleId}-${permId}`;
+    setTogglingKey(key);
     startTransition(async () => {
-      await toggleRolePermission(roleId, permissionId, !currentlyGranted);
-      setPendingKey(null);
+      await toggleRolePermission(roleId, permId, !granted);
+      setTogglingKey(null);
     });
   }
 
   return (
     <div className="space-y-4">
+      {/* Search */}
       <div className="relative">
         <Search
           size={14}
@@ -228,145 +215,237 @@ function PermissionsMatrix({ permissions, roles, rolePermsMap }: Props) {
         />
       </div>
 
-      <div
-        className="rounded-xl overflow-hidden"
-        style={{ border: "1px solid var(--admin-card-border)" }}>
-        <div
-          className="grid items-center text-xs font-semibold uppercase tracking-wide"
-          style={{
-            gridTemplateColumns: `1fr repeat(${roles.length}, minmax(80px, 1fr))`,
-            background: "var(--admin-hover-bg)",
-            borderBottom: "1px solid var(--admin-card-border)",
-          }}>
-          <div className="px-4 py-3" style={{ color: "var(--admin-text-faint)" }}>
-            Permesso
+      {/* Gruppi */}
+      {Array.from(groups.entries()).map(([group, perms]) => {
+        const isExpanded = expandedGroups.has(group);
+        return (
+          <div
+            key={group}
+            className="rounded-xl overflow-hidden"
+            style={{ border: "1px solid var(--admin-card-border)" }}>
+            {/* Header gruppo */}
+            <button
+              onClick={() => toggleGroup(group)}
+              className="w-full flex items-center gap-2 px-4 py-3"
+              style={{ background: "var(--admin-hover-bg)" }}>
+              {isExpanded ? (
+                <ChevronDown size={13} style={{ color: "var(--admin-text-faint)" }} />
+              ) : (
+                <ChevronRight size={13} style={{ color: "var(--admin-text-faint)" }} />
+              )}
+              <span
+                className="text-xs font-bold uppercase tracking-widest flex-1 text-left"
+                style={{ color: "var(--admin-text-muted)" }}>
+                {group}
+              </span>
+              <span
+                className="text-[10px] px-1.5 py-0.5 rounded"
+                style={{
+                  background: "var(--admin-card-border)",
+                  color: "var(--admin-text-faint)",
+                }}>
+                {perms.length}
+              </span>
+            </button>
+
+            {isExpanded &&
+              perms.map((perm) => (
+                <div
+                  key={perm.id}
+                  className="flex items-center gap-3 px-4 py-2.5"
+                  style={{
+                    borderTop: "1px solid var(--admin-card-border)",
+                    background: "var(--admin-bg)",
+                  }}>
+                  {/* Info permesso */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <code
+                        className="font-mono text-[11px]"
+                        style={{ color: "var(--admin-text)" }}>
+                        {perm.key}
+                      </code>
+                      {perm.isSystem && <SystemLockIcon />}
+                    </div>
+                    <p
+                      className="text-[11px] truncate"
+                      style={{ color: "var(--admin-text-faint)" }}>
+                      {perm.label}
+                    </p>
+                  </div>
+
+                  {/* Toggle per ogni ruolo */}
+                  {roles.map((role) => {
+                    const granted = (rolePermsMap[role.id] ?? []).includes(perm.id);
+                    const isPending = togglingKey === `${role.id}-${perm.id}`;
+                    return (
+                      <div
+                        key={role.id}
+                        className="flex flex-col items-center gap-0.5"
+                        style={{ minWidth: 56 }}>
+                        <span
+                          className="text-[9px] font-semibold uppercase tracking-wide"
+                          style={{ color: role.color }}>
+                          {role.label}
+                        </span>
+                        <button
+                          onClick={() => handleToggle(role.id, perm.id, granted)}
+                          disabled={isPending || pending}
+                          className="w-7 h-7 rounded-lg flex items-center justify-center transition-all border"
+                          style={{
+                            background: granted ? role.color + "18" : "transparent",
+                            borderColor: `${
+                              granted
+                                ? role.color + "40"
+                                : "var(--admin-card-border)"
+                            }`,
+                          }}>
+                          {isPending ? (
+                            <div
+                              className="w-3 h-3 border-2 border-t-transparent rounded-full animate-spin"
+                              style={{
+                                borderColor: role.color,
+                                borderTopColor: "transparent",
+                              }}
+                            />
+                          ) : granted ? (
+                            <Check size={13} style={{ color: role.color }} />
+                          ) : (
+                            <X
+                              size={11}
+                              style={{ color: "var(--admin-text-faint)" }}
+                            />
+                          )}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
           </div>
-          {roles.map((r) => (
-            <div
-              key={r.id}
-              className="px-3 py-3 text-center"
-              style={{ color: r.color }}>
-              {r.label}
-            </div>
-          ))}
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Dialog conferma eliminazione ────────────────────────────────────
+type ImpactData = {
+  id: number;
+  key: string;
+  label: string;
+  roleAssignments: number;
+  userOverrides: number;
+};
+
+function DeleteConfirmDialog({
+  impact,
+  onConfirm,
+  onCancel,
+  isDeleting,
+}: {
+  impact: ImpactData;
+  onConfirm: () => void;
+  onCancel: () => void;
+  isDeleting: boolean;
+}) {
+  const hasImpact = impact.roleAssignments > 0 || impact.userOverrides > 0;
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.55)" }}
+      onClick={(e) => e.target === e.currentTarget && onCancel()}>
+      <div
+        className="w-full max-w-md rounded-2xl p-6 space-y-5"
+        style={{
+          background: "var(--admin-card-bg)",
+          border: "1px solid var(--admin-card-border)",
+          boxShadow: "0 24px 48px oklch(0 0 0 / 0.35)",
+        }}>
+        {/* Intestazione */}
+        <div className="flex items-start gap-3">
+          <div
+            className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+            style={{ background: "#fef2f2" }}>
+            <AlertTriangle size={18} style={{ color: "#dc2626" }} />
+          </div>
+          <div>
+            <h3 className="font-semibold text-sm" style={{ color: "var(--admin-text)" }}>
+              Elimina permesso
+            </h3>
+            <code
+              className="font-mono text-xs"
+              style={{ color: "var(--admin-text-muted)" }}>
+              {impact.key}
+            </code>
+          </div>
+          <button
+            onClick={onCancel}
+            className="ml-auto p-1 rounded-lg transition-colors"
+            style={{ color: "var(--admin-text-faint)" }}>
+            <X size={15} />
+          </button>
         </div>
 
-        {groups.size === 0 && (
+        {/* Warning impatto */}
+        {hasImpact ? (
           <div
-            className="flex items-center justify-center py-12 text-sm"
-            style={{ color: "var(--admin-text-faint)" }}>
-            Nessun permesso trovato
+            className="rounded-xl px-4 py-3 space-y-2"
+            style={{ background: "#fffbeb", border: "1px solid #fde68a" }}>
+            <p className="text-xs font-semibold" style={{ color: "#92400e" }}>
+              ⚠️ Questo permesso ha assegnazioni attive:
+            </p>
+            <ul className="space-y-1">
+              {impact.roleAssignments > 0 && (
+                <li className="text-xs" style={{ color: "#b45309" }}>
+                  • <strong>{impact.roleAssignments}</strong>{" "}
+                  {impact.roleAssignments === 1 ? "ruolo" : "ruoli"} con questo permesso
+                </li>
+              )}
+              {impact.userOverrides > 0 && (
+                <li className="text-xs" style={{ color: "#b45309" }}>
+                  • <strong>{impact.userOverrides}</strong>{" "}
+                  override {impact.userOverrides === 1 ? "individuale" : "individuali"} su utenti
+                </li>
+              )}
+            </ul>
+            <p className="text-xs" style={{ color: "#92400e" }}>
+              Tutte queste assegnazioni verranno rimosse automaticamente.
+            </p>
           </div>
+        ) : (
+          <p className="text-sm" style={{ color: "var(--admin-text-muted)" }}>
+            Il permesso{" "}
+            <strong style={{ color: "var(--admin-text)" }}>{impact.label}</strong>{" "}
+            non ha assegnazioni attive. Verrà eliminato definitivamente.
+          </p>
         )}
 
-        {Array.from(groups.entries()).map(([group, perms]) => {
-          const collapsed = collapsedGroups.has(group);
-          return (
-            <div key={group}>
-              <button
-                onClick={() => toggleGroup(group)}
-                className="w-full flex items-center gap-2 px-4 py-2.5 text-left transition-colors"
-                style={{
-                  background: "var(--admin-hover-bg)",
-                  borderTop: "1px solid var(--admin-card-border)",
-                  color: "var(--admin-text-muted)",
-                }}>
-                {collapsed ? <ChevronRight size={13} /> : <ChevronDown size={13} />}
-                <span className="text-[11px] font-bold uppercase tracking-widest">
-                  {group}
-                </span>
-                <span
-                  className="text-[10px] ml-auto px-1.5 py-0.5 rounded"
-                  style={{
-                    background: "var(--admin-card-border)",
-                    color: "var(--admin-text-faint)",
-                  }}>
-                  {perms.length}
-                </span>
-              </button>
-
-              {!collapsed &&
-                perms.map((perm, i) => (
-                  <div
-                    key={perm.id}
-                    className="grid items-center"
-                    style={{
-                      gridTemplateColumns: `1fr repeat(${roles.length}, minmax(80px, 1fr))`,
-                      background:
-                        i % 2 === 0 ? "var(--admin-card-bg)" : "var(--admin-bg)",
-                      borderTop: "1px solid var(--admin-card-border)",
-                    }}>
-                    <div className="px-4 py-2.5">
-                      <div className="flex items-center gap-1.5">
-                        <code
-                          className="text-[11px] font-mono"
-                          style={{ color: "var(--admin-text)" }}>
-                          {perm.key}
-                        </code>
-                        {perm.isSystem && <SystemLockIcon />}
-                      </div>
-                      <p
-                        className="text-[11px] mt-0.5"
-                        style={{ color: "var(--admin-text-faint)" }}>
-                        {perm.label}
-                      </p>
-                    </div>
-
-                    {roles.map((role) => {
-                      const granted = (rolePermsMap[role.id] ?? []).includes(
-                        perm.id,
-                      );
-                      const key = `${role.id}-${perm.id}`;
-                      const isPending = pendingKey === key;
-
-                      return (
-                        <div
-                          key={role.id}
-                          className="flex items-center justify-center px-3 py-2.5">
-                          <button
-                            onClick={() =>
-                              handleToggle(role.id, perm.id, granted)
-                            }
-                            disabled={isPending}
-                            aria-label={`${
-                              granted ? "Rimuovi" : "Aggiungi"
-                            } ${perm.key} da ${role.label}`}
-                            className="w-8 h-8 rounded-lg flex items-center justify-center transition-all disabled:opacity-50"
-                            style={{
-                              background: granted
-                                ? role.color + "18"
-                                : "var(--admin-hover-bg)",
-                              border: `1px solid ${
-                                granted
-                                  ? role.color + "40"
-                                  : "var(--admin-card-border)"
-                              }`,
-                            }}>
-                            {isPending ? (
-                              <div
-                                className="w-3 h-3 border-2 border-t-transparent rounded-full animate-spin"
-                                style={{
-                                  borderColor: role.color,
-                                  borderTopColor: "transparent",
-                                }}
-                              />
-                            ) : granted ? (
-                              <Check size={13} style={{ color: role.color }} />
-                            ) : (
-                              <X
-                                size={11}
-                                style={{ color: "var(--admin-text-faint)" }}
-                              />
-                            )}
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ))}
-            </div>
-          );
-        })}
+        {/* Azioni */}
+        <div className="flex items-center justify-end gap-3">
+          <button
+            onClick={onCancel}
+            disabled={isDeleting}
+            className="px-4 py-2 text-sm rounded-xl font-medium transition-colors"
+            style={{
+              background: "var(--admin-hover-bg)",
+              color: "var(--admin-text-muted)",
+            }}>
+            Annulla
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={isDeleting}
+            className="flex items-center gap-2 px-4 py-2 text-sm rounded-xl font-medium transition-colors disabled:opacity-60"
+            style={{ background: "#dc2626", color: "#fff" }}>
+            {isDeleting ? (
+              <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Trash2 size={13} />
+            )}
+            {isDeleting ? "Eliminazione..." : "Elimina definitivamente"}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -380,6 +459,8 @@ function PermissionsCatalog({ permissions, roles, rolePermsMap }: Props) {
   const [formError, setFormError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [keyValue, setKeyValue] = useState("");
+  const [confirmImpact, setConfirmImpact] = useState<ImpactData | null>(null);
+  const [loadingImpactId, setLoadingImpactId] = useState<number | null>(null);
 
   // Suggerimento gruppo/label dalla chiave scelta nel datalist
   const suggested = useMemo<SystemPermission | undefined>(
@@ -431,11 +512,31 @@ function PermissionsCatalog({ permissions, roles, rolePermsMap }: Props) {
     });
   }
 
-  function handleDelete(id: number) {
-    setDeletingId(id);
+  /** Apre il dialog: carica l'impatto dal server prima di mostrarlo */
+  function handleDeleteRequest(perm: Permission) {
+    setLoadingImpactId(perm.id);
     startTransition(async () => {
-      await deletePermission(id);
+      const res = await getPermissionImpact(perm.id);
+      setLoadingImpactId(null);
+      if ("error" in res) return; // permesso di sistema o non trovato
+      setConfirmImpact({
+        id: perm.id,
+        key: res.key!,
+        label: res.label!,
+        roleAssignments: res.roleAssignments!,
+        userOverrides: res.userOverrides!,
+      });
+    });
+  }
+
+  /** Esegue la cascade delete dopo la conferma */
+  function handleDeleteConfirm() {
+    if (!confirmImpact) return;
+    setDeletingId(confirmImpact.id);
+    startTransition(async () => {
+      await deletePermission(confirmImpact.id);
       setDeletingId(null);
+      setConfirmImpact(null);
     });
   }
 
@@ -447,11 +548,20 @@ function PermissionsCatalog({ permissions, roles, rolePermsMap }: Props) {
     color: "var(--admin-text)",
   };
 
-  // ID per collegare l'input al datalist
   const datalistId = "system-permissions-datalist";
 
   return (
     <div className="space-y-4">
+      {/* Dialog conferma eliminazione */}
+      {confirmImpact && (
+        <DeleteConfirmDialog
+          impact={confirmImpact}
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => setConfirmImpact(null)}
+          isDeleting={deletingId === confirmImpact.id}
+        />
+      )}
+
       {/* Legenda sempre visibile sopra tutto */}
       <SystemPermissionsLegend />
 
@@ -474,275 +584,220 @@ function PermissionsCatalog({ permissions, roles, rolePermsMap }: Props) {
             }}
           />
         </div>
-        {!showCreate && (
-          <button
-            onClick={() => setShowCreate(true)}
-            className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg text-white shrink-0"
-            style={{ background: "var(--admin-accent)" }}>
-            <Plus size={13} /> Nuovo
-          </button>
-        )}
+
+        <button
+          onClick={() => setShowCreate((v) => !v)}
+          className="flex items-center gap-1.5 px-4 py-2 text-sm rounded-xl font-medium transition-colors"
+          style={{ background: "var(--admin-accent)", color: "#fff" }}>
+          <Plus size={14} />
+          Nuovo
+        </button>
       </div>
 
+      {/* Form creazione */}
       {showCreate && (
         <form
           onSubmit={handleCreate}
-          className="rounded-xl p-5 space-y-4"
+          className="rounded-xl p-4 space-y-3"
           style={{
             background: "var(--admin-card-bg)",
-            border: "2px solid var(--admin-accent)",
+            border: "1px solid var(--admin-card-border)",
           }}>
-          {/* datalist con tutte le chiavi di sistema */}
+          <p
+            className="text-xs font-semibold uppercase tracking-wide"
+            style={{ color: "var(--admin-text-muted)" }}>
+            Nuovo permesso
+          </p>
+
+          {/* Datalist chiavi di sistema */}
           <datalist id={datalistId}>
             {SYSTEM_PERMISSIONS.map((p) => (
-              <option key={p.key} value={p.key}>
-                {p.label}
-              </option>
+              <option key={p.key} value={p.key} label={p.description} />
             ))}
           </datalist>
 
-          <h3
-            className="text-sm font-semibold"
-            style={{ color: "var(--admin-text)" }}>
-            Nuovo permesso
-          </h3>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Chiave — con autocomplete datalist */}
-            <div>
-              <label
-                className="block text-xs font-medium mb-1"
-                style={{ color: "var(--admin-text-muted)" }}>
-                Chiave{" "}
-                <span style={{ color: "var(--admin-text-faint)" }}>
-                  (risorsa:azione)
-                </span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-xs" style={{ color: "var(--admin-text-muted)" }}>
+                Chiave *
               </label>
               <input
                 name="key"
-                required
                 list={datalistId}
+                required
+                placeholder="risorsa:azione"
+                className={inputCls}
+                style={inputStyle}
                 value={keyValue}
                 onChange={(e) => setKeyValue(e.target.value)}
-                placeholder="es. posts:publish"
-                autoComplete="off"
-                className={inputCls}
-                style={{ ...inputStyle, fontFamily: "monospace" }}
               />
-              {/* Hint inline quando la chiave è una chiave di sistema conosciuta */}
-              {suggested && (
-                <p
-                  className="text-[10px] mt-1 flex items-center gap-1"
-                  style={{ color: "var(--admin-accent)" }}>
-                  <Check size={10} />
-                  Chiave di sistema · gruppo suggerito:{" "}
-                  <strong>{suggested.group}</strong>
-                </p>
-              )}
             </div>
-
-            {/* Gruppo — precompilato se la chiave è nel catalogo */}
-            <div>
-              <label
-                className="block text-xs font-medium mb-1"
-                style={{ color: "var(--admin-text-muted)" }}>
-                Gruppo
+            <div className="space-y-1">
+              <label className="text-xs" style={{ color: "var(--admin-text-muted)" }}>
+                Etichetta *
+              </label>
+              <input
+                name="label"
+                required
+                placeholder="Es. Pubblica articoli"
+                className={inputCls}
+                style={inputStyle}
+                defaultValue={suggested?.description ?? ""}
+                key={suggested?.key ?? "custom"}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs" style={{ color: "var(--admin-text-muted)" }}>
+                Gruppo *
               </label>
               <input
                 name="group"
                 required
-                key={suggested?.group ?? ""}   /* re-mount per aggiornare defaultValue */
+                placeholder="Es. Contenuti"
+                className={inputCls}
+                style={inputStyle}
                 defaultValue={suggested?.group ?? ""}
-                placeholder="es. Contenuti"
+                key={(suggested?.key ?? "custom") + "-group"}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs" style={{ color: "var(--admin-text-muted)" }}>
+                Descrizione
+              </label>
+              <input
+                name="description"
+                placeholder="Opzionale"
                 className={inputCls}
                 style={inputStyle}
               />
             </div>
           </div>
 
-          {/* Etichetta — precompilata se la chiave è nel catalogo */}
-          <div>
-            <label
-              className="block text-xs font-medium mb-1"
-              style={{ color: "var(--admin-text-muted)" }}>
-              Etichetta visibile
-            </label>
-            <input
-              name="label"
-              required
-              key={suggested?.label ?? ""}
-              defaultValue={suggested?.label ?? ""}
-              placeholder="es. Pubblica post senza approvazione"
-              className={inputCls}
-              style={inputStyle}
-            />
-          </div>
-
-          {/* Descrizione — precompilata se la chiave è nel catalogo */}
-          <div>
-            <label
-              className="block text-xs font-medium mb-1"
-              style={{ color: "var(--admin-text-muted)" }}>
-              Descrizione{" "}
-              <span style={{ color: "var(--admin-text-faint)" }}>
-                (opzionale)
-              </span>
-            </label>
-            <textarea
-              name="description"
-              rows={2}
-              key={suggested?.description ?? ""}
-              defaultValue={suggested?.description ?? ""}
-              className={inputCls}
-              style={inputStyle}
-            />
-          </div>
-
           {formError && (
-            <p className="text-xs" style={{ color: "var(--admin-error, #dc2626)" }}>
+            <p className="text-xs" style={{ color: "#dc2626" }}>
               {formError}
             </p>
           )}
 
-          <div className="flex items-center justify-end gap-2">
+          <div className="flex justify-end gap-2">
             <button
               type="button"
-              onClick={() => {
-                setShowCreate(false);
-                setFormError(null);
-                setKeyValue("");
-              }}
-              className="px-4 py-2 text-sm rounded-lg"
+              onClick={() => { setShowCreate(false); setFormError(null); }}
+              className="px-3 py-1.5 text-sm rounded-lg transition-colors"
               style={{
-                color: "var(--admin-text-muted)",
                 background: "var(--admin-hover-bg)",
+                color: "var(--admin-text-muted)",
               }}>
               Annulla
             </button>
             <button
               type="submit"
               disabled={pending}
-              className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg text-white disabled:opacity-50"
-              style={{ background: "var(--admin-accent)" }}>
-              {pending ? (
-                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <Check size={14} />
-              )}
-              Crea permesso
+              className="px-3 py-1.5 text-sm rounded-lg font-medium transition-colors disabled:opacity-60"
+              style={{ background: "var(--admin-accent)", color: "#fff" }}>
+              {pending ? "Salvataggio..." : "Salva"}
             </button>
           </div>
         </form>
       )}
 
-      {/* Lista permessi esistenti */}
-      <div className="space-y-4">
-        {Array.from(groups.entries()).map(([group, perms]) => (
+      {/* Gruppi permessi */}
+      {Array.from(groups.entries()).map(([group, perms]) => (
+        <div
+          key={group}
+          className="rounded-xl overflow-hidden"
+          style={{ border: "1px solid var(--admin-card-border)" }}>
+          {/* Header gruppo */}
           <div
-            key={group}
-            className="rounded-xl overflow-hidden"
-            style={{ border: "1px solid var(--admin-card-border)" }}>
-            <div
-              className="px-4 py-2.5 flex items-center justify-between"
-              style={{
-                background: "var(--admin-hover-bg)",
-                borderBottom: "1px solid var(--admin-card-border)",
-              }}>
-              <span
-                className="text-[11px] font-bold uppercase tracking-widest"
-                style={{ color: "var(--admin-text-muted)" }}>
-                {group}
-              </span>
-              <span
-                className="text-[10px] px-1.5 py-0.5 rounded"
+            className="px-4 py-2 text-[10px] font-bold uppercase tracking-widest"
+            style={{
+              background: "var(--admin-hover-bg)",
+              color: "var(--admin-text-faint)",
+              borderBottom: "1px solid var(--admin-card-border)",
+            }}>
+            {group}
+          </div>
+
+          {perms.map((perm) => {
+            const assignedRoles = permToRoles.get(perm.id) ?? [];
+            const isLoadingThis = loadingImpactId === perm.id;
+            return (
+              <div
+                key={perm.id}
+                className="flex items-center gap-3 px-4 py-3"
                 style={{
-                  background: "var(--admin-card-border)",
-                  color: "var(--admin-text-faint)",
+                  borderBottom: "1px solid var(--admin-card-border)",
+                  background: "var(--admin-bg)",
                 }}>
-                {perms.length}
-              </span>
-            </div>
-
-            {perms.map((perm, i) => {
-              const assignedRoles = permToRoles.get(perm.id) ?? [];
-              return (
-                <div
-                  key={perm.id}
-                  className="flex items-center gap-4 px-4 py-3"
-                  style={{
-                    background:
-                      i % 2 === 0 ? "var(--admin-card-bg)" : "var(--admin-bg)",
-                    borderTop:
-                      i > 0 ? "1px solid var(--admin-card-border)" : "none",
-                  }}>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <code
-                        className="text-[11px] font-mono"
-                        style={{ color: "var(--admin-text)" }}>
-                        {perm.key}
-                      </code>
-                      {perm.isSystem && <SystemLockIcon />}
-                    </div>
-                    <p
-                      className="text-[11px] mt-0.5 truncate"
-                      style={{ color: "var(--admin-text-faint)" }}>
-                      {perm.label}
-                    </p>
+                {/* Info permesso */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <code
+                      className="font-mono text-[11px]"
+                      style={{ color: "var(--admin-text)" }}>
+                      {perm.key}
+                    </code>
+                    {perm.isSystem && <SystemLockIcon />}
                   </div>
+                  <p
+                    className="text-xs truncate mt-0.5"
+                    style={{ color: "var(--admin-text-muted)" }}>
+                    {perm.label}
+                  </p>
+                </div>
 
-                  <div className="flex items-center gap-1 flex-wrap justify-end">
-                    {assignedRoles.length === 0 ? (
+                {/* Ruoli assegnati */}
+                <div className="flex items-center gap-1 flex-wrap justify-end">
+                  {assignedRoles.length === 0 ? (
+                    <span
+                      className="text-[10px]"
+                      style={{
+                        color: "var(--admin-text-faint)",
+                      }}>
+                      Nessun ruolo
+                    </span>
+                  ) : (
+                    assignedRoles.map((r) => (
                       <span
-                        className="text-[10px] px-2 py-0.5 rounded-full"
+                        key={r.id}
+                        className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
                         style={{
-                          background: "var(--admin-hover-bg)",
-                          color: "var(--admin-text-faint)",
+                          background: r.color + "18",
+                          color: r.color,
+                          border: `1px solid ${r.color}40`,
                         }}>
-                        Nessun ruolo
+                        {r.label}
                       </span>
-                    ) : (
-                      assignedRoles.map((r) => (
-                        <span
-                          key={r.id}
-                          className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                          style={{
-                            background: r.color + "18",
-                            color: r.color,
-                            border: `1px solid ${r.color}40`,
-                          }}>
-                          {r.label}
-                        </span>
-                      ))
-                    )}
-                  </div>
-
-                  {!perm.isSystem && (
-                    <button
-                      onClick={() => handleDelete(perm.id)}
-                      disabled={deletingId === perm.id}
-                      className="p-1.5 rounded-lg transition-colors shrink-0 disabled:opacity-50"
-                      style={{ color: "var(--admin-text-faint)" }}
-                      onMouseEnter={(e) =>
-                        (e.currentTarget.style.background = "#fef2f2")
-                      }
-                      onMouseLeave={(e) =>
-                        (e.currentTarget.style.background = "transparent")
-                      }
-                      title="Elimina permesso">
-                      {deletingId === perm.id ? (
-                        <div className="w-3 h-3 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
-                      ) : (
-                        <Trash2 size={13} />
-                      )}
-                    </button>
+                    ))
                   )}
                 </div>
-              );
-            })}
-          </div>
-        ))}
-      </div>
+
+                {/* Bottone elimina */}
+                {!perm.isSystem && (
+                  <button
+                    onClick={() => handleDeleteRequest(perm)}
+                    disabled={isLoadingThis || deletingId === perm.id}
+                    className="p-1.5 rounded-lg transition-colors shrink-0 disabled:opacity-50"
+                    style={{ color: "var(--admin-text-faint)" }}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.background = "#fef2f2")
+                    }
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.background = "transparent")
+                    }
+                    title="Elimina permesso">
+                    {isLoadingThis || deletingId === perm.id ? (
+                      <div className="w-3 h-3 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Trash2 size={13} />
+                    )}
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ))}
     </div>
   );
 }
