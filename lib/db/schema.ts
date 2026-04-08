@@ -14,7 +14,11 @@ export const users = pgTable("users", {
   lastName: varchar("last_name", { length: 100 }),
   email: varchar("email", { length: 255 }).notNull().unique(),
   passwordHash: text("password_hash").notNull(),
-  role: varchar("role", { length: 20 }).notNull().default("member"),
+  role: varchar("role", { length: 50 }).notNull().default("member"),
+  /** Guard indipendente dalla label del ruolo — usato da middleware e Server Actions */
+  isAdmin: boolean("is_admin").notNull().default(false),
+  /** Guard per staff (editor, support, admin) */
+  isStaff: boolean("is_staff").notNull().default(false),
   bannedAt: timestamp("banned_at"),
   bannedReason: varchar("banned_reason", { length: 255 }),
   stripeCustomerId: varchar("stripe_customer_id", { length: 255 }),
@@ -26,6 +30,21 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
   deletedAt: timestamp("deleted_at"),
   emailVerified: boolean("email_verified").notNull().default(false),
+});
+
+export const roles = pgTable("roles", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 50 }).notNull().unique(),
+  label: varchar("label", { length: 100 }).notNull(),
+  color: varchar("color", { length: 20 }).notNull().default("#6b7280"),
+  description: text("description"),
+  isAdmin: boolean("is_admin").notNull().default(false),
+  isStaff: boolean("is_staff").notNull().default(false),
+  /** I ruoli di sistema non possono essere eliminati dall'UI */
+  isSystem: boolean("is_system").notNull().default(false),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
 export const activityLogs = pgTable("activity_logs", {
@@ -85,28 +104,16 @@ export const seoPages = pgTable("seo_pages", {
   ogTitle: varchar("og_title", { length: 70 }),
   ogDescription: varchar("og_description", { length: 200 }),
   ogImage: text("og_image"),
-  /**
-   * Valore opzionale per il meta robots.
-   * Se null/undefined non viene emesso nessun tag robots (default del browser: index,follow).
-   * Valori supportati: "noindex,nofollow" | "noindex,follow"
-   */
   robots: varchar("robots", { length: 50 }),
-  /**
-   * Se true, viene iniettato uno script JSON-LD nella pagina.
-   * notNull() garantisce che il valore sia sempre boolean (mai null) lato TypeScript.
-   */
   jsonLdEnabled: boolean("json_ld_enabled").notNull().default(false),
-  /**
-   * Tipo di schema JSON-LD da usare.
-   * Es: "WebPage", "Article", "BlogPosting", "Product", ecc.
-   * Rilevante solo quando jsonLdEnabled è true.
-   */
   jsonLdType: varchar("json_ld_type", { length: 50 }),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
+export type Role = typeof roles.$inferSelect;
+export type NewRole = typeof roles.$inferInsert;
 export type ActivityLog = typeof activityLogs.$inferSelect;
 export type NewActivityLog = typeof activityLogs.$inferInsert;
 export type EmailVerification = typeof emailVerifications.$inferSelect;

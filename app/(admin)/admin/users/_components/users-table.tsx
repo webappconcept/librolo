@@ -2,22 +2,23 @@
 "use client";
 
 import type { AdminUser } from "@/lib/db/admin-queries";
-import { ChevronDown, ShieldBan, ShieldCheck } from "lucide-react";
+import { ShieldBan, ShieldCheck } from "lucide-react";
 import Link from "next/link";
-import { useRef, useState, useTransition } from "react";
-import { changeUserRole, unbanUser } from "../actions";
+import { useState, useTransition } from "react";
+import { unbanUser } from "../actions";
 import BanModal from "./ban-modal";
 
-function RoleBadge({ role }: { role: string }) {
-  const map: Record<string, string> = {
-    admin: "bg-purple-100 text-purple-700",
-    owner: "bg-blue-100 text-blue-700",
-    member: "bg-gray-100 text-gray-600",
-  };
+/** Badge ruolo colorato — il colore viene passato dal server tramite roleColor */
+function RoleBadge({ label, color }: { label: string; color: string }) {
   return (
     <span
-      className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${map[role] ?? map.member}`}>
-      {role}
+      className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
+      style={{
+        background: color + "18",
+        color: color,
+        border: `1px solid ${color}40`,
+      }}>
+      {label}
     </span>
   );
 }
@@ -27,89 +28,10 @@ function PlanBadge({ status }: { status: string | null }) {
   return (
     <span
       className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
-        isPremium
-          ? "bg-orange-100 text-orange-700"
-          : "bg-gray-100 text-gray-500"
+        isPremium ? "bg-orange-100 text-orange-700" : "bg-gray-100 text-gray-500"
       }`}>
       {isPremium ? "Premium" : "Free"}
     </span>
-  );
-}
-
-function RoleDropdown({
-  userId,
-  currentRole,
-}: {
-  userId: number;
-  currentRole: string;
-}) {
-  const [open, setOpen] = useState(false);
-  const [pending, startTransition] = useTransition();
-  const [pos, setPos] = useState({ top: 0, left: 0 });
-  const btnRef = useRef<HTMLButtonElement>(null);
-
-  function handleOpen() {
-    if (btnRef.current) {
-      const rect = btnRef.current.getBoundingClientRect();
-      setPos({
-        top: rect.bottom + window.scrollY + 4,
-        left: rect.left + window.scrollX,
-      });
-    }
-    setOpen((v) => !v);
-  }
-
-  return (
-    <div className="inline-flex items-center gap-1">
-      <RoleBadge role={currentRole} />
-      <button
-        ref={btnRef}
-        onClick={handleOpen}
-        className="p-0.5 rounded transition-colors"
-        style={{ color: "var(--admin-text-faint)" }}
-        onMouseEnter={(e) =>
-          (e.currentTarget.style.background = "var(--admin-hover-bg)")
-        }
-        onMouseLeave={(e) =>
-          (e.currentTarget.style.background = "transparent")
-        }>
-        <ChevronDown size={12} />
-      </button>
-
-      {open && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div
-            className="fixed z-50 rounded-lg shadow-lg min-w-[120px] overflow-hidden"
-            style={{
-              top: pos.top,
-              left: pos.left,
-              background: "var(--admin-card-bg)",
-              border: "1px solid var(--admin-card-border)",
-            }}>
-            {["member", "owner", "admin"].map((r) => (
-              <button
-                key={r}
-                disabled={pending || r === currentRole}
-                onClick={() => {
-                  setOpen(false);
-                  startTransition(() => changeUserRole(userId, r));
-                }}
-                className="w-full text-left px-3 py-1.5 text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                style={{ color: "var(--admin-text)" }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.background = "var(--admin-hover-bg)")
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.background = "transparent")
-                }>
-                {r}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
   );
 }
 
@@ -127,16 +49,15 @@ function UserRow({ user }: { user: AdminUser }) {
     <tr
       className={`transition-colors ${isBanned ? "opacity-50" : ""}`}
       style={{ borderBottom: "1px solid var(--admin-divider)" }}
-      onMouseEnter={(e) =>
-        (e.currentTarget.style.background = "var(--admin-hover-bg)")
-      }
+      onMouseEnter={(e) => (e.currentTarget.style.background = "var(--admin-hover-bg)")}
       onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
-      {/* Avatar + nome */}
+
+      {/* Avatar + nome — cliccabile per aprire la scheda */}
       <td className="px-4 py-3">
         <div className="flex items-center gap-3">
           <div
             className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
-            style={{ background: "var(--admin-accent)" }}>
+            style={{ background: user.roleColor ?? "var(--admin-accent)" }}>
             {initials}
           </div>
           <div>
@@ -146,18 +67,19 @@ function UserRow({ user }: { user: AdminUser }) {
               style={{ color: "var(--admin-text)" }}>
               {user.firstName} {user.lastName}
             </Link>
-            <p
-              className="text-xs mt-0.5"
-              style={{ color: "var(--admin-text-faint)" }}>
+            <p className="text-xs mt-0.5" style={{ color: "var(--admin-text-faint)" }}>
               {user.email}
             </p>
           </div>
         </div>
       </td>
 
-      {/* Ruolo */}
+      {/* Ruolo — read-only badge */}
       <td className="px-4 py-3">
-        <RoleDropdown userId={user.id} currentRole={user.role} />
+        <RoleBadge
+          label={user.roleLabel ?? user.role}
+          color={user.roleColor ?? "#6b7280"}
+        />
       </td>
 
       {/* Piano */}
@@ -168,10 +90,10 @@ function UserRow({ user }: { user: AdminUser }) {
       {/* Email verificata */}
       <td className="px-4 py-3 hidden lg:table-cell">
         <span
-          className={`text-[11px] font-medium ${user.emailVerified ? "text-emerald-600" : ""}`}
-          style={
-            !user.emailVerified ? { color: "var(--admin-text-faint)" } : {}
-          }>
+          className={`text-[11px] font-medium ${
+            user.emailVerified ? "text-emerald-600" : ""
+          }`}
+          style={!user.emailVerified ? { color: "var(--admin-text-faint)" } : {}}>
           {user.emailVerified ? "✓ Verificata" : "Non verificata"}
         </span>
       </td>
@@ -183,14 +105,10 @@ function UserRow({ user }: { user: AdminUser }) {
         </span>
       </td>
 
-      {/* Azioni */}
+      {/* Azioni — solo ban/unban, niente cambio ruolo */}
       <td className="px-4 py-3">
-        {user.role === "admin" ? (
-          <span
-            className="text-xs italic"
-            style={{ color: "var(--admin-text-faint)" }}>
-            —
-          </span>
+        {user.isAdmin ? (
+          <span className="text-xs italic" style={{ color: "var(--admin-text-faint)" }}>—</span>
         ) : isBanned ? (
           <div className="flex items-center gap-2">
             {user.bannedReason && (
@@ -236,9 +154,7 @@ function UserRow({ user }: { user: AdminUser }) {
 export default function UsersTable({ users }: { users: AdminUser[] }) {
   if (users.length === 0) {
     return (
-      <div
-        className="text-center py-16 text-sm"
-        style={{ color: "var(--admin-text-faint)" }}>
+      <div className="text-center py-16 text-sm" style={{ color: "var(--admin-text-faint)" }}>
         Nessun utente trovato.
       </div>
     );
@@ -249,18 +165,16 @@ export default function UsersTable({ users }: { users: AdminUser[] }) {
       <table className="w-full min-w-[640px]">
         <thead>
           <tr style={{ borderBottom: "1px solid var(--admin-divider)" }}>
-            {["Utente", "Ruolo", "Piano", "Email", "Iscritto il", "Azioni"].map(
-              (h, i) => (
-                <th
-                  key={h}
-                  className={`px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide ${
-                    i >= 3 && i <= 4 ? "hidden lg:table-cell" : ""
-                  }`}
-                  style={{ color: "var(--admin-text-faint)" }}>
-                  {h}
-                </th>
-              ),
-            )}
+            {["Utente", "Ruolo", "Piano", "Email", "Iscritto il", "Azioni"].map((h, i) => (
+              <th
+                key={h}
+                className={`px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide ${
+                  i >= 3 && i <= 4 ? "hidden lg:table-cell" : ""
+                }`}
+                style={{ color: "var(--admin-text-faint)" }}>
+                {h}
+              </th>
+            ))}
           </tr>
         </thead>
         <tbody>

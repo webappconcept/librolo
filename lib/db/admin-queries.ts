@@ -1,6 +1,6 @@
 // lib/db/admin-queries.ts
 import { db } from "@/lib/db/drizzle";
-import { activityLogs, users } from "@/lib/db/schema";
+import { activityLogs, roles, users } from "@/lib/db/schema";
 import { and, count, desc, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { unstable_noStore as noStore } from "next/cache";
 import "server-only";
@@ -13,56 +13,24 @@ export async function getDashboardStats() {
     premiumUsers,
     verifiedUsers,
   ] = await Promise.all([
-    db
-      .select({ count: count() })
-      .from(users)
-      .where(and(isNull(users.deletedAt), sql`${users.role} != 'admin'`)),
-
-    db
-      .select({ count: count() })
-      .from(users)
-      .where(
-        and(
-          isNull(users.deletedAt),
-          sql`${users.role} != 'admin'`,
-          sql`${users.createdAt} >= NOW() - INTERVAL '30 days'`,
-        ),
+    db.select({ count: count() }).from(users).where(and(isNull(users.deletedAt), sql`${users.isAdmin} = false`)),
+    db.select({ count: count() }).from(users).where(
+      and(isNull(users.deletedAt), sql`${users.isAdmin} = false`, sql`${users.createdAt} >= NOW() - INTERVAL '30 days'`),
+    ),
+    db.select({ count: count() }).from(users).where(
+      and(
+        isNull(users.deletedAt),
+        sql`${users.isAdmin} = false`,
+        sql`${users.createdAt} >= NOW() - INTERVAL '60 days'`,
+        sql`${users.createdAt} < NOW() - INTERVAL '30 days'`,
       ),
-
-    db
-      .select({ count: count() })
-      .from(users)
-      .where(
-        and(
-          isNull(users.deletedAt),
-          sql`${users.role} != 'admin'`,
-          sql`${users.createdAt} >= NOW() - INTERVAL '60 days'`,
-          sql`${users.createdAt} < NOW() - INTERVAL '30 days'`,
-        ),
-      ),
-
-    db
-      .select({ count: count() })
-      .from(users)
-      .where(
-        and(
-          isNull(users.deletedAt),
-          sql`${users.role} != 'admin'`,
-          isNotNull(users.stripeSubscriptionId),
-          sql`${users.subscriptionStatus} = 'active'`,
-        ),
-      ),
-
-    db
-      .select({ count: count() })
-      .from(users)
-      .where(
-        and(
-          isNull(users.deletedAt),
-          sql`${users.role} != 'admin'`,
-          sql`${users.emailVerified} = true`,
-        ),
-      ),
+    ),
+    db.select({ count: count() }).from(users).where(
+      and(isNull(users.deletedAt), sql`${users.isAdmin} = false`, isNotNull(users.stripeSubscriptionId), sql`${users.subscriptionStatus} = 'active'`),
+    ),
+    db.select({ count: count() }).from(users).where(
+      and(isNull(users.deletedAt), sql`${users.isAdmin} = false`, sql`${users.emailVerified} = true`),
+    ),
   ]);
 
   const total = totalUsers[0].count;
@@ -71,44 +39,22 @@ export async function getDashboardStats() {
   const premium = premiumUsers[0].count;
   const verified = verifiedUsers[0].count;
   const free = total - premium;
+  const trendPercent = newLast > 0 ? Math.round(((newThis - newLast) / newLast) * 100) : newThis > 0 ? 100 : 0;
 
-  const trendPercent =
-    newLast > 0
-      ? Math.round(((newThis - newLast) / newLast) * 100)
-      : newThis > 0
-        ? 100
-        : 0;
-
-  return {
-    totalUsers: total,
-    newUsersThisMonth: newThis,
-    trendPercent,
-    premiumUsers: premium,
-    freeUsers: free,
-    verifiedUsers: verified,
-    conversionRate: total > 0 ? Math.round((premium / total) * 100) : 0,
-  };
+  return { totalUsers: total, newUsersThisMonth: newThis, trendPercent, premiumUsers: premium, freeUsers: free, verifiedUsers: verified, conversionRate: total > 0 ? Math.round((premium / total) * 100) : 0 };
 }
 
 export async function getUserGrowthChart() {
   noStore();
-  // Ultimi 7 mesi
   const rows = await db.execute(sql`
-    SELECT
-      TO_CHAR(DATE_TRUNC('month', created_at), 'Mon') AS month,
-      COUNT(*) AS total
+    SELECT TO_CHAR(DATE_TRUNC('month', created_at), 'Mon') AS month, COUNT(*) AS total
     FROM users
-    WHERE deleted_at IS NULL
-      AND role != 'admin'        
+    WHERE deleted_at IS NULL AND is_admin = false
       AND created_at >= NOW() - INTERVAL '7 months'
     GROUP BY DATE_TRUNC('month', created_at)
     ORDER BY DATE_TRUNC('month', created_at) ASC
   `);
-
-  return (rows as any[]).map((r) => ({
-    month: r.month as string,
-    utenti: Number(r.total),
-  }));
+  return (rows as any[]).map((r) => ({ month: r.month as string, utenti: Number(r.total) }));
 }
 
 export type AdminUser = {
@@ -117,6 +63,10 @@ export type AdminUser = {
   lastName: string | null;
   email: string;
   role: string;
+  roleLabel: string | null;
+  roleColor: string | null;
+  isAdmin: boolean;
+  isStaff: boolean;
   planName: string | null;
   subscriptionStatus: string | null;
   emailVerified: boolean;
@@ -141,11 +91,7 @@ export async function getAdminUsers({
 }): Promise<{ users: AdminUser[]; total: number }> {
   const conditions = [
     search
-      ? sql`(
-          ${users.email} ILIKE ${"%" + search + "%"} OR
-          ${users.firstName} ILIKE ${"%" + search + "%"} OR
-          ${users.lastName} ILIKE ${"%" + search + "%"}
-        )`
+      ? sql`(${users.email} ILIKE ${"%" + search + "%"} OR ${users.firstName} ILIKE ${"%" + search + "%"} OR ${users.lastName} ILIKE ${"%" + search + "%"})`
       : undefined,
     role ? sql`${users.role} = ${role}` : undefined,
     plan === "premium"
@@ -165,6 +111,10 @@ export async function getAdminUsers({
         lastName: users.lastName,
         email: users.email,
         role: users.role,
+        roleLabel: roles.label,
+        roleColor: roles.color,
+        isAdmin: users.isAdmin,
+        isStaff: users.isStaff,
         planName: users.planName,
         subscriptionStatus: users.subscriptionStatus,
         emailVerified: users.emailVerified,
@@ -174,11 +124,11 @@ export async function getAdminUsers({
         bannedReason: users.bannedReason,
       })
       .from(users)
+      .leftJoin(roles, eq(users.role, roles.name))
       .where(where)
       .orderBy(sql`${users.createdAt} DESC`)
       .limit(perPage)
       .offset((page - 1) * perPage),
-
     db.select({ count: count() }).from(users).where(where),
   ]);
 
@@ -191,6 +141,10 @@ export type AdminUserDetail = {
   lastName: string | null;
   email: string;
   role: string;
+  roleLabel: string | null;
+  roleColor: string | null;
+  isAdmin: boolean;
+  isStaff: boolean;
   planName: string | null;
   subscriptionStatus: string | null;
   stripeCustomerId: string | null;
@@ -202,9 +156,7 @@ export type AdminUserDetail = {
   bannedReason: string | null;
 };
 
-export async function getAdminUserById(
-  id: number,
-): Promise<AdminUserDetail | null> {
+export async function getAdminUserById(id: number): Promise<AdminUserDetail | null> {
   const result = await db
     .select({
       id: users.id,
@@ -212,6 +164,10 @@ export async function getAdminUserById(
       lastName: users.lastName,
       email: users.email,
       role: users.role,
+      roleLabel: roles.label,
+      roleColor: roles.color,
+      isAdmin: users.isAdmin,
+      isStaff: users.isStaff,
       planName: users.planName,
       subscriptionStatus: users.subscriptionStatus,
       stripeCustomerId: users.stripeCustomerId,
@@ -223,6 +179,7 @@ export async function getAdminUserById(
       bannedReason: users.bannedReason,
     })
     .from(users)
+    .leftJoin(roles, eq(users.role, roles.name))
     .where(eq(users.id, id))
     .limit(1);
 
@@ -236,9 +193,7 @@ export type AdminUserActivity = {
   timestamp: Date;
 };
 
-export async function getAdminUserActivity(
-  userId: number,
-): Promise<AdminUserActivity[]> {
+export async function getAdminUserActivity(userId: number): Promise<AdminUserActivity[]> {
   const result = await db
     .select({
       id: activityLogs.id,
