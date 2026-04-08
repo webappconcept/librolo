@@ -28,7 +28,7 @@ type RouteEntry = {
   source: string;
 };
 
-// Ordine di visualizzazione dei gruppi nella tabella
+// Ordine di visualizzazione dei gruppi
 const TYPE_ORDER: RouteEntry["type"][] = ["public", "auth", "private", "admin"];
 
 function classifyRoute(path: string): RouteEntry["type"] {
@@ -57,8 +57,13 @@ function buildRoutes(): RouteEntry[] {
   PRIVATE_ROUTE_PREFIXES.forEach((r) => add(r, r, "proxy.ts → PRIVATE_ROUTE_PREFIXES"));
 
   return Array.from(map.values()).sort((a, b) => {
+    // 1° criterio: tipo di accesso
     const typeOrder = TYPE_ORDER.indexOf(a.type) - TYPE_ORDER.indexOf(b.type);
     if (typeOrder !== 0) return typeOrder;
+    // 2° criterio: sorgente
+    const sourceOrder = a.source.localeCompare(b.source);
+    if (sourceOrder !== 0) return sourceOrder;
+    // 3° criterio: percorso
     return a.path.localeCompare(b.path);
   });
 }
@@ -98,8 +103,9 @@ export function RoutesTab() {
     {} as Record<RouteEntry["type"], number>,
   );
 
-  // Traccia il cambio di gruppo per aggiungere un separatore visivo
+  // Traccia il cambio di gruppo (tipo + sorgente) per i separatori visivi
   let lastType: RouteEntry["type"] | null = null;
+  let lastSource: string | null = null;
 
   return (
     <div className="space-y-5">
@@ -149,14 +155,16 @@ export function RoutesTab() {
           <tbody>
             {routes.map((route, i) => {
               const cfg = TYPE_CONFIG[route.type];
-              const isNewGroup = route.type !== lastType;
+              const isNewType = route.type !== lastType;
+              const isNewSource = route.source !== lastSource;
               lastType = route.type;
+              lastSource = route.source;
 
               return (
                 <>
-                  {/* Intestazione di gruppo */}
-                  {isNewGroup && (
-                    <tr key={`group-${route.type}`}>
+                  {/* Separatore di gruppo Accesso */}
+                  {isNewType && (
+                    <tr key={`group-type-${route.type}`}>
                       <td
                         colSpan={4}
                         className="px-4 py-1.5 text-[11px] font-semibold uppercase tracking-widest"
@@ -166,7 +174,26 @@ export function RoutesTab() {
                           borderBottom: `1px solid ${cfg.color}22`,
                           borderTop: i > 0 ? `2px solid ${cfg.color}33` : undefined,
                         }}>
-                        {cfg.label}
+                        {cfg.icon}&nbsp;&nbsp;{cfg.label}
+                      </td>
+                    </tr>
+                  )}
+                  {/* Separatore di sottogruppo Sorgente */}
+                  {!isNewType && isNewSource && (
+                    <tr key={`group-source-${route.type}-${route.source}`}>
+                      <td
+                        colSpan={4}
+                        className="px-4 py-1 text-[10px] font-medium uppercase tracking-widest"
+                        style={{
+                          background: "var(--admin-hover-bg)",
+                          color: "var(--admin-text-faint)",
+                          borderTop: "1px dashed var(--admin-card-border)",
+                          borderBottom: "1px dashed var(--admin-card-border)",
+                        }}>
+                        <span className="flex items-center gap-1.5">
+                          <FileCode2 size={10} />
+                          {route.source}
+                        </span>
                       </td>
                     </tr>
                   )}
