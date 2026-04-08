@@ -109,25 +109,25 @@ function SeoForm({
           )}
 
           <div className="grid grid-cols-2 gap-4">
-            {/* Pathname / Selezione pagina */}
+            {/* Pathname */}
             <div className="col-span-2 space-y-1.5">
               <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
                 Pagina
               </label>
+
               {isEdit ? (
+                /* EDIT: select con solo il pathname corrente, read-only */
                 <>
-                  <input
-                    name="pathname"
-                    value={pathname}
-                    onChange={(e) => setPathname(e.target.value)}
-                    placeholder="/esplora"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#e07a3a]/40 focus:border-[#e07a3a]"
-                  />
+                  <input type="hidden" name="pathname" value={page!.pathname} />
+                  <div className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-500 font-mono">
+                    {page!.pathname}
+                  </div>
                   <p className="text-xs text-gray-400">
-                    Modifica il percorso URL della pagina. Attenzione: il vecchio pathname verrà rimosso.
+                    Il percorso URL non può essere modificato.
                   </p>
                 </>
               ) : unconfiguredRoutes.length > 0 ? (
+                /* CREATE: select con le route non ancora configurate */
                 <>
                   <select
                     name="pathname"
