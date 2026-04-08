@@ -1,7 +1,7 @@
 "use server";
 
 import { deleteSeoPage, renameSeoPage, upsertSeoPage } from "@/lib/db/seo-queries";
-import { revalidatePath, revalidateTag } from "next/cache";
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 const ROBOTS_VALUES = ["", "noindex,nofollow", "noindex,follow"] as const;
@@ -23,14 +23,6 @@ const schema = z.object({
     .optional()
     .transform((v) => v || null),
 });
-
-function invalidateSeoCache(pathnames: string[]) {
-  revalidateTag("seo", "unstable_cache");
-  revalidatePath("/admin/seo");
-  for (const p of pathnames) {
-    revalidatePath(p);
-  }
-}
 
 export async function upsertSeoPageAction(
   _: unknown,
@@ -57,10 +49,13 @@ export async function upsertSeoPageAction(
 
   if (originalPathname && originalPathname !== data.pathname) {
     await renameSeoPage(originalPathname, data);
-    invalidateSeoCache([originalPathname, data.pathname]);
+    revalidatePath("/admin/seo");
+    revalidatePath(originalPathname);
+    revalidatePath(data.pathname);
   } else {
     await upsertSeoPage(data);
-    invalidateSeoCache([data.pathname]);
+    revalidatePath("/admin/seo");
+    revalidatePath(data.pathname);
   }
 
   return { success: true };
@@ -71,6 +66,7 @@ export async function deleteSeoPageAction(
 ): Promise<{ error?: string; success?: boolean }> {
   if (!pathname) return { error: "Pathname mancante" };
   await deleteSeoPage(pathname);
-  invalidateSeoCache([pathname]);
+  revalidatePath("/admin/seo");
+  revalidatePath(pathname);
   return { success: true };
 }
