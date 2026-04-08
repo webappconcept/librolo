@@ -91,6 +91,16 @@ export const seoPages = pgTable("seo_pages", {
    * Valori supportati: "noindex,nofollow" | "noindex,follow"
    */
   robots: varchar("robots", { length: 50 }),
+  /**
+   * Se true, viene iniettato uno script JSON-LD nella pagina.
+   */
+  jsonLdEnabled: boolean("json_ld_enabled").default(false),
+  /**
+   * Tipo di schema JSON-LD da usare.
+   * Es: "WebPage", "Article", "BlogPosting", "Product", ecc.
+   * Rilevante solo quando jsonLdEnabled è true.
+   */
+  jsonLdType: varchar("json_ld_type", { length: 50 }),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 

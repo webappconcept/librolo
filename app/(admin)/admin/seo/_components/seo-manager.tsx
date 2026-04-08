@@ -3,7 +3,7 @@
 import type { SeoPage } from "@/lib/db/schema";
 import { FileText, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { useActionState, useEffect, useState, useTransition } from "react";
-import { deleteSeoPageAction, upsertSeoPageAction } from "../actions";
+import { deleteSeoPageAction, JSON_LD_TYPES, type JsonLdType, upsertSeoPageAction } from "../actions";
 
 type RobotsValue = "" | "noindex,nofollow" | "noindex,follow";
 
@@ -12,6 +12,23 @@ const ROBOTS_OPTIONS: { value: RobotsValue; label: string; hint: string }[] = [
   { value: "noindex,nofollow", label: "noindex, nofollow", hint: "Non indicizzare, non seguire i link" },
   { value: "noindex,follow", label: "noindex, follow", hint: "Non indicizzare, ma segui i link" },
 ];
+
+/**
+ * Descrizioni human-friendly per ogni tipo JSON-LD.
+ */
+const JSON_LD_TYPE_HINTS: Record<JsonLdType, string> = {
+  WebPage: "Pagina web generica — ideale per homepage e pagine istituzionali",
+  Article: "Articolo o notizia — migliora l'aspetto nei risultati di Google News",
+  BlogPosting: "Post di blog — simile ad Article, ottimizzato per contenuti blog",
+  Product: "Scheda prodotto — mostra prezzo e disponibilità nei risultati",
+  FAQPage: "Pagina FAQ — abilita i rich result con domande e risposte espansi",
+  BreadcrumbList: "Breadcrumb — mostra il percorso di navigazione nei risultati",
+  Organization: "Organizzazione — dati aziendali (nome, logo, contatti)",
+  LocalBusiness: "Attività locale — indirizzo, orari e valutazioni su Google Maps",
+  Person: "Persona — profilo autore o collaboratore",
+  Event: "Evento — data, luogo e biglietti nei risultati di ricerca",
+  VideoObject: "Video — miniatura e durata nei rich result di YouTube/Google",
+};
 
 function charClass(len: number, max: number) {
   if (len === 0) return "text-gray-400";
@@ -85,6 +102,54 @@ function AppNameHint({ appName }: { appName: string }) {
   );
 }
 
+/**
+ * Toggle switch con label a sinistra.
+ * Usa un <input type="hidden"> per trasmettere il valore nel FormData
+ * (i checkbox non inviano nulla quando deselezionati).
+ */
+function Toggle({
+  label,
+  hint,
+  checked,
+  onChange,
+  name,
+}: {
+  label: string;
+  hint?: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  name: string;
+}) {
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{label}</p>
+          {hint && <p className="text-xs text-gray-400 mt-0.5">{hint}</p>}
+        </div>
+        {/* hidden input per form submission */}
+        <input type="hidden" name={name} value={checked ? "true" : "false"} />
+        <button
+          type="button"
+          role="switch"
+          aria-checked={checked}
+          onClick={() => onChange(!checked)}
+          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-[#e07a3a] focus-visible:ring-offset-2 ${
+            checked ? "bg-[#e07a3a]" : "bg-gray-200"
+          }`}
+        >
+          <span
+            aria-hidden="true"
+            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+              checked ? "translate-x-5" : "translate-x-0"
+            }`}
+          />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function SeoForm({
   page,
   domain,
@@ -107,10 +172,24 @@ function SeoForm({
   const [robots, setRobots] = useState<RobotsValue>(
     (page?.robots as RobotsValue) ?? ""
   );
+  const [jsonLdEnabled, setJsonLdEnabled] = useState<boolean>(
+    page?.jsonLdEnabled ?? false
+  );
+  const [jsonLdType, setJsonLdType] = useState<JsonLdType | "">(
+    (page?.jsonLdType as JsonLdType) ?? ""
+  );
 
   useEffect(() => {
     if (state?.success) onClose();
   }, [state?.success, onClose]);
+
+  // Quando il toggle viene attivato imposta il tipo di default se non già scelto
+  function handleToggleJsonLd(enabled: boolean) {
+    setJsonLdEnabled(enabled);
+    if (enabled && !jsonLdType) setJsonLdType("WebPage");
+  }
+
+  const currentHint = jsonLdType ? JSON_LD_TYPE_HINTS[jsonLdType] : undefined;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
@@ -139,7 +218,6 @@ function SeoForm({
               </label>
 
               {isEdit ? (
-                /* EDIT: select con solo il pathname corrente, read-only */
                 <>
                   <input type="hidden" name="pathname" value={page!.pathname} />
                   <div className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-500 font-mono">
@@ -150,7 +228,6 @@ function SeoForm({
                   </p>
                 </>
               ) : unconfiguredRoutes.length > 0 ? (
-                /* CREATE: select con le route non ancora configurate */
                 <>
                   <select
                     name="pathname"
@@ -190,7 +267,7 @@ function SeoForm({
             </div>
           </div>
 
-          {/* SERP preview — {appName} viene risolto in tempo reale */}
+          {/* SERP preview */}
           <Serp
             title={resolvePreview(title, appName)}
             description={resolvePreview(description, appName)}
@@ -262,6 +339,48 @@ function SeoForm({
               {ROBOTS_OPTIONS.find((o) => o.value === robots)?.hint}
             </p>
           </div>
+
+          {/* ── JSON-LD ─────────────────────────────────────────────────────── */}
+          <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-3">
+            <Toggle
+              name="jsonLdEnabled"
+              label="JSON-LD Structured Data"
+              hint="Inietta un blocco <script type=\"application/ld+json\"> nella pagina per i rich result di Google."
+              checked={jsonLdEnabled}
+              onChange={handleToggleJsonLd}
+            />
+
+            {/* Select tipo — appare solo quando il toggle è attivo */}
+            <div
+              className={`overflow-hidden transition-all duration-200 ease-in-out ${
+                jsonLdEnabled ? "max-h-40 opacity-100" : "max-h-0 opacity-0 pointer-events-none"
+              }`}
+            >
+              <div className="pt-1 space-y-1.5">
+                <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  Tipo di schema
+                </label>
+                {/* Hidden input: invia jsonLdType solo se il toggle è attivo */}
+                {jsonLdEnabled && (
+                  <input type="hidden" name="jsonLdType" value={jsonLdType} />
+                )}
+                <select
+                  value={jsonLdType}
+                  onChange={(e) => setJsonLdType(e.target.value as JsonLdType)}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#e07a3a]/40 focus:border-[#e07a3a] bg-white"
+                >
+                  <option value="" disabled>Seleziona un tipo...</option>
+                  {JSON_LD_TYPES.map((t) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+                {currentHint && (
+                  <p className="text-xs text-gray-400">{currentHint}</p>
+                )}
+              </div>
+            </div>
+          </div>
+          {/* ─────────────────────────────────────────────────────────────────── */}
 
           {/* Open Graph */}
           <details className="group">
@@ -447,10 +566,17 @@ export default function SeoManager({
                     <p className="text-xs text-gray-300 italic">Nessuna descrizione</p>
                   )}
                 </div>
-                {/* Badge robots se presente */}
+                {/* Badge robots */}
                 {page.robots && (
                   <span className="hidden sm:inline-flex text-xs bg-amber-50 text-amber-600 border border-amber-200 px-2 py-0.5 rounded-full font-medium shrink-0">
                     {page.robots}
+                  </span>
+                )}
+                {/* Badge JSON-LD */}
+                {page.jsonLdEnabled && page.jsonLdType && (
+                  <span className="hidden sm:inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-600 border border-blue-200 px-2 py-0.5 rounded-full font-medium shrink-0">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    {page.jsonLdType}
                   </span>
                 )}
                 <div className="flex items-center gap-1 shrink-0">

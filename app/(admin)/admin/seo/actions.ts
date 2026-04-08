@@ -6,6 +6,26 @@ import { z } from "zod";
 
 const ROBOTS_VALUES = ["", "noindex,nofollow", "noindex,follow"] as const;
 
+/**
+ * Tipi JSON-LD supportati.
+ * Aggiungere qui nuovi tipi se necessario — la select nel form si aggiorna automaticamente.
+ */
+export const JSON_LD_TYPES = [
+  "WebPage",
+  "Article",
+  "BlogPosting",
+  "Product",
+  "FAQPage",
+  "BreadcrumbList",
+  "Organization",
+  "LocalBusiness",
+  "Person",
+  "Event",
+  "VideoObject",
+] as const;
+
+export type JsonLdType = (typeof JSON_LD_TYPES)[number];
+
 const schema = z.object({
   pathname: z
     .string()
@@ -22,6 +42,14 @@ const schema = z.object({
     .enum(ROBOTS_VALUES)
     .optional()
     .transform((v) => v || null),
+  jsonLdEnabled: z
+    .string()
+    .optional()
+    .transform((v) => v === "true"),
+  jsonLdType: z
+    .string()
+    .optional()
+    .transform((v) => (v && JSON_LD_TYPES.includes(v as JsonLdType) ? v : null)),
 });
 
 export async function upsertSeoPageAction(
@@ -38,6 +66,8 @@ export async function upsertSeoPageAction(
     ogDescription: formData.get("ogDescription") || undefined,
     ogImage: formData.get("ogImage") || undefined,
     robots: formData.get("robots") || "",
+    jsonLdEnabled: formData.get("jsonLdEnabled") || undefined,
+    jsonLdType: formData.get("jsonLdType") || undefined,
   };
 
   const parsed = schema.safeParse(raw);
