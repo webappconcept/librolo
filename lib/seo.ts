@@ -17,6 +17,21 @@ export async function getSiteUrl(): Promise<string> {
   return domain.replace(/\/$/, "");
 }
 
+/**
+ * Converte il valore stringa salvato in DB nel formato robots atteso da Next.js.
+ * Se il valore è null/undefined/vuoto non viene emesso nessun tag robots
+ * (il browser usa il default: index, follow).
+ */
+function mapRobots(robots?: string | null): Metadata["robots"] | undefined {
+  if (robots === "noindex,nofollow") {
+    return { index: false, follow: false };
+  }
+  if (robots === "noindex,follow") {
+    return { index: false, follow: true };
+  }
+  return undefined;
+}
+
 /** Genera metadata per una pagina leggendo da DB, con fallback sensati. */
 export async function generatePageMetadata(
   pathname: string,
@@ -36,11 +51,13 @@ export async function generatePageMetadata(
   const ogDescription = row?.ogDescription || description;
 
   const canonical = siteUrl ? `${siteUrl}${pathname}` : undefined;
+  const robots = mapRobots(row?.robots);
 
   return {
     title,
     description,
     ...(canonical ? { alternates: { canonical } } : {}),
+    ...(robots ? { robots } : {}),
     openGraph: {
       title: ogTitle,
       description: ogDescription,
