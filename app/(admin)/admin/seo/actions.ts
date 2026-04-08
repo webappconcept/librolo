@@ -1,26 +1,11 @@
 "use server";
 
 import { deleteSeoPage, renameSeoPage, upsertSeoPage } from "@/lib/db/seo-queries";
+import { JSON_LD_TYPES, type JsonLdType } from "./_components/jsonld-types";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 const ROBOTS_VALUES = ["", "noindex,nofollow", "noindex,follow"] as const;
-
-export const JSON_LD_TYPES = [
-  "WebPage",
-  "Article",
-  "BlogPosting",
-  "Product",
-  "FAQPage",
-  "BreadcrumbList",
-  "Organization",
-  "LocalBusiness",
-  "Person",
-  "Event",
-  "VideoObject",
-] as const;
-
-export type JsonLdType = (typeof JSON_LD_TYPES)[number];
 
 const schema = z.object({
   pathname: z
@@ -73,7 +58,6 @@ export async function upsertSeoPageAction(
 
   const { originalPathname, ...data } = parsed.data;
 
-  // Normalizza stringa vuota → null per ogImage
   const finalData = {
     ...data,
     ogImage: data.ogImage === "" ? null : (data.ogImage ?? null),

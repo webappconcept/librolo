@@ -3,7 +3,8 @@
 import type { SeoPage } from "@/lib/db/schema";
 import { FileText, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { useActionState, useEffect, useState, useTransition } from "react";
-import { deleteSeoPageAction, JSON_LD_TYPES, type JsonLdType, upsertSeoPageAction } from "../actions";
+import { deleteSeoPageAction, upsertSeoPageAction } from "../actions";
+import { JSON_LD_TYPES, type JsonLdType } from "./jsonld-types";
 
 type RobotsValue = "" | "noindex,nofollow" | "noindex,follow";
 
@@ -13,16 +14,9 @@ const ROBOTS_OPTIONS: { value: RobotsValue; label: string; hint: string }[] = [
   { value: "noindex,follow", label: "noindex, follow", hint: "Non indicizzare, ma segui i link" },
 ];
 
-/**
- * Stringa definita fuori dal JSX per evitare che il parser Turbopack
- * interpreti i tag <script> come elementi JSX.
- */
 const JSON_LD_TOGGLE_HINT =
   'Inietta un blocco <script type="application/ld+json"> nella pagina per i rich result di Google.';
 
-/**
- * Descrizioni human-friendly per ogni tipo JSON-LD.
- */
 const JSON_LD_TYPE_HINTS: Record<JsonLdType, string> = {
   WebPage: "Pagina web generica \u2014 ideale per homepage e pagine istituzionali",
   Article: "Articolo o notizia \u2014 migliora l'aspetto nei risultati di Google News",
@@ -44,7 +38,6 @@ function charClass(len: number, max: number) {
   return "text-green-600";
 }
 
-/** Sostituisce {appName} con il nome reale dell'app — usato solo nell'anteprima live. */
 function resolvePreview(text: string, appName: string): string {
   if (!appName || !text) return text;
   return text.replace(/\{appName\}/gi, appName);
@@ -68,9 +61,7 @@ function Serp({
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-4 text-sm">
       <div className="flex items-center justify-between mb-1">
-        <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">
-          Anteprima Google
-        </p>
+        <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Anteprima Google</p>
         {isNoIndex && (
           <span className="text-xs bg-amber-50 text-amber-600 border border-amber-200 px-2 py-0.5 rounded-full font-medium">
             noindex \u2014 non verr\u00e0 indicizzata
@@ -78,23 +69,16 @@ function Serp({
         )}
       </div>
       <p className="text-[#1a0dab] text-base font-medium truncate">
-        {title || (
-          <span className="text-gray-400 italic">Titolo non impostato</span>
-        )}
+        {title || <span className="text-gray-400 italic">Titolo non impostato</span>}
       </p>
-      <p className="text-[#006621] text-xs">
-        {displayDomain}{pathname}
-      </p>
+      <p className="text-[#006621] text-xs">{displayDomain}{pathname}</p>
       <p className="text-[#545454] text-sm mt-0.5 line-clamp-2">
-        {description || (
-          <span className="text-gray-400 italic">Descrizione non impostata</span>
-        )}
+        {description || <span className="text-gray-400 italic">Descrizione non impostata</span>}
       </p>
     </div>
   );
 }
 
-/** Hint riutilizzabile che spiega il placeholder {appName}. */
 function AppNameHint({ appName }: { appName: string }) {
   if (!appName) return null;
   return (
@@ -109,11 +93,6 @@ function AppNameHint({ appName }: { appName: string }) {
   );
 }
 
-/**
- * Toggle switch con label a sinistra.
- * Usa un <input type="hidden"> per trasmettere il valore nel FormData
- * (i checkbox non inviano nulla quando deselezionati).
- */
 function Toggle({
   label,
   hint,
@@ -134,7 +113,6 @@ function Toggle({
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{label}</p>
           {hint && <p className="text-xs text-gray-400 mt-0.5">{hint}</p>}
         </div>
-        {/* hidden input per form submission */}
         <input type="hidden" name={name} value={checked ? "true" : "false"} />
         <button
           type="button"
@@ -176,14 +154,8 @@ function SeoForm({
   const [title, setTitle] = useState(page?.title ?? "");
   const [description, setDescription] = useState(page?.description ?? "");
   const [pathname, setPathname] = useState(page?.pathname ?? "");
-  const [robots, setRobots] = useState<RobotsValue>(
-    (page?.robots as RobotsValue) ?? ""
-  );
-  // Normalizza null → false (il DB può restituire null se la colonna non era notNull)
-  const [jsonLdEnabled, setJsonLdEnabled] = useState<boolean>(
-    page?.jsonLdEnabled === true
-  );
-  // Normalizza null/undefined → "" per evitare crash su JSON_LD_TYPE_HINTS[null]
+  const [robots, setRobots] = useState<RobotsValue>((page?.robots as RobotsValue) ?? "");
+  const [jsonLdEnabled, setJsonLdEnabled] = useState<boolean>(page?.jsonLdEnabled === true);
   const [jsonLdType, setJsonLdType] = useState<JsonLdType | "">(
     (page?.jsonLdType as JsonLdType | null | undefined) ?? ""
   );
@@ -197,7 +169,6 @@ function SeoForm({
     if (enabled && !jsonLdType) setJsonLdType("WebPage");
   }
 
-  // Cast sicuro: se jsonLdType è "" non accediamo al record
   const currentHint =
     jsonLdType && jsonLdType in JSON_LD_TYPE_HINTS
       ? JSON_LD_TYPE_HINTS[jsonLdType as JsonLdType]
@@ -223,21 +194,15 @@ function SeoForm({
           )}
 
           <div className="grid grid-cols-2 gap-4">
-            {/* Pathname */}
             <div className="col-span-2 space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                Pagina
-              </label>
-
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">Pagina</label>
               {isEdit ? (
                 <>
                   <input type="hidden" name="pathname" value={page!.pathname} />
                   <div className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-500 font-mono">
                     {page!.pathname}
                   </div>
-                  <p className="text-xs text-gray-400">
-                    Il percorso URL non pu\u00f2 essere modificato.
-                  </p>
+                  <p className="text-xs text-gray-400">Il percorso URL non pu\u00f2 essere modificato.</p>
                 </>
               ) : unconfiguredRoutes.length > 0 ? (
                 <>
@@ -251,25 +216,18 @@ function SeoForm({
                       <option key={r} value={r}>{r}</option>
                     ))}
                   </select>
-                  <p className="text-xs text-gray-400">
-                    Mostra solo le pagine dell&apos;app non ancora configurate.
-                  </p>
+                  <p className="text-xs text-gray-400">Mostra solo le pagine dell&apos;app non ancora configurate.</p>
                 </>
               ) : (
                 <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-50 border border-green-200">
                   <span className="text-green-600 text-sm">\u2713</span>
-                  <p className="text-xs text-green-700 font-medium">
-                    Tutte le pagine dell&apos;app sono gi\u00e0 configurate.
-                  </p>
+                  <p className="text-xs text-green-700 font-medium">Tutte le pagine dell&apos;app sono gi\u00e0 configurate.</p>
                 </div>
               )}
             </div>
 
-            {/* Label uso interno */}
             <div className="col-span-2 space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                Nome (uso interno)
-              </label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">Nome (uso interno)</label>
               <input
                 name="label"
                 defaultValue={page?.label ?? ""}
@@ -279,7 +237,6 @@ function SeoForm({
             </div>
           </div>
 
-          {/* SERP preview */}
           <Serp
             title={resolvePreview(title, appName)}
             description={resolvePreview(description, appName)}
@@ -288,15 +245,10 @@ function SeoForm({
             robots={robots}
           />
 
-          {/* Meta Title */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                Meta Title
-              </label>
-              <span className={`text-xs ${charClass(title.length, 60)}`}>
-                {title.length}/60
-              </span>
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">Meta Title</label>
+              <span className={`text-xs ${charClass(title.length, 60)}`}>{title.length}/60</span>
             </div>
             <input
               name="title"
@@ -309,15 +261,10 @@ function SeoForm({
             <AppNameHint appName={appName} />
           </div>
 
-          {/* Meta Description */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                Meta Description
-              </label>
-              <span className={`text-xs ${charClass(description.length, 155)}`}>
-                {description.length}/155
-              </span>
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">Meta Description</label>
+              <span className={`text-xs ${charClass(description.length, 155)}`}>{description.length}/155</span>
             </div>
             <textarea
               name="description"
@@ -331,20 +278,15 @@ function SeoForm({
             <AppNameHint appName={appName} />
           </div>
 
-          {/* Meta Robots */}
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-              Meta Robots
-            </label>
+            <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">Meta Robots</label>
             <select
               name="robots"
               value={robots}
               onChange={(e) => setRobots(e.target.value as RobotsValue)}
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#e07a3a]/40 focus:border-[#e07a3a] bg-white">
               {ROBOTS_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
             </select>
             <p className="text-xs text-gray-400">
@@ -352,7 +294,7 @@ function SeoForm({
             </p>
           </div>
 
-          {/* \u2500\u2500 JSON-LD \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */}
+          {/* JSON-LD */}
           <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-3">
             <Toggle
               name="jsonLdEnabled"
@@ -361,17 +303,13 @@ function SeoForm({
               checked={jsonLdEnabled}
               onChange={handleToggleJsonLd}
             />
-
-            {/* Select tipo \u2014 appare solo quando il toggle \u00e8 attivo */}
             <div
               className={`overflow-hidden transition-all duration-200 ease-in-out ${
                 jsonLdEnabled ? "max-h-40 opacity-100" : "max-h-0 opacity-0 pointer-events-none"
               }`}
             >
               <div className="pt-1 space-y-1.5">
-                <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  Tipo di schema
-                </label>
+                <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">Tipo di schema</label>
                 {jsonLdEnabled && (
                   <input type="hidden" name="jsonLdType" value={jsonLdType} />
                 )}
@@ -385,13 +323,10 @@ function SeoForm({
                     <option key={t} value={t}>{t}</option>
                   ))}
                 </select>
-                {currentHint && (
-                  <p className="text-xs text-gray-400">{currentHint}</p>
-                )}
+                {currentHint && <p className="text-xs text-gray-400">{currentHint}</p>}
               </div>
             </div>
           </div>
-          {/* \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */}
 
           {/* Open Graph */}
           <details className="group">
@@ -400,9 +335,7 @@ function SeoForm({
             </summary>
             <div className="mt-3 space-y-3">
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  OG Title
-                </label>
+                <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">OG Title</label>
                 <input
                   name="ogTitle"
                   defaultValue={page?.ogTitle ?? ""}
@@ -413,9 +346,7 @@ function SeoForm({
                 <AppNameHint appName={appName} />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  OG Description
-                </label>
+                <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">OG Description</label>
                 <textarea
                   name="ogDescription"
                   defaultValue={page?.ogDescription ?? ""}
@@ -427,9 +358,7 @@ function SeoForm({
                 <AppNameHint appName={appName} />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  OG Image URL
-                </label>
+                <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">OG Image URL</label>
                 <input
                   name="ogImage"
                   defaultValue={page?.ogImage ?? ""}
@@ -441,9 +370,7 @@ function SeoForm({
           </details>
 
           {state?.error && (
-            <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">
-              {state.error}
-            </p>
+            <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{state.error}</p>
           )}
 
           <div className="flex items-center justify-end gap-3 pt-2 border-t border-gray-100">
@@ -502,13 +429,9 @@ export default function SeoManager({
 
   return (
     <>
-      {/* Toolbar */}
       <div className="flex items-center gap-3 mb-4">
         <div className="relative flex-1">
-          <Search
-            size={14}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-          />
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -526,7 +449,6 @@ export default function SeoManager({
         </button>
       </div>
 
-      {/* Lista */}
       {filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <FileText size={36} className="text-gray-300 mb-3" />
@@ -550,20 +472,12 @@ export default function SeoManager({
                 <div
                   className="w-2 h-2 rounded-full shrink-0"
                   style={{
-                    background: complete
-                      ? "#22c55e"
-                      : hasTitle || hasDesc
-                        ? "#f59e0b"
-                        : "#d1d5db",
+                    background: complete ? "#22c55e" : hasTitle || hasDesc ? "#f59e0b" : "#d1d5db",
                   }}
                 />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">
-                    {page.label}
-                  </p>
-                  <p className="text-xs text-gray-400 font-mono">
-                    {page.pathname}
-                  </p>
+                  <p className="text-sm font-medium text-gray-900 truncate">{page.label}</p>
+                  <p className="text-xs text-gray-400 font-mono">{page.pathname}</p>
                 </div>
                 <div className="hidden sm:block flex-1 min-w-0">
                   {page.title ? (
@@ -577,17 +491,14 @@ export default function SeoManager({
                     <p className="text-xs text-gray-300 italic">Nessuna descrizione</p>
                   )}
                 </div>
-                {/* Badge robots */}
                 {page.robots && (
                   <span className="hidden sm:inline-flex text-xs bg-amber-50 text-amber-600 border border-amber-200 px-2 py-0.5 rounded-full font-medium shrink-0">
                     {page.robots}
                   </span>
                 )}
-                {/* Badge JSON-LD */}
                 {page.jsonLdEnabled && page.jsonLdType && (
                   <span className="hidden sm:inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-600 border border-blue-200 px-2 py-0.5 rounded-full font-medium shrink-0">
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                    {page.jsonLdType}
+                    LD+JSON
                   </span>
                 )}
                 <div className="flex items-center gap-1 shrink-0">
@@ -608,7 +519,6 @@ export default function SeoManager({
         </div>
       )}
 
-      {/* Modal */}
       {editPage !== null && (
         <SeoForm
           page={editPage === "new" ? null : editPage}
