@@ -21,7 +21,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { useTransition, useState, useMemo } from "react";
+import { useTransition, useState, useMemo, useEffect } from "react";
 import {
   createPermission,
   deletePermission,
@@ -36,7 +36,7 @@ type Props = {
   rolePermsMap: Record<number, number[]>;
 };
 
-// ─── Tab bar ─────────────────────────────────────────────────────────
+// ─── Tab bar ──────────────────────────────────────────────────────────────────
 function TabBar({
   active,
   onChange,
@@ -71,7 +71,7 @@ function TabBar({
   );
 }
 
-// ─── Lock icon ────────────────────────────────────────────────────────────
+// ─── Lock icon ────────────────────────────────────────────────────────────────
 function SystemLockIcon() {
   return (
     <span title="Permesso di sistema" style={{ display: "inline-flex" }}>
@@ -80,7 +80,7 @@ function SystemLockIcon() {
   );
 }
 
-// ─── Legenda permessi di sistema ─────────────────────────────────────
+// ─── Legenda permessi di sistema ──────────────────────────────────────────────
 function SystemPermissionsLegend() {
   const [open, setOpen] = useState(false);
   const grouped = useMemo(() => groupedSystemPermissions(), []);
@@ -139,7 +139,7 @@ function SystemPermissionsLegend() {
   );
 }
 
-// ─── Matrice ruoli ────────────────────────────────────────────────────
+// ─── Matrice ruoli ────────────────────────────────────────────────────────────
 function PermissionsMatrix({ permissions, roles, rolePermsMap }: Props) {
   const [search, setSearch] = useState("");
   const [pending, startTransition] = useTransition();
@@ -262,7 +262,7 @@ function PermissionsMatrix({ permissions, roles, rolePermsMap }: Props) {
   );
 }
 
-// ─── Drawer "Chi ha questo permesso?" ─────────────────────────────────
+// ─── Drawer "Chi ha questo permesso?" ────────────────────────────────────────
 type UserWithPermission = {
   id: number;
   email: string;
@@ -283,16 +283,20 @@ function UsersDrawer({
 }) {
   const [users, setUsers] = useState<UserWithPermission[] | null>(null);
   const [loading, setLoading] = useState(true);
-  const [, startTransition] = useTransition();
 
-  // Carica al mount
-  useState(() => {
-    startTransition(async () => {
-      const result = await fetchUsersWithPermission(permKey);
-      setUsers(result as UserWithPermission[]);
-      setLoading(false);
+  // Carica al mount — useEffect, NON useState
+  useEffect(() => {
+    let cancelled = false;
+    fetchUsersWithPermission(permKey).then((result) => {
+      if (!cancelled) {
+        setUsers(result as UserWithPermission[]);
+        setLoading(false);
+      }
     });
-  });
+    return () => {
+      cancelled = true;
+    };
+  }, [permKey]);
 
   return (
     <div
@@ -401,7 +405,7 @@ function UsersDrawer({
   );
 }
 
-// ─── Dialog conferma eliminazione ────────────────────────────────────
+// ─── Dialog conferma eliminazione ─────────────────────────────────────────────
 type ImpactData = {
   id: number;
   key: string;
@@ -496,7 +500,7 @@ function DeleteConfirmDialog({
   );
 }
 
-// ─── Catalogo permessi ────────────────────────────────────────────────
+// ─── Catalogo permessi ────────────────────────────────────────────────────────
 function PermissionsCatalog({ permissions, roles, rolePermsMap }: Props) {
   const [showCreate, setShowCreate] = useState(false);
   const [search, setSearch] = useState("");
@@ -749,7 +753,7 @@ function PermissionsCatalog({ permissions, roles, rolePermsMap }: Props) {
   );
 }
 
-// ─── Root ─────────────────────────────────────────────────────────────
+// ─── Root ─────────────────────────────────────────────────────────────────────
 export function PermissionsManager({ permissions, roles, rolePermsMap }: Props) {
   const [tab, setTab] = useState<"matrix" | "catalog">("matrix");
 
