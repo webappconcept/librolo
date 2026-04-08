@@ -27,7 +27,7 @@ export function UserDetailTabs({
       icon: Key,
       badge: overridesCount > 0 ? overridesCount : undefined,
     },
-    { id: "activity" as const, label: "Attività", icon: Activity },
+    { id: "activity" as const, label: "Attivit\u00e0", icon: Activity },
   ];
 
   return (
@@ -45,10 +45,10 @@ export function UserDetailTabs({
               onClick={() => setActive(t.id)}
               className="flex items-center gap-1.5 px-4 py-1.5 text-sm rounded-lg font-medium transition-all"
               style={{
-                background: isActive ? "var(--admin-card-bg)" : "transparent",
-                color: isActive ? "var(--admin-text)" : "var(--admin-text-muted)",
+                background: isActive ? "var(--admin-accent)" : "transparent",
+                color: isActive ? "#fff" : "var(--admin-text-muted)",
                 boxShadow: isActive
-                  ? "0 1px 3px oklch(0 0 0 / 0.08)"
+                  ? "0 1px 3px oklch(0 0 0 / 0.15)"
                   : "none",
               }}>
               <Icon size={13} />
@@ -56,7 +56,10 @@ export function UserDetailTabs({
               {t.badge !== undefined && (
                 <span
                   className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                  style={{ background: "#dbeafe", color: "#2563eb" }}>
+                  style={{
+                    background: isActive ? "rgba(255,255,255,0.25)" : "#dbeafe",
+                    color: isActive ? "#fff" : "#2563eb",
+                  }}>
                   {t.badge}
                 </span>
               )}
