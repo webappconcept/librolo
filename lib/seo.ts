@@ -1,8 +1,8 @@
-import type { Metadata } from "next";
-import { unstable_cache } from "next/cache";
 import { getSeoPage as _getSeoPage } from "@/lib/db/seo-queries";
 import { getAppSettings as _getAppSettings } from "@/lib/db/settings-queries";
-
+import type { Metadata } from "next";
+import { unstable_cache } from "next/cache";
+import { connection } from "next/server";
 /**
  * Versione cached di getSeoPage — revalidata ogni 60s o su revalidateTag('seo').
  */
@@ -59,6 +59,7 @@ export async function generatePageMetadata(
   pathname: string,
   defaults?: { title?: string; description?: string },
 ): Promise<Metadata> {
+  await connection();
   const [row, settings, siteUrl] = await Promise.all([
     getCachedSeoPage(pathname),
     getCachedAppSettings(),
@@ -70,9 +71,7 @@ export async function generatePageMetadata(
 
   const title = resolve(row?.title || defaults?.title || appName);
   const description = resolve(
-    row?.description ||
-      defaults?.description ||
-      `Benvenuto su ${appName}.`,
+    row?.description || defaults?.description || `Benvenuto su ${appName}.`,
   );
   const ogTitle = resolve(row?.ogTitle || title);
   const ogDescription = resolve(row?.ogDescription || description);
