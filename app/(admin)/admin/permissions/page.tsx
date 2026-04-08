@@ -6,6 +6,7 @@ import { rolePermissions } from "@/lib/db/schema";
 import { requireAdminPage } from "@/lib/rbac/guards";
 import { Suspense } from "react";
 import { PermissionsManager } from "./_components/permissions-manager";
+import { PermissionsInfoCard } from "./_components/permissions-info-card";
 
 export const metadata = { title: "Permessi" };
 
@@ -15,7 +16,6 @@ async function PermissionsContent() {
     getAdminRoles(),
   ]);
 
-  // Carica la matrice roleId -> Set<permissionId>
   const matrix = await db.select().from(rolePermissions);
   const rolePermsMap: Record<number, Set<number>> = {};
   for (const row of matrix) {
@@ -39,6 +39,7 @@ export default async function AdminPermissionsPage() {
 
   return (
     <div className="space-y-5">
+      {/* Header */}
       <div>
         <h2 className="text-lg font-bold" style={{ color: "var(--admin-text)" }}>
           Permessi
@@ -48,6 +49,10 @@ export default async function AdminPermissionsPage() {
         </p>
       </div>
 
+      {/* Scheda informativa collassabile */}
+      <PermissionsInfoCard />
+
+      {/* Contenuto principale */}
       <Suspense
         fallback={
           <div className="flex items-center justify-center h-40">
@@ -56,7 +61,8 @@ export default async function AdminPermissionsPage() {
               style={{ borderColor: "var(--admin-accent)", borderTopColor: "transparent" }}
             />
           </div>
-        }>
+        }
+      >
         <PermissionsContent />
       </Suspense>
     </div>
