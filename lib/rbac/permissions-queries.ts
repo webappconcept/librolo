@@ -11,6 +11,8 @@ import {
 } from "@/lib/db/schema";
 import { and, eq, gt, isNull, or, desc, sql } from "drizzle-orm";
 
+const USERS_WITH_PERMISSION_LIMIT = 200;
+
 /** Tutti i permessi, ordinati per gruppo poi per key */
 export async function getAllPermissions() {
   return db
@@ -49,7 +51,11 @@ export async function getUserPermissionOverrides(userId: number) {
     .orderBy(desc(userPermissions.createdAt));
 }
 
-/** Lista utenti che hanno un dato permesso (via ruolo O override attivo) */
+/**
+ * Lista utenti che hanno un dato permesso (via ruolo O override attivo).
+ * Restituisce al massimo USERS_WITH_PERMISSION_LIMIT utenti.
+ * Se il risultato è troncato, `truncated: true` viene incluso nella risposta.
+ */
 export async function getUsersWithPermission(permissionKey: string) {
   const now = new Date();
 
@@ -67,7 +73,8 @@ export async function getUsersWithPermission(permissionKey: string) {
     .innerJoin(roles, eq(users.role, roles.name))
     .innerJoin(rolePermissions, eq(rolePermissions.roleId, roles.id))
     .innerJoin(permissions, eq(rolePermissions.permissionId, permissions.id))
-    .where(eq(permissions.key, permissionKey));
+    .where(eq(permissions.key, permissionKey))
+    .limit(USERS_WITH_PERMISSION_LIMIT);
 
   // Via override attivo granted=true
   const viaOverride = await db
@@ -88,14 +95,18 @@ export async function getUsersWithPermission(permissionKey: string) {
         eq(userPermissions.granted, true),
         or(isNull(userPermissions.expiresAt), gt(userPermissions.expiresAt, now)),
       ),
-    );
+    )
+    .limit(USERS_WITH_PERMISSION_LIMIT);
 
   // Deduplicazione per id (override ha priorità)
   const map = new Map<number, (typeof viaRole)[0]>();
   for (const u of viaRole) map.set(u.id, u);
   for (const u of viaOverride) map.set(u.id, u);
 
-  return Array.from(map.values());
+  const all = Array.from(map.values());
+  const truncated = all.length >= USERS_WITH_PERMISSION_LIMIT;
+
+  return { users: all, truncated, limit: USERS_WITH_PERMISSION_LIMIT };
 }
 
 /** Aggiunge un permesso a un ruolo */

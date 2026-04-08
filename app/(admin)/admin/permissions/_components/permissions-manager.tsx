@@ -36,7 +36,7 @@ type Props = {
   rolePermsMap: Record<number, number[]>;
 };
 
-// ─── Tab bar ──────────────────────────────────────────────────────────────────
+// ─── Tab bar ─────────────────────────────────────────────────────────────────
 function TabBar({
   active,
   onChange,
@@ -59,10 +59,8 @@ function TabBar({
           className="px-4 py-1.5 text-sm rounded-lg font-medium transition-all"
           style={{
             background: active === t.id ? "var(--admin-card-bg)" : "transparent",
-            color:
-              active === t.id ? "var(--admin-text)" : "var(--admin-text-muted)",
-            boxShadow:
-              active === t.id ? "0 1px 3px oklch(0 0 0 / 0.08)" : "none",
+            color: active === t.id ? "var(--admin-text)" : "var(--admin-text-muted)",
+            boxShadow: active === t.id ? "0 1px 3px oklch(0 0 0 / 0.08)" : "none",
           }}>
           {t.label}
         </button>
@@ -262,7 +260,7 @@ function PermissionsMatrix({ permissions, roles, rolePermsMap }: Props) {
   );
 }
 
-// ─── Drawer "Chi ha questo permesso?" ────────────────────────────────────────
+// ─── Drawer "Chi ha questo permesso?" ─────────────────────────────────────────
 type UserWithPermission = {
   id: number;
   email: string;
@@ -270,6 +268,12 @@ type UserWithPermission = {
   lastName: string | null;
   role: string;
   source: string;
+};
+
+type DrawerData = {
+  users: UserWithPermission[];
+  truncated: boolean;
+  limit: number;
 };
 
 function UsersDrawer({
@@ -281,47 +285,60 @@ function UsersDrawer({
   permLabel: string;
   onClose: () => void;
 }) {
-  const [users, setUsers] = useState<UserWithPermission[] | null>(null);
+  const [data, setData] = useState<DrawerData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
 
-  // Carica al mount — useEffect, NON useState
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
+    setSearch("");
     fetchUsersWithPermission(permKey).then((result) => {
       if (!cancelled) {
-        setUsers(result as UserWithPermission[]);
+        setData(result as DrawerData);
         setLoading(false);
       }
     });
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [permKey]);
+
+  const filtered = useMemo(() => {
+    if (!data) return [];
+    const q = search.trim().toLowerCase();
+    if (!q) return data.users;
+    return data.users.filter(
+      (u) =>
+        u.email.toLowerCase().includes(q) ||
+        (u.firstName ?? "").toLowerCase().includes(q) ||
+        (u.lastName ?? "").toLowerCase().includes(q),
+    );
+  }, [data, search]);
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-end"
+      className="fixed inset-0 z-50 flex items-stretch sm:items-center justify-end"
       style={{ background: "rgba(0,0,0,0.45)" }}
       onClick={(e) => e.target === e.currentTarget && onClose()}>
-      {/* Pannello drawer */}
+
       <div
-        className="w-full sm:w-96 h-full sm:h-auto sm:max-h-[80vh] flex flex-col rounded-t-2xl sm:rounded-2xl sm:mr-4"
+        className="w-full sm:w-[420px] h-full flex flex-col"
         style={{
           background: "var(--admin-card-bg)",
-          border: "1px solid var(--admin-card-border)",
-          boxShadow: "0 24px 48px oklch(0 0 0 / 0.35)",
+          borderLeft: "1px solid var(--admin-card-border)",
+          boxShadow: "-12px 0 40px oklch(0 0 0 / 0.18)",
         }}>
-        {/* Header */}
+
+        {/* ── Header ─────────────────────────────────────────────── */}
         <div
-          className="flex items-center gap-3 px-5 py-4 border-b shrink-0"
-          style={{ borderColor: "var(--admin-card-border)" }}>
+          className="flex items-center gap-3 px-5 py-4 shrink-0"
+          style={{ borderBottom: "1px solid var(--admin-card-border)" }}>
           <div
             className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
             style={{ background: "var(--admin-hover-bg)" }}>
             <Users size={15} style={{ color: "var(--admin-accent)" }} />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold truncate" style={{ color: "var(--admin-text)" }}>
+            <p className="text-sm font-semibold" style={{ color: "var(--admin-text)" }}>
               Chi ha questo permesso?
             </p>
             <code className="text-[11px] font-mono" style={{ color: "var(--admin-text-muted)" }}>
@@ -330,36 +347,90 @@ function UsersDrawer({
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg transition-colors"
+            className="p-1.5 rounded-lg transition-colors hover:bg-[var(--admin-hover-bg)]"
             style={{ color: "var(--admin-text-faint)" }}>
             <X size={16} />
           </button>
         </div>
 
-        {/* Corpo */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+        {/* ── Barra ricerca + contatore ───────────────────────────── */}
+        {!loading && data && (
+          <div
+            className="px-4 pt-3 pb-2 shrink-0 space-y-2"
+            style={{ borderBottom: "1px solid var(--admin-card-border)" }}>
+            <div className="relative">
+              <Search
+                size={13}
+                className="absolute left-3 top-1/2 -translate-y-1/2"
+                style={{ color: "var(--admin-text-faint)" }}
+              />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Cerca per nome o email..."
+                className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg outline-none border"
+                style={{
+                  background: "var(--admin-bg)",
+                  borderColor: "var(--admin-card-border)",
+                  color: "var(--admin-text)",
+                }}
+              />
+              {search && (
+                <button
+                  onClick={() => setSearch("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2"
+                  style={{ color: "var(--admin-text-faint)" }}>
+                  <X size={11} />
+                </button>
+              )}
+            </div>
+
+            {/* Contatore risultati */}
+            <div className="flex items-center justify-between">
+              <p className="text-[11px]" style={{ color: "var(--admin-text-faint)" }}>
+                {search
+                  ? `${filtered.length} di ${data.users.length} utenti`
+                  : `${data.users.length} ${data.users.length === 1 ? "utente" : "utenti"}`}
+              </p>
+              {data.truncated && (
+                <span
+                  className="text-[10px] font-medium px-2 py-0.5 rounded-full"
+                  style={{ background: "#fffbeb", color: "#b45309", border: "1px solid #fde68a" }}>
+                  Mostra primi {data.limit}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── Corpo ──────────────────────────────────────────────── */}
+        <div className="flex-1 overflow-y-auto p-3 space-y-1.5">
           {loading ? (
-            <div className="flex items-center justify-center py-12">
+            <div className="flex items-center justify-center py-16">
               <div
                 className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin"
                 style={{ borderColor: "var(--admin-accent)", borderTopColor: "transparent" }}
               />
             </div>
-          ) : !users || users.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
+          ) : filtered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
               <Users size={28} style={{ color: "var(--admin-text-faint)" }} className="mb-3" />
               <p className="text-sm font-medium" style={{ color: "var(--admin-text-muted)" }}>
-                Nessun utente
+                {search ? "Nessun risultato" : "Nessun utente"}
               </p>
-              <p className="text-xs mt-1" style={{ color: "var(--admin-text-faint)" }}>
-                Nessuno ha ancora il permesso <code>{permKey}</code>
+              <p className="text-xs mt-1 max-w-[220px]" style={{ color: "var(--admin-text-faint)" }}>
+                {search
+                  ? `Nessun utente corrisponde a "${search}"`
+                  : `Nessuno ha ancora il permesso`}
               </p>
             </div>
           ) : (
-            users.map((u) => {
+            filtered.map((u) => {
               const name = [u.firstName, u.lastName].filter(Boolean).join(" ") || u.email;
-              const initials = [u.firstName?.[0], u.lastName?.[0]].filter(Boolean).join("").toUpperCase() || u.email[0].toUpperCase();
-              const isViaOverride = u.source === "'override'" || u.source === "override";
+              const initials =
+                [u.firstName?.[0], u.lastName?.[0]].filter(Boolean).join("").toUpperCase() ||
+                u.email[0].toUpperCase();
+              const isViaOverride = u.source === "override" || u.source === "'override'";
               return (
                 <div
                   key={u.id}
@@ -368,14 +439,25 @@ function UsersDrawer({
                   {/* Avatar */}
                   <div
                     className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
-                    style={{ background: "var(--admin-card-border)", color: "var(--admin-text-muted)" }}>
+                    style={{
+                      background: "var(--admin-card-border)",
+                      color: "var(--admin-text-muted)",
+                    }}>
                     {initials}
                   </div>
                   {/* Info */}
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium truncate" style={{ color: "var(--admin-text)" }}>{name}</p>
-                    <p className="text-[10px] truncate" style={{ color: "var(--admin-text-faint)" }}>{u.email}</p>
+                    <p className="text-xs font-medium truncate" style={{ color: "var(--admin-text)" }}>
+                      {name}
+                    </p>
+                    <p className="text-[10px] truncate" style={{ color: "var(--admin-text-faint)" }}>
+                      {u.email}
+                    </p>
                   </div>
+                  {/* Ruolo */}
+                  <span className="text-[10px] shrink-0" style={{ color: "var(--admin-text-faint)" }}>
+                    {u.role}
+                  </span>
                   {/* Source badge */}
                   <span
                     className="text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0"
@@ -392,12 +474,15 @@ function UsersDrawer({
           )}
         </div>
 
-        {/* Footer */}
-        {users && users.length > 0 && (
+        {/* ── Footer permesso ─────────────────────────────────────── */}
+        {!loading && data && data.users.length > 0 && (
           <div
-            className="px-5 py-3 border-t text-xs shrink-0"
-            style={{ borderColor: "var(--admin-card-border)", color: "var(--admin-text-faint)" }}>
-            {users.length} {users.length === 1 ? "utente" : "utenti"} — {permLabel}
+            className="px-5 py-3 shrink-0 text-xs truncate"
+            style={{
+              borderTop: "1px solid var(--admin-card-border)",
+              color: "var(--admin-text-faint)",
+            }}>
+            {permLabel}
           </div>
         )}
       </div>
