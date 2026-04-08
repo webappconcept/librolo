@@ -14,6 +14,13 @@ const ROBOTS_OPTIONS: { value: RobotsValue; label: string; hint: string }[] = [
 ];
 
 /**
+ * Stringa definita fuori dal JSX per evitare che il parser Turbopack
+ * interpreti i tag <script> come elementi JSX.
+ */
+const JSON_LD_TOGGLE_HINT =
+  'Inietta un blocco <script type="application/ld+json"> nella pagina per i rich result di Google.';
+
+/**
  * Descrizioni human-friendly per ogni tipo JSON-LD.
  */
 const JSON_LD_TYPE_HINTS: Record<JsonLdType, string> = {
@@ -183,7 +190,6 @@ function SeoForm({
     if (state?.success) onClose();
   }, [state?.success, onClose]);
 
-  // Quando il toggle viene attivato imposta il tipo di default se non già scelto
   function handleToggleJsonLd(enabled: boolean) {
     setJsonLdEnabled(enabled);
     if (enabled && !jsonLdType) setJsonLdType("WebPage");
@@ -345,7 +351,7 @@ function SeoForm({
             <Toggle
               name="jsonLdEnabled"
               label="JSON-LD Structured Data"
-              hint="Inietta un blocco <script type=\"application/ld+json\"> nella pagina per i rich result di Google."
+              hint={JSON_LD_TOGGLE_HINT}
               checked={jsonLdEnabled}
               onChange={handleToggleJsonLd}
             />
@@ -360,7 +366,6 @@ function SeoForm({
                 <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
                   Tipo di schema
                 </label>
-                {/* Hidden input: invia jsonLdType solo se il toggle è attivo */}
                 {jsonLdEnabled && (
                   <input type="hidden" name="jsonLdType" value={jsonLdType} />
                 )}
