@@ -93,8 +93,9 @@ export const seoPages = pgTable("seo_pages", {
   robots: varchar("robots", { length: 50 }),
   /**
    * Se true, viene iniettato uno script JSON-LD nella pagina.
+   * notNull() garantisce che il valore sia sempre boolean (mai null) lato TypeScript.
    */
-  jsonLdEnabled: boolean("json_ld_enabled").default(false),
+  jsonLdEnabled: boolean("json_ld_enabled").notNull().default(false),
   /**
    * Tipo di schema JSON-LD da usare.
    * Es: "WebPage", "Article", "BlogPosting", "Product", ecc.

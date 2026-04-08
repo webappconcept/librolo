@@ -24,17 +24,17 @@ const JSON_LD_TOGGLE_HINT =
  * Descrizioni human-friendly per ogni tipo JSON-LD.
  */
 const JSON_LD_TYPE_HINTS: Record<JsonLdType, string> = {
-  WebPage: "Pagina web generica — ideale per homepage e pagine istituzionali",
-  Article: "Articolo o notizia — migliora l'aspetto nei risultati di Google News",
-  BlogPosting: "Post di blog — simile ad Article, ottimizzato per contenuti blog",
-  Product: "Scheda prodotto — mostra prezzo e disponibilità nei risultati",
-  FAQPage: "Pagina FAQ — abilita i rich result con domande e risposte espansi",
-  BreadcrumbList: "Breadcrumb — mostra il percorso di navigazione nei risultati",
-  Organization: "Organizzazione — dati aziendali (nome, logo, contatti)",
-  LocalBusiness: "Attività locale — indirizzo, orari e valutazioni su Google Maps",
-  Person: "Persona — profilo autore o collaboratore",
-  Event: "Evento — data, luogo e biglietti nei risultati di ricerca",
-  VideoObject: "Video — miniatura e durata nei rich result di YouTube/Google",
+  WebPage: "Pagina web generica \u2014 ideale per homepage e pagine istituzionali",
+  Article: "Articolo o notizia \u2014 migliora l'aspetto nei risultati di Google News",
+  BlogPosting: "Post di blog \u2014 simile ad Article, ottimizzato per contenuti blog",
+  Product: "Scheda prodotto \u2014 mostra prezzo e disponibilit\u00e0 nei risultati",
+  FAQPage: "Pagina FAQ \u2014 abilita i rich result con domande e risposte espansi",
+  BreadcrumbList: "Breadcrumb \u2014 mostra il percorso di navigazione nei risultati",
+  Organization: "Organizzazione \u2014 dati aziendali (nome, logo, contatti)",
+  LocalBusiness: "Attivit\u00e0 locale \u2014 indirizzo, orari e valutazioni su Google Maps",
+  Person: "Persona \u2014 profilo autore o collaboratore",
+  Event: "Evento \u2014 data, luogo e biglietti nei risultati di ricerca",
+  VideoObject: "Video \u2014 miniatura e durata nei rich result di YouTube/Google",
 };
 
 function charClass(len: number, max: number) {
@@ -73,7 +73,7 @@ function Serp({
         </p>
         {isNoIndex && (
           <span className="text-xs bg-amber-50 text-amber-600 border border-amber-200 px-2 py-0.5 rounded-full font-medium">
-            noindex — non verrà indicizzata
+            noindex \u2014 non verr\u00e0 indicizzata
           </span>
         )}
       </div>
@@ -179,11 +179,13 @@ function SeoForm({
   const [robots, setRobots] = useState<RobotsValue>(
     (page?.robots as RobotsValue) ?? ""
   );
+  // Normalizza null → false (il DB può restituire null se la colonna non era notNull)
   const [jsonLdEnabled, setJsonLdEnabled] = useState<boolean>(
-    page?.jsonLdEnabled ?? false
+    page?.jsonLdEnabled === true
   );
+  // Normalizza null/undefined → "" per evitare crash su JSON_LD_TYPE_HINTS[null]
   const [jsonLdType, setJsonLdType] = useState<JsonLdType | "">(
-    (page?.jsonLdType as JsonLdType) ?? ""
+    (page?.jsonLdType as JsonLdType | null | undefined) ?? ""
   );
 
   useEffect(() => {
@@ -195,7 +197,11 @@ function SeoForm({
     if (enabled && !jsonLdType) setJsonLdType("WebPage");
   }
 
-  const currentHint = jsonLdType ? JSON_LD_TYPE_HINTS[jsonLdType] : undefined;
+  // Cast sicuro: se jsonLdType è "" non accediamo al record
+  const currentHint =
+    jsonLdType && jsonLdType in JSON_LD_TYPE_HINTS
+      ? JSON_LD_TYPE_HINTS[jsonLdType as JsonLdType]
+      : undefined;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
@@ -230,7 +236,7 @@ function SeoForm({
                     {page!.pathname}
                   </div>
                   <p className="text-xs text-gray-400">
-                    Il percorso URL non può essere modificato.
+                    Il percorso URL non pu\u00f2 essere modificato.
                   </p>
                 </>
               ) : unconfiguredRoutes.length > 0 ? (
@@ -251,9 +257,9 @@ function SeoForm({
                 </>
               ) : (
                 <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-50 border border-green-200">
-                  <span className="text-green-600 text-sm">✓</span>
+                  <span className="text-green-600 text-sm">\u2713</span>
                   <p className="text-xs text-green-700 font-medium">
-                    Tutte le pagine dell&apos;app sono già configurate.
+                    Tutte le pagine dell&apos;app sono gi\u00e0 configurate.
                   </p>
                 </div>
               )}
@@ -346,7 +352,7 @@ function SeoForm({
             </p>
           </div>
 
-          {/* ── JSON-LD ─────────────────────────────────────────────────────── */}
+          {/* \u2500\u2500 JSON-LD \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */}
           <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-3">
             <Toggle
               name="jsonLdEnabled"
@@ -356,7 +362,7 @@ function SeoForm({
               onChange={handleToggleJsonLd}
             />
 
-            {/* Select tipo — appare solo quando il toggle è attivo */}
+            {/* Select tipo \u2014 appare solo quando il toggle \u00e8 attivo */}
             <div
               className={`overflow-hidden transition-all duration-200 ease-in-out ${
                 jsonLdEnabled ? "max-h-40 opacity-100" : "max-h-0 opacity-0 pointer-events-none"
@@ -385,7 +391,7 @@ function SeoForm({
               </div>
             </div>
           </div>
-          {/* ─────────────────────────────────────────────────────────────────── */}
+          {/* \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */}
 
           {/* Open Graph */}
           <details className="group">
@@ -513,7 +519,7 @@ export default function SeoManager({
         <button
           onClick={() => setEditPage("new")}
           disabled={allConfigured}
-          title={allConfigured ? "Tutte le pagine sono già configurate" : "Aggiungi pagina"}
+          title={allConfigured ? "Tutte le pagine sono gi\u00e0 configurate" : "Aggiungi pagina"}
           className="flex items-center gap-2 px-4 py-2 text-sm bg-[#e07a3a] hover:bg-[#c96830] text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
           <Plus size={15} />
           Aggiungi pagina
