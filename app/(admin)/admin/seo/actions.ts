@@ -24,6 +24,14 @@ const schema = z.object({
     .transform((v) => v || null),
 });
 
+function invalidateSeoCache(pathnames: string[]) {
+  revalidateTag("seo", "unstable_cache");
+  revalidatePath("/admin/seo");
+  for (const p of pathnames) {
+    revalidatePath(p);
+  }
+}
+
 export async function upsertSeoPageAction(
   _: unknown,
   formData: FormData,
@@ -49,15 +57,10 @@ export async function upsertSeoPageAction(
 
   if (originalPathname && originalPathname !== data.pathname) {
     await renameSeoPage(originalPathname, data);
-    revalidateTag("seo");
-    revalidatePath("/admin/seo");
-    revalidatePath(originalPathname);
-    revalidatePath(data.pathname);
+    invalidateSeoCache([originalPathname, data.pathname]);
   } else {
     await upsertSeoPage(data);
-    revalidateTag("seo");
-    revalidatePath("/admin/seo");
-    revalidatePath(data.pathname);
+    invalidateSeoCache([data.pathname]);
   }
 
   return { success: true };
@@ -68,8 +71,6 @@ export async function deleteSeoPageAction(
 ): Promise<{ error?: string; success?: boolean }> {
   if (!pathname) return { error: "Pathname mancante" };
   await deleteSeoPage(pathname);
-  revalidateTag("seo");
-  revalidatePath("/admin/seo");
-  revalidatePath(pathname);
+  invalidateSeoCache([pathname]);
   return { success: true };
 }
