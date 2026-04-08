@@ -1,6 +1,6 @@
 // app/(admin)/admin/users/page.tsx
 import { getAdminUsers } from "@/lib/db/admin-queries";
-import { getAllRoles } from "@/lib/db/roles-queries";
+import { getAdminRoles } from "@/lib/db/roles-queries";
 import { Search } from "lucide-react";
 import { Suspense } from "react";
 import UsersTable from "./_components/users-table";
@@ -121,7 +121,7 @@ export default async function AdminUsersPage({
   const page = Number(params.page ?? 1);
 
   // Ruoli dal DB per il select dinamico
-  const allRoles = await getAllRoles();
+  const allRoles = await getAdminRoles();
 
   const hasFilters = !!(search || role || plan || verified);
 
