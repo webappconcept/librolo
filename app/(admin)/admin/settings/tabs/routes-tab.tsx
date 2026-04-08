@@ -28,6 +28,9 @@ type RouteEntry = {
   source: string;
 };
 
+// Ordine di visualizzazione dei gruppi nella tabella
+const TYPE_ORDER: RouteEntry["type"][] = ["public", "auth", "private", "admin"];
+
 function classifyRoute(path: string): RouteEntry["type"] {
   if (path === ADMIN_SIGNIN_ROUTE || ADMIN_ROUTES.some((r) => path === r || path.startsWith(r + "/"))) return "admin";
   if (AUTH_ROUTES.some((r) => path === r || path.startsWith(r + "/"))) return "auth";
@@ -45,21 +48,19 @@ function buildRoutes(): RouteEntry[] {
     }
   };
 
-  // Nav principale
   NAV_ITEMS.forEach((item) => add(item.href, item.label, "NAV_ITEMS"));
-  // Menu utente
   USER_MENU_ITEMS.forEach((item) => add(item.href, item.label, "USER_MENU_ITEMS"));
-  // Footer
   FOOTER_LINKS.forEach((item) => add(item.href, item.label, "FOOTER_LINKS"));
-  // Route pubbliche/auth da PUBLIC_ROUTES
   PUBLIC_ROUTES.forEach((r) => add(r, r, "PUBLIC_ROUTES"));
-  // Route admin
   ADMIN_ROUTES.forEach((r) => add(r, "Pannello Admin", "ADMIN_ROUTES"));
   add(ADMIN_SIGNIN_ROUTE, "Admin Sign-in", "ADMIN_SIGNIN_ROUTE");
-  // Route private (solo quelle non già aggiunte da NAV/USER_MENU)
   PRIVATE_ROUTE_PREFIXES.forEach((r) => add(r, r, "proxy.ts → PRIVATE_ROUTE_PREFIXES"));
 
-  return Array.from(map.values()).sort((a, b) => a.path.localeCompare(b.path));
+  return Array.from(map.values()).sort((a, b) => {
+    const typeOrder = TYPE_ORDER.indexOf(a.type) - TYPE_ORDER.indexOf(b.type);
+    if (typeOrder !== 0) return typeOrder;
+    return a.path.localeCompare(b.path);
+  });
 }
 
 const TYPE_CONFIG: Record<RouteEntry["type"], { label: string; color: string; bg: string; icon: React.ReactNode }> = {
@@ -96,6 +97,9 @@ export function RoutesTab() {
     (acc, r) => { acc[r.type] = (acc[r.type] ?? 0) + 1; return acc; },
     {} as Record<RouteEntry["type"], number>,
   );
+
+  // Traccia il cambio di gruppo per aggiungere un separatore visivo
+  let lastType: RouteEntry["type"] | null = null;
 
   return (
     <div className="space-y-5">
@@ -145,44 +149,65 @@ export function RoutesTab() {
           <tbody>
             {routes.map((route, i) => {
               const cfg = TYPE_CONFIG[route.type];
+              const isNewGroup = route.type !== lastType;
+              lastType = route.type;
+
               return (
-                <tr
-                  key={route.path}
-                  style={{
-                    background: i % 2 === 0 ? "var(--admin-bg)" : "var(--admin-card-bg)",
-                    borderBottom: "1px solid var(--admin-card-border)",
-                  }}>
-                  <td className="px-4 py-2.5">
-                    <div className="flex items-center gap-2">
-                      <code className="font-mono text-xs" style={{ color: "var(--admin-text)" }}>{route.path}</code>
-                      <a
-                        href={route.path}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        title="Apri in nuova scheda"
-                        className="opacity-30 hover:opacity-70 transition-opacity">
-                        <ExternalLink size={11} style={{ color: "var(--admin-text-muted)" }} />
-                      </a>
-                    </div>
-                  </td>
-                  <td className="px-4 py-2.5 hidden sm:table-cell" style={{ color: "var(--admin-text-muted)" }}>
-                    <span className="text-xs">{route.label}</span>
-                  </td>
-                  <td className="px-4 py-2.5">
-                    <span
-                      className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full"
-                      style={{ background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.color}33` }}>
-                      {cfg.icon}
-                      {cfg.label}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2.5 hidden md:table-cell">
-                    <div className="flex items-center gap-1.5">
-                      <FileCode2 size={11} style={{ color: "var(--admin-text-muted)" }} />
-                      <code className="text-xs" style={{ color: "var(--admin-text-muted)" }}>{route.source}</code>
-                    </div>
-                  </td>
-                </tr>
+                <>
+                  {/* Intestazione di gruppo */}
+                  {isNewGroup && (
+                    <tr key={`group-${route.type}`}>
+                      <td
+                        colSpan={4}
+                        className="px-4 py-1.5 text-[11px] font-semibold uppercase tracking-widest"
+                        style={{
+                          background: cfg.bg,
+                          color: cfg.color,
+                          borderBottom: `1px solid ${cfg.color}22`,
+                          borderTop: i > 0 ? `2px solid ${cfg.color}33` : undefined,
+                        }}>
+                        {cfg.label}
+                      </td>
+                    </tr>
+                  )}
+                  <tr
+                    key={route.path}
+                    style={{
+                      background: "var(--admin-bg)",
+                      borderBottom: "1px solid var(--admin-card-border)",
+                    }}>
+                    <td className="px-4 py-2.5">
+                      <div className="flex items-center gap-2">
+                        <code className="font-mono text-xs" style={{ color: "var(--admin-text)" }}>{route.path}</code>
+                        <a
+                          href={route.path}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="Apri in nuova scheda"
+                          className="opacity-30 hover:opacity-70 transition-opacity">
+                          <ExternalLink size={11} style={{ color: "var(--admin-text-muted)" }} />
+                        </a>
+                      </div>
+                    </td>
+                    <td className="px-4 py-2.5 hidden sm:table-cell" style={{ color: "var(--admin-text-muted)" }}>
+                      <span className="text-xs">{route.label}</span>
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <span
+                        className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full"
+                        style={{ background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.color}33` }}>
+                        {cfg.icon}
+                        {cfg.label}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2.5 hidden md:table-cell">
+                      <div className="flex items-center gap-1.5">
+                        <FileCode2 size={11} style={{ color: "var(--admin-text-muted)" }} />
+                        <code className="text-xs" style={{ color: "var(--admin-text-muted)" }}>{route.source}</code>
+                      </div>
+                    </td>
+                  </tr>
+                </>
               );
             })}
           </tbody>
