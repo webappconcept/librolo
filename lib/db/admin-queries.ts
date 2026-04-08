@@ -80,12 +80,15 @@ export async function getAdminUsers({
   search = "",
   role = "",
   plan = "",
+  verified = "",
   page = 1,
   perPage = 20,
 }: {
   search?: string;
   role?: string;
   plan?: string;
+  /** "true" | "false" | "" */
+  verified?: string;
   page?: number;
   perPage?: number;
 }): Promise<{ users: AdminUser[]; total: number }> {
@@ -98,6 +101,11 @@ export async function getAdminUsers({
       ? sql`${users.subscriptionStatus} = 'active'`
       : plan === "free"
         ? sql`(${users.subscriptionStatus} IS NULL OR ${users.subscriptionStatus} != 'active')`
+        : undefined,
+    verified === "true"
+      ? sql`${users.emailVerified} = true`
+      : verified === "false"
+        ? sql`${users.emailVerified} = false`
         : undefined,
   ].filter(Boolean) as any[];
 
