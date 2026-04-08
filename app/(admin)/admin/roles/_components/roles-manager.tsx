@@ -15,13 +15,24 @@ import {
 import { useTransition, useState } from "react";
 import { createRole, deleteRole, updateRole } from "../actions";
 
-// ─── Colori preset per il color picker rapido ───────────────────────────
+// ─── Sanitizza lo slug in tempo reale ────────────────────────────────
+// Regole: solo a-z, 0-9, trattino. Spazi → trattino. Tutto il resto rimosso.
+function sanitizeSlug(raw: string): string {
+  return raw
+    .toLowerCase()
+    .replace(/\s+/g, "-")        // spazi (anche multipli) → singolo trattino
+    .replace(/[^a-z0-9-]/g, "")  // rimuove caratteri non validi
+    .replace(/-{2,}/g, "-")      // trattini multipli → uno solo
+    .replace(/^-+|-+$/g, "");    // strip trattini iniziali/finali
+}
+
+// ─── Colori preset ────────────────────────────────────────────────────
 const COLOR_PRESETS = [
   "#6b7280", "#2563eb", "#16a34a", "#7c3aed",
   "#dc2626", "#d97706", "#db2777", "#0891b2",
 ];
 
-// ─── RoleBadge ─────────────────────────────────────────────────────
+// ─── RoleBadge ────────────────────────────────────────────────────────
 function RoleBadge({ role }: { role: RoleRow }) {
   return (
     <span
@@ -51,12 +62,20 @@ function RoleForm({
   const [color, setColor] = useState(initial?.color ?? "#6b7280");
   const [isAdmin, setIsAdmin] = useState(initial?.isAdmin ?? false);
   const [isStaff, setIsStaff] = useState(initial?.isStaff ?? false);
+  // slug controllato — inizializzato dal valore esistente già sanificato
+  const [slug, setSlug] = useState(initial?.name ?? "");
   const isEdit = !!initial;
   const isSystem = initial?.isSystem ?? false;
+
+  function handleSlugChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setSlug(sanitizeSlug(e.target.value));
+  }
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
+    // Sovrascrive il campo name con il valore già sanificato dallo state
+    fd.set("name", slug);
     fd.set("color", color);
     fd.set("isAdmin", String(isAdmin));
     fd.set("isStaff", String(isStaff || isAdmin));
@@ -75,25 +94,47 @@ function RoleForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Slug */}
         <div>
           <label className="block text-xs font-medium mb-1" style={{ color: "var(--admin-text-muted)" }}>
             Slug (identificatore interno)
           </label>
           <input
             name="name"
-            defaultValue={initial?.name}
+            value={slug}
+            onChange={handleSlugChange}
             disabled={isSystem}
-            placeholder="es. editor"
+            placeholder="es. content-editor"
             required
+            autoComplete="off"
+            spellCheck={false}
             className={inputCls}
-            style={{ ...inputStyle, opacity: isSystem ? 0.5 : 1 }}
+            style={{
+              ...inputStyle,
+              opacity: isSystem ? 0.5 : 1,
+              fontFamily: "monospace",
+              letterSpacing: "0.02em",
+            }}
           />
-          {isSystem && (
+          {/* Feedback visivo sotto il campo */}
+          {isSystem ? (
             <p className="text-[11px] mt-1" style={{ color: "var(--admin-text-faint)" }}>
               Lo slug dei ruoli di sistema non può essere modificato.
             </p>
+          ) : (
+            <p className="text-[11px] mt-1 flex items-center gap-1" style={{ color: "var(--admin-text-faint)" }}>
+              Solo
+              <code
+                className="px-1 rounded"
+                style={{ background: "var(--admin-hover-bg)", color: "var(--admin-text-muted)", fontSize: "10px" }}>
+                a-z 0-9 -
+              </code>
+              — spazi e caratteri speciali vengono rimossi automaticamente.
+            </p>
           )}
         </div>
+
+        {/* Label */}
         <div>
           <label className="block text-xs font-medium mb-1" style={{ color: "var(--admin-text-muted)" }}>
             Etichetta visibile
@@ -101,7 +142,7 @@ function RoleForm({
           <input
             name="label"
             defaultValue={initial?.label}
-            placeholder="es. Editore"
+            placeholder="es. Content Editor"
             required
             className={inputCls}
             style={inputStyle}
@@ -109,6 +150,7 @@ function RoleForm({
         </div>
       </div>
 
+      {/* Description */}
       <div>
         <label className="block text-xs font-medium mb-1" style={{ color: "var(--admin-text-muted)" }}>
           Descrizione (opzionale)
@@ -123,6 +165,7 @@ function RoleForm({
         />
       </div>
 
+      {/* Colore */}
       <div>
         <label className="block text-xs font-medium mb-2" style={{ color: "var(--admin-text-muted)" }}>
           Colore badge
@@ -156,6 +199,7 @@ function RoleForm({
         </div>
       </div>
 
+      {/* Guard flag */}
       <div className="flex flex-col gap-3 pt-1">
         <label className="flex items-start gap-3 cursor-pointer group">
           <div className="mt-0.5">
@@ -211,6 +255,7 @@ function RoleForm({
         </label>
       </div>
 
+      {/* Azioni */}
       <div className="flex items-center justify-end gap-2 pt-2">
         <button
           type="button"
@@ -221,7 +266,7 @@ function RoleForm({
         </button>
         <button
           type="submit"
-          disabled={pending}
+          disabled={pending || slug.length === 0}
           className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg text-white transition-colors disabled:opacity-50"
           style={{ background: "var(--admin-accent)" }}>
           {pending ? (
@@ -357,7 +402,7 @@ function RoleCard({ role, onEdit }: { role: RoleRow; onEdit: (r: RoleRow) => voi
   );
 }
 
-// ─── RolesManager (root) ────────────────────────────────────────────────
+// ─── RolesManager (root) ──────────────────────────────────────────────
 export function RolesManager({ roles }: { roles: RoleRow[] }) {
   const [showCreate, setShowCreate] = useState(false);
   const [editingRole, setEditingRole] = useState<RoleRow | null>(null);
