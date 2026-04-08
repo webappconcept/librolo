@@ -10,9 +10,11 @@ import { Suspense } from "react";
 import SeoManager from "./_components/seo-manager";
 
 /**
- * Derive tutti i pathname pubblici dell'app dalla fonte di verità `lib/routes.ts`.
+ * Deriva tutti i pathname pubblici dell'app dalla fonte di verità `lib/routes.ts`.
  * Include: PUBLIC_ROUTES, NAV_ITEMS, USER_MENU_ITEMS, FOOTER_LINKS.
- * Le route admin (/admin/*) sono escluse — non hanno senso come pagine SEO pubbliche.
+ * Escluse solo le route /admin/* — non sono pagine pubbliche.
+ * Le route auth (/sign-in, /forgot-password, ecc.) sono incluse: non vengono
+ * indicizzate (robots: noindex) ma l'admin può comunque impostare title/OG.
  */
 function getPublicAppRoutes(): string[] {
   const paths = new Set<string>([
@@ -21,9 +23,8 @@ function getPublicAppRoutes(): string[] {
     ...USER_MENU_ITEMS.map((i) => i.href),
     ...FOOTER_LINKS.map((i) => i.href),
   ]);
-  // Filtra le route admin/auth che non sono pagine pubbliche indicizzabili
   return [...paths]
-    .filter((p) => !p.startsWith("/admin") && !p.startsWith("/sign") && !p.startsWith("/forgot") && !p.startsWith("/reset") && !p.startsWith("/verify"))
+    .filter((p) => !p.startsWith("/admin"))
     .sort();
 }
 
@@ -33,7 +34,6 @@ async function SeoContent() {
     getAppSettings(),
   ]);
 
-  // Normalizza il dominio: aggiunge https:// se mancante, rimuove slash finale
   let domain = settings.app_domain?.trim() ?? "";
   if (domain && !/^https?:\/\//i.test(domain)) domain = `https://${domain}`;
   domain = domain.replace(/\/$/, "");

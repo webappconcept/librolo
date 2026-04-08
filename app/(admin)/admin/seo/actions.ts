@@ -4,12 +4,13 @@ import { deleteSeoPage, renameSeoPage, upsertSeoPage } from "@/lib/db/seo-querie
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+const ROBOTS_VALUES = ["", "noindex,nofollow", "noindex,follow"] as const;
+
 const schema = z.object({
   pathname: z
     .string()
     .min(1)
     .regex(/^\//, { message: "Il pathname deve iniziare con /" }),
-  // Presente solo in modifica: il pathname originale prima della modifica
   originalPathname: z.string().optional(),
   label: z.string().min(1, "Il nome è obbligatorio").max(100),
   title: z.string().max(70).optional(),
@@ -17,6 +18,10 @@ const schema = z.object({
   ogTitle: z.string().max(70).optional(),
   ogDescription: z.string().max(200).optional(),
   ogImage: z.string().url().optional().or(z.literal("")),
+  robots: z
+    .enum(ROBOTS_VALUES)
+    .optional()
+    .transform((v) => v || null),
 });
 
 export async function upsertSeoPageAction(
@@ -32,6 +37,7 @@ export async function upsertSeoPageAction(
     ogTitle: formData.get("ogTitle") || undefined,
     ogDescription: formData.get("ogDescription") || undefined,
     ogImage: formData.get("ogImage") || undefined,
+    robots: formData.get("robots") || "",
   };
 
   const parsed = schema.safeParse(raw);
@@ -41,7 +47,6 @@ export async function upsertSeoPageAction(
 
   const { originalPathname, ...data } = parsed.data;
 
-  // Se il pathname è cambiato rispetto all'originale, elimina il vecchio e inserisce il nuovo
   if (originalPathname && originalPathname !== data.pathname) {
     await renameSeoPage(originalPathname, data);
     revalidatePath("/admin/seo");
