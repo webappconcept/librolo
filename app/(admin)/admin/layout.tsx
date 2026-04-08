@@ -1,15 +1,15 @@
 // app/(admin)/admin/layout.tsx
-import { getUser } from "@/lib/db/queries";
+import { requireAdminPage } from "@/lib/rbac/guards";
 import { getAppSettings } from "@/lib/db/settings-queries";
-import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import AdminShellClient from "./_components/admin-shell-client";
 import AdminHeaderRight from "./_components/header";
 
 async function AdminShell({ children }: { children: React.ReactNode }) {
-  const settings = await getAppSettings();
-  const user = await getUser();
-  if (!user || user.role !== "admin") redirect("/");
+  const [settings, user] = await Promise.all([
+    getAppSettings(),
+    requireAdminPage(), // verifica isAdmin flag OR permesso admin:access via RBAC
+  ]);
 
   const appName = settings.app_name?.trim() || "App";
 
