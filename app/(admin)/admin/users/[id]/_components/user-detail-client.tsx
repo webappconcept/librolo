@@ -7,7 +7,7 @@ import { Check, Shield, ShieldBan, ShieldCheck } from "lucide-react";
 import { useState, useTransition } from "react";
 import BanModal from "../../_components/ban-modal";
 import { unbanUser } from "../../actions";
-import { setUserRole } from "/app/(admin)/admin/roles/actions";
+import { setUserRole } from "../../../roles/actions";
 
 // ─── BanButton (invariato) ────────────────────────────────────────────
 export function BanButton({ user }: { user: AdminUserDetail }) {
