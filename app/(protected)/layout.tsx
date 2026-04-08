@@ -1,22 +1,11 @@
-"use client";
-
 import AppNav from "@/components/app-nav";
-import { Suspense, useEffect } from "react";
-import { mutate } from "swr";
+import { PageShowRevalidator } from "@/components/pageshow-revalidator";
+import { Suspense } from "react";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  useEffect(() => {
-    function handlePageShow(e: PageTransitionEvent) {
-      if (e.persisted) {
-        mutate("/api/user");
-      }
-    }
-    window.addEventListener("pageshow", handlePageShow);
-    return () => window.removeEventListener("pageshow", handlePageShow);
-  }, []);
-
   return (
     <div className="min-h-dvh bg-[var(--brand-bg)]">
+      <PageShowRevalidator />
       <Suspense fallback={null}>
         <AppNav />
       </Suspense>
