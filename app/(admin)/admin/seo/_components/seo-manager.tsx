@@ -5,6 +5,14 @@ import { FileText, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { useActionState, useEffect, useState, useTransition } from "react";
 import { deleteSeoPageAction, upsertSeoPageAction } from "../actions";
 
+type RobotsValue = "" | "noindex,nofollow" | "noindex,follow";
+
+const ROBOTS_OPTIONS: { value: RobotsValue; label: string; hint: string }[] = [
+  { value: "", label: "Default (index, follow)", hint: "La pagina viene indicizzata normalmente" },
+  { value: "noindex,nofollow", label: "noindex, nofollow", hint: "Non indicizzare, non seguire i link" },
+  { value: "noindex,follow", label: "noindex, follow", hint: "Non indicizzare, ma segui i link" },
+];
+
 function charClass(len: number, max: number) {
   if (len === 0) return "text-gray-400";
   if (len > max) return "text-red-500 font-semibold";
@@ -17,18 +25,28 @@ function Serp({
   description,
   pathname,
   domain,
+  robots,
 }: {
   title: string;
   description: string;
   pathname: string;
   domain: string;
+  robots: RobotsValue;
 }) {
   const displayDomain = domain || "https://il-tuo-dominio.it";
+  const isNoIndex = robots.startsWith("noindex");
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-4 text-sm">
-      <p className="text-xs text-gray-400 mb-1 font-medium uppercase tracking-wide">
-        Anteprima Google
-      </p>
+      <div className="flex items-center justify-between mb-1">
+        <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">
+          Anteprima Google
+        </p>
+        {isNoIndex && (
+          <span className="text-xs bg-amber-50 text-amber-600 border border-amber-200 px-2 py-0.5 rounded-full font-medium">
+            noindex — non verrà indicizzata
+          </span>
+        )}
+      </div>
       <p className="text-[#1a0dab] text-base font-medium truncate">
         {title || (
           <span className="text-gray-400 italic">Titolo non impostato</span>
@@ -39,9 +57,7 @@ function Serp({
       </p>
       <p className="text-[#545454] text-sm mt-0.5 line-clamp-2">
         {description || (
-          <span className="text-gray-400 italic">
-            Descrizione non impostata
-          </span>
+          <span className="text-gray-400 italic">Descrizione non impostata</span>
         )}
       </p>
     </div>
@@ -65,8 +81,10 @@ function SeoForm({
   const [title, setTitle] = useState(page?.title ?? "");
   const [description, setDescription] = useState(page?.description ?? "");
   const [pathname, setPathname] = useState(page?.pathname ?? "");
+  const [robots, setRobots] = useState<RobotsValue>(
+    (page?.robots as RobotsValue) ?? ""
+  );
 
-  // Chiudi automaticamente il modal al successo
   useEffect(() => {
     if (state?.success) onClose();
   }, [state?.success, onClose]);
@@ -86,19 +104,17 @@ function SeoForm({
         </div>
 
         <form action={action} className="px-6 py-5 space-y-5">
-          {/* In modifica, passa il pathname originale come riferimento per il rename */}
           {isEdit && (
             <input type="hidden" name="originalPathname" value={page!.pathname} />
           )}
 
           <div className="grid grid-cols-2 gap-4">
+            {/* Pathname / Selezione pagina */}
             <div className="col-span-2 space-y-1.5">
               <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
                 Pagina
               </label>
-
               {isEdit ? (
-                // In modifica: input testo editabile (comportamento invariato)
                 <>
                   <input
                     name="pathname"
@@ -112,7 +128,6 @@ function SeoForm({
                   </p>
                 </>
               ) : unconfiguredRoutes.length > 0 ? (
-                // In creazione: select con le route disponibili non ancora configurate
                 <>
                   <select
                     name="pathname"
@@ -129,7 +144,6 @@ function SeoForm({
                   </p>
                 </>
               ) : (
-                // Tutte le route sono già configurate
                 <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-50 border border-green-200">
                   <span className="text-green-600 text-sm">✓</span>
                   <p className="text-xs text-green-700 font-medium">
@@ -139,6 +153,7 @@ function SeoForm({
               )}
             </div>
 
+            {/* Label uso interno */}
             <div className="col-span-2 space-y-1.5">
               <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
                 Nome (uso interno)
@@ -158,8 +173,10 @@ function SeoForm({
             description={description}
             pathname={pathname}
             domain={domain}
+            robots={robots}
           />
 
+          {/* Meta Title */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
@@ -179,13 +196,13 @@ function SeoForm({
             />
           </div>
 
+          {/* Meta Description */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
                 Meta Description
               </label>
-              <span
-                className={`text-xs ${charClass(description.length, 155)}`}>
+              <span className={`text-xs ${charClass(description.length, 155)}`}>
                 {description.length}/155
               </span>
             </div>
@@ -200,6 +217,28 @@ function SeoForm({
             />
           </div>
 
+          {/* Meta Robots */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+              Meta Robots
+            </label>
+            <select
+              name="robots"
+              value={robots}
+              onChange={(e) => setRobots(e.target.value as RobotsValue)}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#e07a3a]/40 focus:border-[#e07a3a] bg-white">
+              {ROBOTS_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-400">
+              {ROBOTS_OPTIONS.find((o) => o.value === robots)?.hint}
+            </p>
+          </div>
+
+          {/* Open Graph */}
           <details className="group">
             <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-gray-400 hover:text-gray-600 select-none">
               Open Graph (opzionale)
@@ -369,22 +408,22 @@ export default function SeoManager({
                 </div>
                 <div className="hidden sm:block flex-1 min-w-0">
                   {page.title ? (
-                    <p className="text-xs text-gray-600 truncate">
-                      {page.title}
-                    </p>
+                    <p className="text-xs text-gray-600 truncate">{page.title}</p>
                   ) : (
                     <p className="text-xs text-gray-300 italic">Nessun titolo</p>
                   )}
                   {page.description ? (
-                    <p className="text-xs text-gray-400 truncate">
-                      {page.description}
-                    </p>
+                    <p className="text-xs text-gray-400 truncate">{page.description}</p>
                   ) : (
-                    <p className="text-xs text-gray-300 italic">
-                      Nessuna descrizione
-                    </p>
+                    <p className="text-xs text-gray-300 italic">Nessuna descrizione</p>
                   )}
                 </div>
+                {/* Badge robots se presente */}
+                {page.robots && (
+                  <span className="hidden sm:inline-flex text-xs bg-amber-50 text-amber-600 border border-amber-200 px-2 py-0.5 rounded-full font-medium shrink-0">
+                    {page.robots}
+                  </span>
+                )}
                 <div className="flex items-center gap-1 shrink-0">
                   <button
                     onClick={() => setEditPage(page)}
