@@ -1,8 +1,4 @@
-// app/(admin)/admin/sign-in/page.tsx
-// Pagina di login dedicata agli amministratori.
-// Usa lo stesso componente Login ma con redirect verso /admin dopo il login.
-import { AdminLogin } from "@/app/(admin)/admin/sign-in/admin-login";
-
-export default function AdminSignInPage() {
-  return <AdminLogin />;
-}
+// MOVED — this page is now at app/(admin)/sign-in/page.tsx
+// This file is intentionally left as a redirect stub to avoid broken imports.
+// You can delete this file once confirmed working.
+export { default } from "@/app/(admin)/sign-in/page";
