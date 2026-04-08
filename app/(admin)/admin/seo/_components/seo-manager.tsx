@@ -1,7 +1,7 @@
 "use client";
 
 import type { SeoPage } from "@/lib/db/schema";
-import { FileText, Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { FileText, Info, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { useActionState, useEffect, useState, useTransition } from "react";
 import { deleteSeoPageAction, upsertSeoPageAction } from "../actions";
 import { JSON_LD_TYPES, type JsonLdType } from "./jsonld-types";
@@ -216,7 +216,16 @@ function SeoForm({
                       <option key={r} value={r}>{r}</option>
                     ))}
                   </select>
-                  <p className="text-xs text-gray-400">Mostra solo le pagine dell&apos;app non ancora configurate.</p>
+                  {/* Avviso provenienza lista */}
+                  <div className="flex items-start gap-2 rounded-lg bg-blue-50 border border-blue-100 px-3 py-2.5">
+                    <Info size={13} className="text-blue-400 mt-0.5 shrink-0" />
+                    <p className="text-xs text-blue-600 leading-relaxed">
+                      La lista dei percorsi è definita in{" "}
+                      <code className="font-mono bg-blue-100 px-1 py-0.5 rounded text-blue-700">lib/routes.ts</code>
+                      {" "}(voci di navigazione, footer e route pubbliche).{" "}
+                      Se una pagina non compare, aggiungila prima a quel file.
+                    </p>
+                  </div>
                 </>
               ) : (
                 <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-50 border border-green-200">
