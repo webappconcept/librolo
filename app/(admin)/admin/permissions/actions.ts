@@ -5,6 +5,7 @@ import {
   addPermissionToRole,
   removePermissionFromRole,
 } from "@/lib/rbac/permissions-queries";
+import { requireAdmin } from "@/lib/rbac/guards";
 import { db } from "@/lib/db/drizzle";
 import { permissions, rolePermissions, userPermissions } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
@@ -17,6 +18,7 @@ export async function toggleRolePermission(
   permissionId: number,
   granted: boolean,
 ) {
+  await requireAdmin();
   if (granted) {
     await addPermissionToRole(roleId, permissionId);
   } else {
@@ -40,6 +42,8 @@ const CreatePermissionSchema = z.object({
 });
 
 export async function createPermission(formData: FormData) {
+  await requireAdmin();
+
   const parsed = CreatePermissionSchema.safeParse(
     Object.fromEntries(formData),
   );
@@ -68,6 +72,8 @@ export async function createPermission(formData: FormData) {
  * (ruoli + override individuali). Usato dal dialog di conferma.
  */
 export async function getPermissionImpact(permissionId: number) {
+  await requireAdmin();
+
   const perm = await db
     .select({ isSystem: permissions.isSystem, key: permissions.key, label: permissions.label })
     .from(permissions)
@@ -100,6 +106,8 @@ export async function getPermissionImpact(permissionId: number) {
  * rimuove prima tutte le assegnazioni su ruoli e override individuali.
  */
 export async function deletePermission(permissionId: number) {
+  await requireAdmin();
+
   const perm = await db
     .select({ isSystem: permissions.isSystem })
     .from(permissions)
@@ -120,4 +128,14 @@ export async function deletePermission(permissionId: number) {
   revalidatePath("/admin/permissions");
   revalidatePath("/admin/users");
   return { success: true };
+}
+
+/**
+ * Ritorna gli utenti che hanno un dato permesso (via ruolo o override).
+ * Usato dal drawer "Chi ha questo permesso?" nel catalogo.
+ */
+export async function fetchUsersWithPermission(permissionKey: string) {
+  await requireAdmin();
+  const { getUsersWithPermission } = await import("@/lib/rbac/permissions-queries");
+  return getUsersWithPermission(permissionKey);
 }
