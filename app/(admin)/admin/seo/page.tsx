@@ -38,6 +38,8 @@ async function SeoContent() {
   if (domain && !/^https?:\/\//i.test(domain)) domain = `https://${domain}`;
   domain = domain.replace(/\/$/, "");
 
+  const appName = settings.app_name?.trim() ?? "";
+
   const allPublicRoutes = getPublicAppRoutes();
   const configuredPaths = new Set(pages.map((p) => p.pathname));
   const unconfiguredRoutes = allPublicRoutes.filter(
@@ -49,6 +51,7 @@ async function SeoContent() {
       initialPages={pages}
       unconfiguredRoutes={unconfiguredRoutes}
       domain={domain}
+      appName={appName}
     />
   );
 }

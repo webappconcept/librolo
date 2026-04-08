@@ -20,6 +20,12 @@ function charClass(len: number, max: number) {
   return "text-green-600";
 }
 
+/** Sostituisce {appName} con il nome reale dell'app — usato solo nell'anteprima live. */
+function resolvePreview(text: string, appName: string): string {
+  if (!appName || !text) return text;
+  return text.replace(/\{appName\}/gi, appName);
+}
+
 function Serp({
   title,
   description,
@@ -64,14 +70,31 @@ function Serp({
   );
 }
 
+/** Hint riutilizzabile che spiega il placeholder {appName}. */
+function AppNameHint({ appName }: { appName: string }) {
+  if (!appName) return null;
+  return (
+    <p className="text-xs text-gray-400">
+      Usa{" "}
+      <code className="bg-gray-100 px-1 py-0.5 rounded font-mono text-gray-600">
+        {"{"}appName{"}"}
+      </code>{" "}
+      per inserire automaticamente il nome dell&apos;app:{" "}
+      <strong className="text-gray-500">{appName}</strong>.
+    </p>
+  );
+}
+
 function SeoForm({
   page,
   domain,
+  appName,
   unconfiguredRoutes,
   onClose,
 }: {
   page?: SeoPage | null;
   domain: string;
+  appName: string;
   unconfiguredRoutes: string[];
   onClose: () => void;
 }) {
@@ -167,10 +190,10 @@ function SeoForm({
             </div>
           </div>
 
-          {/* SERP preview */}
+          {/* SERP preview — {appName} viene risolto in tempo reale */}
           <Serp
-            title={title}
-            description={description}
+            title={resolvePreview(title, appName)}
+            description={resolvePreview(description, appName)}
             pathname={pathname}
             domain={domain}
             robots={robots}
@@ -194,6 +217,7 @@ function SeoForm({
               placeholder="Titolo della pagina"
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#e07a3a]/40 focus:border-[#e07a3a]"
             />
+            <AppNameHint appName={appName} />
           </div>
 
           {/* Meta Description */}
@@ -215,6 +239,7 @@ function SeoForm({
               placeholder="Descrizione della pagina"
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#e07a3a]/40 focus:border-[#e07a3a] resize-none"
             />
+            <AppNameHint appName={appName} />
           </div>
 
           {/* Meta Robots */}
@@ -255,6 +280,7 @@ function SeoForm({
                   placeholder="Default: uguale al Meta Title"
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#e07a3a]/40 focus:border-[#e07a3a]"
                 />
+                <AppNameHint appName={appName} />
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
@@ -268,6 +294,7 @@ function SeoForm({
                   placeholder="Default: uguale alla Meta Description"
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#e07a3a]/40 focus:border-[#e07a3a] resize-none"
                 />
+                <AppNameHint appName={appName} />
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
@@ -317,10 +344,12 @@ export default function SeoManager({
   initialPages,
   unconfiguredRoutes,
   domain,
+  appName,
 }: {
   initialPages: SeoPage[];
   unconfiguredRoutes: string[];
   domain: string;
+  appName: string;
 }) {
   const [search, setSearch] = useState("");
   const [editPage, setEditPage] = useState<SeoPage | null | "new">(null);
@@ -447,6 +476,7 @@ export default function SeoManager({
         <SeoForm
           page={editPage === "new" ? null : editPage}
           domain={domain}
+          appName={appName}
           unconfiguredRoutes={unconfiguredRoutes}
           onClose={() => setEditPage(null)}
         />
