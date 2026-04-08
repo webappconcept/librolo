@@ -1,16 +1,35 @@
 import type { Metadata } from "next";
-import { getSeoPage } from "@/lib/db/seo-queries";
-import { getAppSettings } from "@/lib/db/settings-queries";
+import { unstable_cache } from "next/cache";
+import { getSeoPage as _getSeoPage } from "@/lib/db/seo-queries";
+import { getAppSettings as _getAppSettings } from "@/lib/db/settings-queries";
 
 const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME ?? "Librolo";
 
 /**
+ * Versione cached di getSeoPage — revalidata ogni 60s o su tag 'seo'.
+ * Usata in generatePageMetadata per non bloccare lo stream SSR.
+ */
+const getCachedSeoPage = unstable_cache(
+  (pathname: string) => _getSeoPage(pathname),
+  ["seo-page"],
+  { revalidate: 60, tags: ["seo"] },
+);
+
+/**
+ * Versione cached di getAppSettings — revalidata ogni 60s o su tag 'settings'.
+ */
+const getCachedAppSettings = unstable_cache(
+  () => _getAppSettings(),
+  ["app-settings"],
+  { revalidate: 60, tags: ["settings"] },
+);
+
+/**
  * Restituisce il dominio configurato nelle impostazioni (es. "https://librolo.it").
  * Normalizza aggiungendo "https://" se mancante e rimuovendo lo slash finale.
- * Usare questa funzione ovunque si costruisca un URL assoluto.
  */
 export async function getSiteUrl(): Promise<string> {
-  const settings = await getAppSettings();
+  const settings = await getCachedAppSettings();
   let domain = settings.app_domain?.trim() ?? "";
   if (!domain) return "";
   if (!/^https?:\/\//i.test(domain)) domain = `https://${domain}`;
@@ -28,8 +47,6 @@ function resolvePlaceholders(text: string, appName: string): string {
 
 /**
  * Converte il valore stringa salvato in DB nel formato robots atteso da Next.js.
- * Se il valore è null/undefined/vuoto non viene emesso nessun tag robots
- * (il browser usa il default: index, follow).
  */
 function mapRobots(robots?: string | null): Metadata["robots"] | undefined {
   if (robots === "noindex,nofollow") {
@@ -41,14 +58,14 @@ function mapRobots(robots?: string | null): Metadata["robots"] | undefined {
   return undefined;
 }
 
-/** Genera metadata per una pagina leggendo da DB, con fallback sensati. */
+/** Genera metadata per una pagina leggendo da DB (con cache), con fallback sensati. */
 export async function generatePageMetadata(
   pathname: string,
   defaults?: { title?: string; description?: string },
 ): Promise<Metadata> {
   const [row, settings, siteUrl] = await Promise.all([
-    getSeoPage(pathname),
-    getAppSettings(),
+    getCachedSeoPage(pathname),
+    getCachedAppSettings(),
     getSiteUrl(),
   ]);
 
