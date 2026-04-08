@@ -4,6 +4,27 @@ import { ADMIN_ROUTES, ADMIN_SIGNIN_ROUTE, AUTH_ROUTES, PUBLIC_ROUTES } from "@/
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
+/**
+ * Route private conosciute: solo queste richiedono autenticazione.
+ * Qualsiasi percorso che non inizia con uno di questi prefissi
+ * viene lasciato passare — se non esiste, Next.js mostrerà il 404.
+ */
+const PRIVATE_ROUTE_PREFIXES = [
+  "/dashboard",
+  "/profilo",
+  "/account",
+  "/libreria",
+  "/esplora",
+  "/assistenza",
+  "/segnala",
+];
+
+function isKnownPrivateRoute(pathname: string): boolean {
+  return PRIVATE_ROUTE_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(prefix + "/"),
+  );
+}
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const sessionCookie = request.cookies.get("session");
@@ -21,6 +42,7 @@ export async function proxy(request: NextRequest) {
     (route) => pathname === route || pathname.startsWith(route + "/"),
   );
   const isAdminSignIn = pathname === ADMIN_SIGNIN_ROUTE;
+  const isPrivateRoute = isKnownPrivateRoute(pathname);
 
   // --- ADMIN SIGN-IN: sempre accessibile ---
   if (isAdminSignIn) {
@@ -37,7 +59,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
-  // --- ROUTE PUBBLICHE ---
+  // --- ROUTE PUBBLICHE (non-auth) ---
   if (isPublicRoute && !isAuthRoute) {
     return NextResponse.next({ request: { headers: requestHeaders } });
   }
@@ -49,21 +71,31 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
-  // Utente non loggato su route protetta → /sign-in
-  if (!isPublicRoute && !isLoggedIn) {
-    return NextResponse.redirect(new URL("/sign-in", request.url));
+  // Utente non loggato su /sign-in o /sign-up → lascia passare
+  if (isAuthRoute && !isLoggedIn) {
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
   // --- ROUTE ADMIN: richiede ruolo admin ---
-  if (isAdminRoute && isLoggedIn) {
+  if (isAdminRoute) {
+    if (!isLoggedIn) {
+      return NextResponse.redirect(new URL("/admin/sign-in", request.url));
+    }
     try {
       const parsed = await verifyToken(sessionCookie!.value);
       if (parsed.user.role !== "admin") {
         return NextResponse.redirect(new URL("/", request.url));
       }
     } catch {
-      return NextResponse.redirect(new URL("/sign-in", request.url));
+      return NextResponse.redirect(new URL("/admin/sign-in", request.url));
     }
+  }
+
+  // --- ROUTE PRIVATE CONOSCIUTE: richiede login ---
+  // Solo le route esplicitamente elencate in PRIVATE_ROUTE_PREFIXES
+  // vengono protette. Route sconosciute passano e mostrano il 404.
+  if (isPrivateRoute && !isLoggedIn) {
+    return NextResponse.redirect(new URL("/sign-in", request.url));
   }
 
   // --- REFRESH SESSION ---
@@ -89,7 +121,8 @@ export async function proxy(request: NextRequest) {
       });
     } catch {
       res.cookies.delete("session");
-      if (!isPublicRoute) {
+      // Solo se era su una route privata nota, redirect al login
+      if (isPrivateRoute || isAdminRoute) {
         return NextResponse.redirect(new URL("/sign-in", request.url));
       }
     }
