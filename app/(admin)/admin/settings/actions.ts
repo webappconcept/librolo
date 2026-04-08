@@ -16,6 +16,14 @@ async function requireAdmin() {
   return user;
 }
 
+/** Normalizza il dominio: rimuove protocollo e slash finale. */
+function normalizeDomain(raw: string): string {
+  return raw
+    .trim()
+    .replace(/^https?:\/\//i, "")
+    .replace(/\/$/, "");
+}
+
 export async function saveAppSettings(
   _prevState: ActionState,
   formData: FormData,
@@ -35,7 +43,9 @@ export async function saveAppSettings(
       fields.map((key) => {
         const value = formData.get(key);
         if (typeof value === "string") {
-          return updateAppSetting(key, value.trim());
+          // Il dominio viene sempre normalizzato (senza protocollo)
+          const cleaned = key === "app_domain" ? normalizeDomain(value) : value.trim();
+          return updateAppSetting(key, cleaned);
         }
       }),
     );

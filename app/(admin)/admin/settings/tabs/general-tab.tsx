@@ -34,6 +34,11 @@ function GeneralTabInner({ settings }: { settings: AppSettings }) {
       setToast({ message: state.error, type: "error" });
   }, [state]);
 
+  // Mostra il dominio già pulito (senza protocollo) nel campo
+  const cleanDomain = (settings.app_domain ?? "")
+    .replace(/^https?:\/\//i, "")
+    .replace(/\/$/, "");
+
   return (
     <>
       <form action={formAction} className="space-y-5">
@@ -113,26 +118,38 @@ function GeneralTabInner({ settings }: { settings: AppSettings }) {
                   Dominio del sito
                 </span>
               </label>
-              <input
-                name="app_domain"
-                defaultValue={settings.app_domain ?? ""}
-                maxLength={253}
-                placeholder="librolo.it"
-                className="w-full px-3 py-2 text-sm rounded-lg focus:outline-none transition-colors"
+              <div className="flex items-center rounded-lg overflow-hidden"
                 style={{
-                  background: "var(--admin-page-bg)",
                   border: "1px solid var(--admin-input-border)",
-                  color: "var(--admin-text)",
-                }}
-              />
+                }}>
+                <span
+                  className="px-3 py-2 text-sm select-none shrink-0"
+                  style={{
+                    background: "var(--admin-hover-bg)",
+                    color: "var(--admin-text-faint)",
+                    borderRight: "1px solid var(--admin-input-border)",
+                  }}>
+                  https://
+                </span>
+                <input
+                  name="app_domain"
+                  defaultValue={cleanDomain}
+                  maxLength={253}
+                  placeholder="esempio.it"
+                  className="flex-1 px-3 py-2 text-sm focus:outline-none transition-colors"
+                  style={{
+                    background: "var(--admin-page-bg)",
+                    color: "var(--admin-text)",
+                  }}
+                />
+              </div>
               <p
                 className="text-[11px] mt-1"
                 style={{ color: "var(--admin-text-faint)" }}>
-                Usato nella preview SEO, nei canonical URL e in tutti i link
-                assoluti. Scrivi solo il dominio (es.{" "}
-                <code className="font-mono">librolo.it</code>) oppure con
-                prefisso (es.{" "}
-                <code className="font-mono">https://librolo.it</code>).
+                Solo il dominio, senza protocollo (es.{" "}
+                <code className="font-mono">esempio.it</code> oppure{" "}
+                <code className="font-mono">app.esempio.it</code>).{" "}
+                Il prefisso <code className="font-mono">https://</code> viene aggiunto automaticamente.
               </p>
             </div>
           </div>
