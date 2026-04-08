@@ -7,7 +7,6 @@ import {
   Check,
   ChevronDown,
   ChevronRight,
-  Info,
   Lock,
   Plus,
   Search,
@@ -62,6 +61,15 @@ function TabBar({
   );
 }
 
+// ─── Lock icon con tooltip nativo ────────────────────────────────────
+function SystemLockIcon() {
+  return (
+    <span title="Permesso di sistema" style={{ display: "inline-flex" }}>
+      <Lock size={10} style={{ color: "var(--admin-text-faint)" }} />
+    </span>
+  );
+}
+
 // ─── Matrice ruoli → permessi ─────────────────────────────────────────
 function PermissionsMatrix({
   permissions,
@@ -73,7 +81,6 @@ function PermissionsMatrix({
   const [search, setSearch] = useState("");
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
 
-  // Raggruppa per group
   const groups = useMemo(() => {
     const filtered = permissions.filter(
       (p) =>
@@ -157,7 +164,6 @@ function PermissionsMatrix({
           ))}
         </div>
 
-        {/* Righe per gruppo */}
         {groups.size === 0 && (
           <div
             className="flex items-center justify-center py-12 text-sm"
@@ -170,7 +176,6 @@ function PermissionsMatrix({
           const collapsed = collapsedGroups.has(group);
           return (
             <div key={group}>
-              {/* Intestazione gruppo */}
               <button
                 onClick={() => toggleGroup(group)}
                 className="w-full flex items-center gap-2 px-4 py-2.5 text-left transition-colors"
@@ -197,7 +202,6 @@ function PermissionsMatrix({
                 </span>
               </button>
 
-              {/* Righe permessi */}
               {!collapsed &&
                 perms.map((perm, i) => (
                   <div
@@ -211,7 +215,6 @@ function PermissionsMatrix({
                           : "var(--admin-bg)",
                       borderTop: "1px solid var(--admin-card-border)",
                     }}>
-                    {/* Info permesso */}
                     <div className="px-4 py-2.5">
                       <div className="flex items-center gap-1.5">
                         <code
@@ -219,12 +222,7 @@ function PermissionsMatrix({
                           style={{ color: "var(--admin-text)" }}>
                           {perm.key}
                         </code>
-                        {perm.isSystem && (
-                          <Lock
-                            size={10}
-                            style={{ color: "var(--admin-text-faint)" }}
-                          />
-                        )}
+                        {perm.isSystem && <SystemLockIcon />}
                       </div>
                       <p
                         className="text-[11px] mt-0.5"
@@ -233,7 +231,6 @@ function PermissionsMatrix({
                       </p>
                     </div>
 
-                    {/* Toggle per ogni ruolo */}
                     {roles.map((role) => {
                       const granted = (
                         rolePermsMap[role.id] ?? []
@@ -302,7 +299,6 @@ function PermissionsCatalog({
   const [formError, setFormError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
-  // Mappa permissionId -> ruoli che ce l'hanno
   const permToRoles = useMemo(() => {
     const map = new Map<number, RoleRow[]>();
     for (const [roleIdStr, permIds] of Object.entries(rolePermsMap)) {
@@ -393,7 +389,6 @@ function PermissionsCatalog({
         )}
       </div>
 
-      {/* Form creazione */}
       {showCreate && (
         <form
           onSubmit={handleCreate}
@@ -497,7 +492,6 @@ function PermissionsCatalog({
         </form>
       )}
 
-      {/* Lista gruppi */}
       <div className="space-y-4">
         {Array.from(groups.entries()).map(([group, perms]) => (
           <div
@@ -541,7 +535,6 @@ function PermissionsCatalog({
                         ? "1px solid var(--admin-card-border)"
                         : "none",
                   }}>
-                  {/* Info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
                       <code
@@ -549,13 +542,7 @@ function PermissionsCatalog({
                         style={{ color: "var(--admin-text)" }}>
                         {perm.key}
                       </code>
-                      {perm.isSystem && (
-                        <Lock
-                          size={10}
-                          style={{ color: "var(--admin-text-faint)" }}
-                          title="Permesso di sistema"
-                        />
-                      )}
+                      {perm.isSystem && <SystemLockIcon />}
                     </div>
                     <p
                       className="text-[11px] mt-0.5 truncate"
@@ -564,7 +551,6 @@ function PermissionsCatalog({
                     </p>
                   </div>
 
-                  {/* Ruoli che ce l'hanno */}
                   <div className="flex items-center gap-1 flex-wrap justify-end">
                     {assignedRoles.length === 0 ? (
                       <span
@@ -591,7 +577,6 @@ function PermissionsCatalog({
                     )}
                   </div>
 
-                  {/* Azioni */}
                   {!perm.isSystem && (
                     <button
                       onClick={() => handleDelete(perm.id)}
