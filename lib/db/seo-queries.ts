@@ -30,6 +30,7 @@ export async function upsertSeoPage(data: NewSeoPage): Promise<void> {
         ogTitle: data.ogTitle,
         ogDescription: data.ogDescription,
         ogImage: data.ogImage,
+        robots: data.robots,
         updatedAt: new Date(),
       },
     });
