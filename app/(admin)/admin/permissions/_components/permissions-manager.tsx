@@ -4,9 +4,15 @@
 import type { Permission } from "@/lib/db/schema";
 import type { RoleRow } from "@/lib/db/roles-queries";
 import {
+  SYSTEM_PERMISSIONS,
+  groupedSystemPermissions,
+  type SystemPermission,
+} from "@/lib/rbac/system-permissions";
+import {
   Check,
   ChevronDown,
   ChevronRight,
+  HelpCircle,
   Lock,
   Plus,
   Search,
@@ -70,12 +76,96 @@ function SystemLockIcon() {
   );
 }
 
+// ─── Legenda permessi di sistema ─────────────────────────────────────
+function SystemPermissionsLegend() {
+  const [open, setOpen] = useState(false);
+  const grouped = useMemo(() => groupedSystemPermissions(), []);
+
+  return (
+    <div
+      className="rounded-xl overflow-hidden"
+      style={{ border: "1px solid var(--admin-card-border)" }}>
+      {/* Header collassabile */}
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center gap-2 px-4 py-3 text-left transition-colors"
+        style={{ background: "var(--admin-hover-bg)" }}>
+        <HelpCircle size={14} style={{ color: "var(--admin-accent)" }} />
+        <span
+          className="text-xs font-semibold flex-1"
+          style={{ color: "var(--admin-text)" }}>
+          Chiavi di sistema disponibili
+        </span>
+        <span
+          className="text-[10px] px-1.5 py-0.5 rounded mr-2"
+          style={{
+            background: "var(--admin-card-border)",
+            color: "var(--admin-text-faint)",
+          }}>
+          {SYSTEM_PERMISSIONS.length} chiavi
+        </span>
+        {open ? (
+          <ChevronDown size={13} style={{ color: "var(--admin-text-faint)" }} />
+        ) : (
+          <ChevronRight size={13} style={{ color: "var(--admin-text-faint)" }} />
+        )}
+      </button>
+
+      {open && (
+        <div
+          className="divide-y"
+          style={{ borderTop: "1px solid var(--admin-card-border)" }}>
+          {Array.from(grouped.entries()).map(([group, perms]) => (
+            <div key={group}>
+              {/* Intestazione gruppo */}
+              <div
+                className="px-4 py-1.5"
+                style={{ background: "var(--admin-bg)" }}>
+                <span
+                  className="text-[10px] font-bold uppercase tracking-widest"
+                  style={{ color: "var(--admin-text-faint)" }}>
+                  {group}
+                </span>
+              </div>
+              {/* Righe permesso */}
+              {perms.map((p) => (
+                <div
+                  key={p.key}
+                  className="grid gap-x-4 px-4 py-2"
+                  style={{
+                    gridTemplateColumns: "180px 1fr",
+                    background: "var(--admin-card-bg)",
+                    borderTop: "1px solid var(--admin-card-border)",
+                  }}>
+                  <code
+                    className="text-[11px] font-mono self-start pt-0.5"
+                    style={{ color: "var(--admin-accent)" }}>
+                    {p.key}
+                  </code>
+                  <div>
+                    <p
+                      className="text-[11px] font-medium"
+                      style={{ color: "var(--admin-text)" }}>
+                      {p.label}
+                    </p>
+                    <p
+                      className="text-[10px] mt-0.5"
+                      style={{ color: "var(--admin-text-faint)" }}>
+                      {p.description}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Matrice ruoli → permessi ─────────────────────────────────────────
-function PermissionsMatrix({
-  permissions,
-  roles,
-  rolePermsMap,
-}: Props) {
+function PermissionsMatrix({ permissions, roles, rolePermsMap }: Props) {
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [, startTransition] = useTransition();
   const [search, setSearch] = useState("");
@@ -119,7 +209,6 @@ function PermissionsMatrix({
 
   return (
     <div className="space-y-4">
-      {/* Ricerca */}
       <div className="relative">
         <Search
           size={14}
@@ -139,11 +228,9 @@ function PermissionsMatrix({
         />
       </div>
 
-      {/* Tabella */}
       <div
         className="rounded-xl overflow-hidden"
         style={{ border: "1px solid var(--admin-card-border)" }}>
-        {/* Header ruoli */}
         <div
           className="grid items-center text-xs font-semibold uppercase tracking-wide"
           style={{
@@ -184,11 +271,7 @@ function PermissionsMatrix({
                   borderTop: "1px solid var(--admin-card-border)",
                   color: "var(--admin-text-muted)",
                 }}>
-                {collapsed ? (
-                  <ChevronRight size={13} />
-                ) : (
-                  <ChevronDown size={13} />
-                )}
+                {collapsed ? <ChevronRight size={13} /> : <ChevronDown size={13} />}
                 <span className="text-[11px] font-bold uppercase tracking-widest">
                   {group}
                 </span>
@@ -210,9 +293,7 @@ function PermissionsMatrix({
                     style={{
                       gridTemplateColumns: `1fr repeat(${roles.length}, minmax(80px, 1fr))`,
                       background:
-                        i % 2 === 0
-                          ? "var(--admin-card-bg)"
-                          : "var(--admin-bg)",
+                        i % 2 === 0 ? "var(--admin-card-bg)" : "var(--admin-bg)",
                       borderTop: "1px solid var(--admin-card-border)",
                     }}>
                     <div className="px-4 py-2.5">
@@ -232,9 +313,9 @@ function PermissionsMatrix({
                     </div>
 
                     {roles.map((role) => {
-                      const granted = (
-                        rolePermsMap[role.id] ?? []
-                      ).includes(perm.id);
+                      const granted = (rolePermsMap[role.id] ?? []).includes(
+                        perm.id,
+                      );
                       const key = `${role.id}-${perm.id}`;
                       const isPending = pendingKey === key;
 
@@ -247,14 +328,18 @@ function PermissionsMatrix({
                               handleToggle(role.id, perm.id, granted)
                             }
                             disabled={isPending}
-                            aria-label={`${granted ? "Rimuovi" : "Aggiungi"} ${perm.key} da ${role.label}`}
+                            aria-label={`${
+                              granted ? "Rimuovi" : "Aggiungi"
+                            } ${perm.key} da ${role.label}`}
                             className="w-8 h-8 rounded-lg flex items-center justify-center transition-all disabled:opacity-50"
                             style={{
                               background: granted
                                 ? role.color + "18"
                                 : "var(--admin-hover-bg)",
                               border: `1px solid ${
-                                granted ? role.color + "40" : "var(--admin-card-border)"
+                                granted
+                                  ? role.color + "40"
+                                  : "var(--admin-card-border)"
                               }`,
                             }}>
                             {isPending ? (
@@ -288,16 +373,19 @@ function PermissionsMatrix({
 }
 
 // ─── Catalogo permessi ────────────────────────────────────────────────
-function PermissionsCatalog({
-  permissions,
-  roles,
-  rolePermsMap,
-}: Props) {
+function PermissionsCatalog({ permissions, roles, rolePermsMap }: Props) {
   const [showCreate, setShowCreate] = useState(false);
   const [search, setSearch] = useState("");
   const [pending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [keyValue, setKeyValue] = useState("");
+
+  // Suggerimento gruppo/label dalla chiave scelta nel datalist
+  const suggested = useMemo<SystemPermission | undefined>(
+    () => SYSTEM_PERMISSIONS.find((p) => p.key === keyValue),
+    [keyValue],
+  );
 
   const permToRoles = useMemo(() => {
     const map = new Map<number, RoleRow[]>();
@@ -337,6 +425,7 @@ function PermissionsCatalog({
         setFormError(res.error);
       } else {
         setShowCreate(false);
+        setKeyValue("");
         (e.target as HTMLFormElement).reset();
       }
     });
@@ -358,8 +447,14 @@ function PermissionsCatalog({
     color: "var(--admin-text)",
   };
 
+  // ID per collegare l'input al datalist
+  const datalistId = "system-permissions-datalist";
+
   return (
     <div className="space-y-4">
+      {/* Legenda sempre visibile sopra tutto */}
+      <SystemPermissionsLegend />
+
       <div className="flex items-center gap-3">
         <div className="relative flex-1">
           <Search
@@ -397,12 +492,23 @@ function PermissionsCatalog({
             background: "var(--admin-card-bg)",
             border: "2px solid var(--admin-accent)",
           }}>
+          {/* datalist con tutte le chiavi di sistema */}
+          <datalist id={datalistId}>
+            {SYSTEM_PERMISSIONS.map((p) => (
+              <option key={p.key} value={p.key}>
+                {p.label}
+              </option>
+            ))}
+          </datalist>
+
           <h3
             className="text-sm font-semibold"
             style={{ color: "var(--admin-text)" }}>
             Nuovo permesso
           </h3>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Chiave — con autocomplete datalist */}
             <div>
               <label
                 className="block text-xs font-medium mb-1"
@@ -415,11 +521,27 @@ function PermissionsCatalog({
               <input
                 name="key"
                 required
+                list={datalistId}
+                value={keyValue}
+                onChange={(e) => setKeyValue(e.target.value)}
                 placeholder="es. posts:publish"
+                autoComplete="off"
                 className={inputCls}
                 style={{ ...inputStyle, fontFamily: "monospace" }}
               />
+              {/* Hint inline quando la chiave è una chiave di sistema conosciuta */}
+              {suggested && (
+                <p
+                  className="text-[10px] mt-1 flex items-center gap-1"
+                  style={{ color: "var(--admin-accent)" }}>
+                  <Check size={10} />
+                  Chiave di sistema · gruppo suggerito:{" "}
+                  <strong>{suggested.group}</strong>
+                </p>
+              )}
             </div>
+
+            {/* Gruppo — precompilato se la chiave è nel catalogo */}
             <div>
               <label
                 className="block text-xs font-medium mb-1"
@@ -429,12 +551,16 @@ function PermissionsCatalog({
               <input
                 name="group"
                 required
+                key={suggested?.group ?? ""}   /* re-mount per aggiornare defaultValue */
+                defaultValue={suggested?.group ?? ""}
                 placeholder="es. Contenuti"
                 className={inputCls}
                 style={inputStyle}
               />
             </div>
           </div>
+
+          {/* Etichetta — precompilata se la chiave è nel catalogo */}
           <div>
             <label
               className="block text-xs font-medium mb-1"
@@ -444,31 +570,48 @@ function PermissionsCatalog({
             <input
               name="label"
               required
+              key={suggested?.label ?? ""}
+              defaultValue={suggested?.label ?? ""}
               placeholder="es. Pubblica post senza approvazione"
               className={inputCls}
               style={inputStyle}
             />
           </div>
+
+          {/* Descrizione — precompilata se la chiave è nel catalogo */}
           <div>
             <label
               className="block text-xs font-medium mb-1"
               style={{ color: "var(--admin-text-muted)" }}>
-              Descrizione (opzionale)
+              Descrizione{" "}
+              <span style={{ color: "var(--admin-text-faint)" }}>
+                (opzionale)
+              </span>
             </label>
             <textarea
               name="description"
               rows={2}
+              key={suggested?.description ?? ""}
+              defaultValue={suggested?.description ?? ""}
               className={inputCls}
               style={inputStyle}
             />
           </div>
+
           {formError && (
-            <p className="text-xs text-red-600">{formError}</p>
+            <p className="text-xs" style={{ color: "var(--admin-error, #dc2626)" }}>
+              {formError}
+            </p>
           )}
+
           <div className="flex items-center justify-end gap-2">
             <button
               type="button"
-              onClick={() => { setShowCreate(false); setFormError(null); }}
+              onClick={() => {
+                setShowCreate(false);
+                setFormError(null);
+                setKeyValue("");
+              }}
               className="px-4 py-2 text-sm rounded-lg"
               style={{
                 color: "var(--admin-text-muted)",
@@ -492,6 +635,7 @@ function PermissionsCatalog({
         </form>
       )}
 
+      {/* Lista permessi esistenti */}
       <div className="space-y-4">
         {Array.from(groups.entries()).map(([group, perms]) => (
           <div
@@ -527,13 +671,9 @@ function PermissionsCatalog({
                   className="flex items-center gap-4 px-4 py-3"
                   style={{
                     background:
-                      i % 2 === 0
-                        ? "var(--admin-card-bg)"
-                        : "var(--admin-bg)",
+                      i % 2 === 0 ? "var(--admin-card-bg)" : "var(--admin-bg)",
                     borderTop:
-                      i > 0
-                        ? "1px solid var(--admin-card-border)"
-                        : "none",
+                      i > 0 ? "1px solid var(--admin-card-border)" : "none",
                   }}>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
