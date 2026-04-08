@@ -36,7 +36,7 @@ type Props = {
   rolePermsMap: Record<number, number[]>;
 };
 
-// ─── Tab bar ─────────────────────────────────────────────────────────────────
+// ─── Tab bar ───────────────────────────────────────────────────────────────────
 function TabBar({
   active,
   onChange,
@@ -45,8 +45,8 @@ function TabBar({
   onChange: (t: "matrix" | "catalog") => void;
 }) {
   const tabs = [
-    { id: "matrix" as const, label: "Matrice ruoli" },
     { id: "catalog" as const, label: "Catalogo permessi" },
+    { id: "matrix" as const, label: "Matrice ruoli" },
   ];
   return (
     <div
@@ -69,7 +69,7 @@ function TabBar({
   );
 }
 
-// ─── Lock icon ────────────────────────────────────────────────────────────────
+// ─── Lock icon ─────────────────────────────────────────────────────────────────
 function SystemLockIcon() {
   return (
     <span title="Permesso di sistema" style={{ display: "inline-flex" }}>
@@ -78,7 +78,7 @@ function SystemLockIcon() {
   );
 }
 
-// ─── Legenda permessi di sistema ──────────────────────────────────────────────
+// ─── Legenda permessi di sistema ───────────────────────────────────────────────
 function SystemPermissionsLegend() {
   const [open, setOpen] = useState(false);
   const grouped = useMemo(() => groupedSystemPermissions(), []);
@@ -137,7 +137,7 @@ function SystemPermissionsLegend() {
   );
 }
 
-// ─── Matrice ruoli ────────────────────────────────────────────────────────────
+// ─── Matrice ruoli ─────────────────────────────────────────────────────────────
 function PermissionsMatrix({ permissions, roles, rolePermsMap }: Props) {
   const [search, setSearch] = useState("");
   const [pending, startTransition] = useTransition();
@@ -260,7 +260,7 @@ function PermissionsMatrix({ permissions, roles, rolePermsMap }: Props) {
   );
 }
 
-// ─── Drawer "Chi ha questo permesso?" ─────────────────────────────────────────
+// ─── Drawer "Chi ha questo permesso?" ──────────────────────────────────────────
 type UserWithPermission = {
   id: number;
   email: string;
@@ -328,7 +328,7 @@ function UsersDrawer({
           boxShadow: "-12px 0 40px oklch(0 0 0 / 0.18)",
         }}>
 
-        {/* ── Header ─────────────────────────────────────────────── */}
+        {/* ── Header ─────────────────────────────────────────────────── */}
         <div
           className="flex items-center gap-3 px-5 py-4 shrink-0"
           style={{ borderBottom: "1px solid var(--admin-card-border)" }}>
@@ -353,7 +353,7 @@ function UsersDrawer({
           </button>
         </div>
 
-        {/* ── Barra ricerca + contatore ───────────────────────────── */}
+        {/* ── Barra ricerca + contatore ───────────────────────────────── */}
         {!loading && data && (
           <div
             className="px-4 pt-3 pb-2 shrink-0 space-y-2"
@@ -403,7 +403,7 @@ function UsersDrawer({
           </div>
         )}
 
-        {/* ── Corpo ──────────────────────────────────────────────── */}
+        {/* ── Corpo ──────────────────────────────────────────────────── */}
         <div className="flex-1 overflow-y-auto p-3 space-y-1.5">
           {loading ? (
             <div className="flex items-center justify-center py-16">
@@ -474,7 +474,7 @@ function UsersDrawer({
           )}
         </div>
 
-        {/* ── Footer permesso ─────────────────────────────────────── */}
+        {/* ── Footer permesso ─────────────────────────────────────────── */}
         {!loading && data && data.users.length > 0 && (
           <div
             className="px-5 py-3 shrink-0 text-xs truncate"
@@ -490,7 +490,7 @@ function UsersDrawer({
   );
 }
 
-// ─── Dialog conferma eliminazione ─────────────────────────────────────────────
+// ─── Dialog conferma eliminazione ──────────────────────────────────────────────
 type ImpactData = {
   id: number;
   key: string;
@@ -585,7 +585,7 @@ function DeleteConfirmDialog({
   );
 }
 
-// ─── Catalogo permessi ────────────────────────────────────────────────────────
+// ─── Catalogo permessi ─────────────────────────────────────────────────────────
 function PermissionsCatalog({ permissions, roles, rolePermsMap }: Props) {
   const [showCreate, setShowCreate] = useState(false);
   const [search, setSearch] = useState("");
@@ -838,9 +838,9 @@ function PermissionsCatalog({ permissions, roles, rolePermsMap }: Props) {
   );
 }
 
-// ─── Root ─────────────────────────────────────────────────────────────────────
+// ─── Root ───────────────────────────────────────────────────────────────────────
 export function PermissionsManager({ permissions, roles, rolePermsMap }: Props) {
-  const [tab, setTab] = useState<"matrix" | "catalog">("matrix");
+  const [tab, setTab] = useState<"matrix" | "catalog">("catalog");
 
   return (
     <div className="space-y-5">
