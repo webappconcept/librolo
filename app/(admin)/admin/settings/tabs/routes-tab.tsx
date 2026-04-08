@@ -57,13 +57,10 @@ function buildRoutes(): RouteEntry[] {
   PRIVATE_ROUTE_PREFIXES.forEach((r) => add(r, r, "proxy.ts → PRIVATE_ROUTE_PREFIXES"));
 
   return Array.from(map.values()).sort((a, b) => {
-    // 1° criterio: tipo di accesso
     const typeOrder = TYPE_ORDER.indexOf(a.type) - TYPE_ORDER.indexOf(b.type);
     if (typeOrder !== 0) return typeOrder;
-    // 2° criterio: sorgente
     const sourceOrder = a.source.localeCompare(b.source);
     if (sourceOrder !== 0) return sourceOrder;
-    // 3° criterio: percorso
     return a.path.localeCompare(b.path);
   });
 }
@@ -103,7 +100,6 @@ export function RoutesTab() {
     {} as Record<RouteEntry["type"], number>,
   );
 
-  // Traccia il cambio di gruppo (tipo + sorgente) per i separatori visivi
   let lastType: RouteEntry["type"] | null = null;
   let lastSource: string | null = null;
 
@@ -174,7 +170,10 @@ export function RoutesTab() {
                           borderBottom: `1px solid ${cfg.color}22`,
                           borderTop: i > 0 ? `2px solid ${cfg.color}33` : undefined,
                         }}>
-                        {cfg.icon}&nbsp;&nbsp;{cfg.label}
+                        <span className="flex items-center gap-1.5">
+                          {cfg.icon}
+                          {cfg.label}
+                        </span>
                       </td>
                     </tr>
                   )}
