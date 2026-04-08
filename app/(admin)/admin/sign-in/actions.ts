@@ -4,6 +4,7 @@ import { validatedAction } from "@/lib/auth/middleware";
 import { comparePasswords, setSession } from "@/lib/auth/session";
 import { db } from "@/lib/db/drizzle";
 import { users } from "@/lib/db/schema";
+import { can } from "@/lib/rbac/can";
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -28,7 +29,9 @@ export const adminSignIn = validatedAction(
       return { error: "Credenziali non valide.", email, password };
     }
 
-    if (foundUser.role !== "admin") {
+    // Verifica accesso admin: flag is_admin OPPURE permesso RBAC "admin:access"
+    const hasAccess = foundUser.isAdmin || (await can(foundUser, "admin:access"));
+    if (!hasAccess) {
       return { error: "Accesso non autorizzato.", email, password };
     }
 
