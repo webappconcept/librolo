@@ -38,7 +38,7 @@ type Props = {
   rolePermsMap: Record<number, number[]>;
 };
 
-// ─── Tab bar ─────────────────────────────────────────────────────────────────
+// ─── Tab bar ────────────────────────────────────────────────────────────────
 const PERMISSION_TABS = [
   { id: "catalog" as const, label: "Catalogo permessi", icon: LayoutGrid },
   { id: "matrix" as const, label: "Matrice ruoli", icon: Table2 },
@@ -78,7 +78,7 @@ function TabBar({
   );
 }
 
-// ─── Lock icon ────────────────────────────────────────────────────────────────
+// ─── Lock icon ──────────────────────────────────────────────────────────────
 function SystemLockIcon() {
   return (
     <span title="Permesso di sistema" style={{ display: "inline-flex" }}>
@@ -87,7 +87,43 @@ function SystemLockIcon() {
   );
 }
 
-// ─── Legenda permessi di sistema ──────────────────────────────────────────────
+// ─── Group card header condiviso ─────────────────────────────────────────────
+function GroupHeader({
+  group,
+  count,
+  isExpanded,
+  onToggle,
+}: {
+  group: string;
+  count: number;
+  isExpanded: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      onClick={onToggle}
+      className="w-full flex items-center gap-2 px-4 py-3"
+      style={{ background: "var(--admin-hover-bg)" }}>
+      {isExpanded ? (
+        <ChevronDown size={13} style={{ color: "var(--admin-text-faint)" }} />
+      ) : (
+        <ChevronRight size={13} style={{ color: "var(--admin-text-faint)" }} />
+      )}
+      <span
+        className="text-xs font-bold uppercase tracking-widest flex-1 text-left"
+        style={{ color: "var(--admin-text-muted)" }}>
+        {group}
+      </span>
+      <span
+        className="text-[10px] px-1.5 py-0.5 rounded"
+        style={{ background: "var(--admin-card-border)", color: "var(--admin-text-faint)" }}>
+        {count}
+      </span>
+    </button>
+  );
+}
+
+// ─── Legenda permessi di sistema ─────────────────────────────────────────────
 function SystemPermissionsLegend() {
   const [open, setOpen] = useState(false);
   const grouped = useMemo(() => groupedSystemPermissions(), []);
@@ -146,7 +182,7 @@ function SystemPermissionsLegend() {
   );
 }
 
-// ─── Matrice ruoli ────────────────────────────────────────────────────────────
+// ─── Matrice ruoli ──────────────────────────────────────────────────────────
 function PermissionsMatrix({ permissions, roles, rolePermsMap }: Props) {
   const [search, setSearch] = useState("");
   const [pending, startTransition] = useTransition();
@@ -202,22 +238,12 @@ function PermissionsMatrix({ permissions, roles, rolePermsMap }: Props) {
         const isExpanded = expandedGroups.has(group);
         return (
           <div key={group} className="rounded-xl overflow-hidden" style={{ border: "1px solid oklch(0 0 0 / 0.13)" }}>
-            <button
-              onClick={() => toggleGroup(group)}
-              className="w-full flex items-center gap-2 px-4 py-3"
-              style={{ background: "var(--admin-hover-bg)" }}>
-              {isExpanded ? (
-                <ChevronDown size={13} style={{ color: "var(--admin-text-faint)" }} />
-              ) : (
-                <ChevronRight size={13} style={{ color: "var(--admin-text-faint)" }} />
-              )}
-              <span className="text-xs font-bold uppercase tracking-widest flex-1 text-left" style={{ color: "var(--admin-text-muted)" }}>
-                {group}
-              </span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: "var(--admin-card-border)", color: "var(--admin-text-faint)" }}>
-                {perms.length}
-              </span>
-            </button>
+            <GroupHeader
+              group={group}
+              count={perms.length}
+              isExpanded={isExpanded}
+              onToggle={() => toggleGroup(group)}
+            />
 
             {isExpanded &&
               perms.map((perm) => (
@@ -240,13 +266,11 @@ function PermissionsMatrix({ permissions, roles, rolePermsMap }: Props) {
                     const isPending = togglingKey === `${role.id}-${perm.id}`;
                     return (
                       <div key={role.id} className="flex flex-col items-center gap-1" style={{ minWidth: 64 }}>
-                        {/* Label ruolo */}
                         <span
                           className="text-[9px] font-bold uppercase tracking-wide"
                           style={{ color: role.color, opacity: 0.85 }}>
                           {role.label}
                         </span>
-                        {/* Toggle button */}
                         <button
                           onClick={() => handleToggle(role.id, perm.id, granted)}
                           disabled={isPending || pending}
@@ -300,7 +324,7 @@ function PermissionsMatrix({ permissions, roles, rolePermsMap }: Props) {
   );
 }
 
-// ─── Drawer "Chi ha questo permesso?" ─────────────────────────────────────────
+// ─── Drawer "Chi ha questo permesso?" ────────────────────────────────────────
 type UserWithPermission = {
   id: number;
   email: string;
@@ -368,7 +392,7 @@ function UsersDrawer({
           boxShadow: "-12px 0 40px oklch(0 0 0 / 0.18)",
         }}>
 
-        {/* ── Header ───────────────────────────────────────────────────────────── */}
+        {/* ── Header ─────────────────────────────────────────────────────── */}
         <div
           className="flex items-center gap-3 px-5 py-4 shrink-0"
           style={{ borderBottom: "1px solid var(--admin-card-border)" }}>
@@ -393,7 +417,7 @@ function UsersDrawer({
           </button>
         </div>
 
-        {/* ── Barra ricerca + contatore ─────────────────────────────────────────── */}
+        {/* ── Barra ricerca + contatore ────────────────────────────────────── */}
         {!loading && data && (
           <div
             className="px-4 pt-3 pb-2 shrink-0 space-y-2"
@@ -425,7 +449,6 @@ function UsersDrawer({
               )}
             </div>
 
-            {/* Contatore risultati */}
             <div className="flex items-center justify-between">
               <p className="text-[11px]" style={{ color: "var(--admin-text-faint)" }}>
                 {search
@@ -443,7 +466,7 @@ function UsersDrawer({
           </div>
         )}
 
-        {/* ── Corpo ──────────────────────────────────────────────────────────────── */}
+        {/* ── Corpo ─────────────────────────────────────────────────────────── */}
         <div className="flex-1 overflow-y-auto p-3 space-y-1.5">
           {loading ? (
             <div className="flex items-center justify-center py-16">
@@ -476,7 +499,6 @@ function UsersDrawer({
                   key={u.id}
                   className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
                   style={{ background: "var(--admin-hover-bg)" }}>
-                  {/* Avatar */}
                   <div
                     className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
                     style={{
@@ -485,7 +507,6 @@ function UsersDrawer({
                     }}>
                     {initials}
                   </div>
-                  {/* Info */}
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-medium truncate" style={{ color: "var(--admin-text)" }}>
                       {name}
@@ -494,11 +515,9 @@ function UsersDrawer({
                       {u.email}
                     </p>
                   </div>
-                  {/* Ruolo */}
                   <span className="text-[10px] shrink-0" style={{ color: "var(--admin-text-faint)" }}>
                     {u.role}
                   </span>
-                  {/* Source badge */}
                   <span
                     className="text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0"
                     style={{
@@ -514,7 +533,7 @@ function UsersDrawer({
           )}
         </div>
 
-        {/* ── Footer permesso ────────────────────────────────────────────────────── */}
+        {/* ── Footer permesso ────────────────────────────────────────────────── */}
         {!loading && data && data.users.length > 0 && (
           <div
             className="px-5 py-3 shrink-0 text-xs truncate"
@@ -530,7 +549,7 @@ function UsersDrawer({
   );
 }
 
-// ─── Dialog conferma eliminazione ─────────────────────────────────────────────
+// ─── Dialog conferma eliminazione ────────────────────────────────────────────
 type ImpactData = {
   id: number;
   key: string;
@@ -636,6 +655,15 @@ function PermissionsCatalog({ permissions, roles, rolePermsMap }: Props) {
   const [confirmImpact, setConfirmImpact] = useState<ImpactData | null>(null);
   const [loadingImpactId, setLoadingImpactId] = useState<number | null>(null);
   const [usersDrawer, setUsersDrawer] = useState<{ key: string; label: string } | null>(null);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+
+  function toggleGroup(group: string) {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      next.has(group) ? next.delete(group) : next.add(group);
+      return next;
+    });
+  }
 
   const suggested = useMemo<SystemPermission | undefined>(
     () => SYSTEM_PERMISSIONS.find((p) => p.key === keyValue),
@@ -722,7 +750,6 @@ function PermissionsCatalog({ permissions, roles, rolePermsMap }: Props) {
 
   return (
     <div className="space-y-4">
-      {/* Drawer utenti */}
       {usersDrawer && (
         <UsersDrawer
           permKey={usersDrawer.key}
@@ -731,7 +758,6 @@ function PermissionsCatalog({ permissions, roles, rolePermsMap }: Props) {
         />
       )}
 
-      {/* Dialog conferma eliminazione */}
       {confirmImpact && (
         <DeleteConfirmDialog
           impact={confirmImpact}
@@ -800,80 +826,80 @@ function PermissionsCatalog({ permissions, roles, rolePermsMap }: Props) {
         </form>
       )}
 
-      {Array.from(groups.entries()).map(([group, perms]) => (
-        <div key={group} className="rounded-xl overflow-hidden" style={{ border: "1px solid oklch(0 0 0 / 0.13)" }}>
-          <div
-            className="px-4 py-2 text-[10px] font-bold uppercase tracking-widest"
-            style={{ background: "var(--admin-hover-bg)", color: "var(--admin-text-faint)", borderBottom: "1px solid var(--admin-card-border)" }}>
-            {group}
-          </div>
+      {Array.from(groups.entries()).map(([group, perms]) => {
+        const isExpanded = expandedGroups.has(group);
+        return (
+          <div key={group} className="rounded-xl overflow-hidden" style={{ border: "1px solid oklch(0 0 0 / 0.13)" }}>
+            <GroupHeader
+              group={group}
+              count={perms.length}
+              isExpanded={isExpanded}
+              onToggle={() => toggleGroup(group)}
+            />
 
-          {perms.map((perm) => {
-            const assignedRoles = permToRoles.get(perm.id) ?? [];
-            const isLoadingThis = loadingImpactId === perm.id;
-            return (
-              <div
-                key={perm.id}
-                className="flex items-center gap-3 px-4 py-3"
-                style={{ borderBottom: "1px solid var(--admin-card-border)", background: "var(--admin-bg)" }}>
-                {/* Info permesso */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <code className="font-mono text-[11px]" style={{ color: "var(--admin-text)" }}>{perm.key}</code>
-                    {perm.isSystem && <SystemLockIcon />}
+            {isExpanded && perms.map((perm) => {
+              const assignedRoles = permToRoles.get(perm.id) ?? [];
+              const isLoadingThis = loadingImpactId === perm.id;
+              return (
+                <div
+                  key={perm.id}
+                  className="flex items-center gap-3 px-4 py-3"
+                  style={{ borderTop: "1px solid var(--admin-card-border)", background: "var(--admin-bg)" }}>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <code className="font-mono text-[11px]" style={{ color: "var(--admin-text)" }}>{perm.key}</code>
+                      {perm.isSystem && <SystemLockIcon />}
+                    </div>
+                    <p className="text-xs truncate mt-0.5" style={{ color: "var(--admin-text-muted)" }}>{perm.label}</p>
                   </div>
-                  <p className="text-xs truncate mt-0.5" style={{ color: "var(--admin-text-muted)" }}>{perm.label}</p>
-                </div>
 
-                {/* Ruoli assegnati */}
-                <div className="flex items-center gap-1 flex-wrap justify-end">
-                  {assignedRoles.length === 0 ? (
-                    <span className="text-[10px]" style={{ color: "var(--admin-text-faint)" }}>Nessun ruolo</span>
-                  ) : (
-                    assignedRoles.map((r) => (
-                      <span
-                        key={r.id}
-                        className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                        style={{ background: r.color + "18", color: r.color, border: `1px solid ${r.color}40` }}>
-                        {r.label}
-                      </span>
-                    ))
+                  <div className="flex items-center gap-1 flex-wrap justify-end">
+                    {assignedRoles.length === 0 ? (
+                      <span className="text-[10px]" style={{ color: "var(--admin-text-faint)" }}>Nessun ruolo</span>
+                    ) : (
+                      assignedRoles.map((r) => (
+                        <span
+                          key={r.id}
+                          className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                          style={{ background: r.color + "18", color: r.color, border: `1px solid ${r.color}40` }}>
+                          {r.label}
+                        </span>
+                      ))
+                    )}
+                  </div>
+
+                  <button
+                    onClick={() => setUsersDrawer({ key: perm.key, label: perm.label })}
+                    className="p-1.5 rounded-lg transition-colors shrink-0"
+                    style={{ color: "var(--admin-text-faint)" }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "var(--admin-hover-bg)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                    title="Chi ha questo permesso?">
+                    <Users size={13} />
+                  </button>
+
+                  {!perm.isSystem && (
+                    <button
+                      onClick={() => handleDeleteRequest(perm)}
+                      disabled={isLoadingThis || deletingId === perm.id}
+                      className="p-1.5 rounded-lg transition-colors shrink-0 disabled:opacity-50"
+                      style={{ color: "var(--admin-text-faint)" }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "#fef2f2")}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                      title="Elimina permesso">
+                      {isLoadingThis || deletingId === perm.id ? (
+                        <div className="w-3 h-3 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <Trash2 size={13} />
+                      )}
+                    </button>
                   )}
                 </div>
-
-                {/* Bottone "chi ha questo permesso" */}
-                <button
-                  onClick={() => setUsersDrawer({ key: perm.key, label: perm.label })}
-                  className="p-1.5 rounded-lg transition-colors shrink-0"
-                  style={{ color: "var(--admin-text-faint)" }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "var(--admin-hover-bg)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                  title="Chi ha questo permesso?">
-                  <Users size={13} />
-                </button>
-
-                {/* Bottone elimina */}
-                {!perm.isSystem && (
-                  <button
-                    onClick={() => handleDeleteRequest(perm)}
-                    disabled={isLoadingThis || deletingId === perm.id}
-                    className="p-1.5 rounded-lg transition-colors shrink-0 disabled:opacity-50"
-                    style={{ color: "var(--admin-text-faint)" }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = "#fef2f2")}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                    title="Elimina permesso">
-                    {isLoadingThis || deletingId === perm.id ? (
-                      <div className="w-3 h-3 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                      <Trash2 size={13} />
-                    )}
-                  </button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      ))}
+              );
+            })}
+          </div>
+        );
+      })}
     </div>
   );
 }
