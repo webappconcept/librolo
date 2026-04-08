@@ -25,8 +25,8 @@ export type AppSettings = {
 };
 
 const DEFAULTS: AppSettings = {
-  app_name: "Librolo",
-  app_description: "La tua libreria digitale",
+  app_name: "Nome dell'app",
+  app_description: "Descrizione dell'app",
   app_domain: "",
   maintenance_mode: "false",
   registrations_enabled: "true",
