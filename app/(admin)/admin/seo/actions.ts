@@ -6,10 +6,6 @@ import { z } from "zod";
 
 const ROBOTS_VALUES = ["", "noindex,nofollow", "noindex,follow"] as const;
 
-/**
- * Tipi JSON-LD supportati.
- * Aggiungere qui nuovi tipi se necessario — la select nel form si aggiorna automaticamente.
- */
 export const JSON_LD_TYPES = [
   "WebPage",
   "Article",
@@ -26,90 +22,80 @@ export const JSON_LD_TYPES = [
 
 export type JsonLdType = (typeof JSON_LD_TYPES)[number];
 
-function emptyToNull(v: unknown): string | null {
-  if (typeof v !== "string") return null;
-  const trimmed = v.trim();
-  return trimmed === "" ? null : trimmed;
-}
+const schema = z.object({
+  pathname: z
+    .string()
+    .min(1)
+    .regex(/^\//, { message: "Il pathname deve iniziare con /" }),
+  originalPathname: z.string().optional(),
+  label: z.string().min(1, "Il nome è obbligatorio").max(100),
+  title: z.string().max(70).optional(),
+  description: z.string().max(160).optional(),
+  ogTitle: z.string().max(70).optional(),
+  ogDescription: z.string().max(200).optional(),
+  ogImage: z.string().url().optional().or(z.literal("")),
+  robots: z
+    .enum(ROBOTS_VALUES)
+    .optional()
+    .transform((v) => v || null),
+  jsonLdEnabled: z.boolean().default(false),
+  jsonLdType: z.string().optional().nullable(),
+});
 
 export async function upsertSeoPageAction(
   _: unknown,
   formData: FormData,
 ): Promise<{ error?: string; success?: boolean }> {
-  // Legge tutti i valori raw dal FormData
-  const pathnameRaw = formData.get("pathname");
-  const originalPathnameRaw = formData.get("originalPathname");
-  const labelRaw = formData.get("label");
-  const titleRaw = formData.get("title");
-  const descriptionRaw = formData.get("description");
-  const ogTitleRaw = formData.get("ogTitle");
-  const ogDescriptionRaw = formData.get("ogDescription");
-  const ogImageRaw = formData.get("ogImage");
-  const robotsRaw = formData.get("robots");
-  const jsonLdEnabledRaw = formData.get("jsonLdEnabled");
   const jsonLdTypeRaw = formData.get("jsonLdType");
+  const jsonLdTypeValue =
+    typeof jsonLdTypeRaw === "string" && JSON_LD_TYPES.includes(jsonLdTypeRaw as JsonLdType)
+      ? jsonLdTypeRaw
+      : null;
 
-  // Validazioni manuali essenziali
-  const pathname = typeof pathnameRaw === "string" ? pathnameRaw.trim() : "";
-  if (!pathname) return { error: "Il pathname è obbligatorio" };
-  if (!pathname.startsWith("/")) return { error: "Il pathname deve iniziare con /" };
+  const raw = {
+    pathname: formData.get("pathname"),
+    originalPathname: formData.get("originalPathname") || undefined,
+    label: formData.get("label"),
+    title: formData.get("title") || undefined,
+    description: formData.get("description") || undefined,
+    ogTitle: formData.get("ogTitle") || undefined,
+    ogDescription: formData.get("ogDescription") || undefined,
+    ogImage: formData.get("ogImage") || undefined,
+    robots: formData.get("robots") || "",
+    jsonLdEnabled: formData.get("jsonLdEnabled") === "true",
+    jsonLdType: jsonLdTypeValue,
+  };
 
-  const label = typeof labelRaw === "string" ? labelRaw.trim() : "";
-  if (!label) return { error: "Il nome è obbligatorio" };
-  if (label.length > 100) return { error: "Il nome è troppo lungo (max 100 caratteri)" };
-
-  const title = emptyToNull(titleRaw);
-  const description = emptyToNull(descriptionRaw);
-  const ogTitle = emptyToNull(ogTitleRaw);
-  const ogDescription = emptyToNull(ogDescriptionRaw);
-  const ogImageStr = emptyToNull(ogImageRaw);
-  const robots = emptyToNull(robotsRaw);
-
-  // Valida ogImage come URL solo se presente
-  if (ogImageStr) {
-    const urlSchema = z.url();
-    const urlResult = urlSchema.safeParse(ogImageStr);
-    if (!urlResult.success) return { error: "OG Image deve essere un URL valido" };
+  const parsed = schema.safeParse(raw);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Dati non validi" };
   }
 
-  // JSON-LD
-  const jsonLdEnabled = jsonLdEnabledRaw === "true";
-  const jsonLdTypeStr = typeof jsonLdTypeRaw === "string" ? jsonLdTypeRaw.trim() : "";
-  const jsonLdType = JSON_LD_TYPES.includes(jsonLdTypeStr as JsonLdType)
-    ? (jsonLdTypeStr as JsonLdType)
-    : null;
+  const { originalPathname, ...data } = parsed.data;
 
-  const originalPathname =
-    typeof originalPathnameRaw === "string" && originalPathnameRaw.trim()
-      ? originalPathnameRaw.trim()
-      : undefined;
-
-  const data = {
-    pathname,
-    label,
-    title,
-    description,
-    ogTitle,
-    ogDescription,
-    ogImage: ogImageStr,
-    robots,
-    jsonLdEnabled,
-    jsonLdType,
+  // Normalizza stringa vuota → null per ogImage
+  const finalData = {
+    ...data,
+    ogImage: data.ogImage === "" ? null : (data.ogImage ?? null),
+    title: data.title ?? null,
+    description: data.description ?? null,
+    ogTitle: data.ogTitle ?? null,
+    ogDescription: data.ogDescription ?? null,
   };
 
   try {
-    if (originalPathname && originalPathname !== pathname) {
-      await renameSeoPage(originalPathname, data);
+    if (originalPathname && originalPathname !== finalData.pathname) {
+      await renameSeoPage(originalPathname, finalData);
       revalidatePath("/admin/seo");
       revalidatePath(originalPathname);
-      revalidatePath(pathname);
+      revalidatePath(finalData.pathname);
     } else {
-      await upsertSeoPage(data);
+      await upsertSeoPage(finalData);
       revalidatePath("/admin/seo");
-      revalidatePath(pathname);
+      revalidatePath(finalData.pathname);
     }
   } catch (err) {
-    console.error("[upsertSeoPageAction] DB error:", err);
+    console.error("[upsertSeoPageAction] error:", err);
     return { error: "Errore nel salvataggio. Riprova." };
   }
 
@@ -125,7 +111,7 @@ export async function deleteSeoPageAction(
     revalidatePath("/admin/seo");
     revalidatePath(pathname);
   } catch (err) {
-    console.error("[deleteSeoPageAction] DB error:", err);
+    console.error("[deleteSeoPageAction] error:", err);
     return { error: "Errore nell'eliminazione. Riprova." };
   }
   return { success: true };
