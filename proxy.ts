@@ -45,19 +45,12 @@ export async function proxy(request: NextRequest) {
   const isPrivateRoute = isKnownPrivateRoute(pathname);
 
   // --- ADMIN SIGN-IN: sempre accessibile ---
-  // Se l'utente ha già una sessione valida, redirect a /admin
+  // NON facciamo redirect verso /admin anche se la sessione è valida:
+  // non possiamo sapere qui se l'utente ha davvero admin:access (no DB sull'edge).
+  // Il redirect post-login è compito della server action di login.
+  // Se reindirizzassimo qui creeremmo un loop quando requireAdminPage() nega l'accesso
+  // e manda a /admin/sign-in, che ci rimanda a /admin, che rimanda a /admin/sign-in...
   if (isAdminSignIn) {
-    if (sessionCookie) {
-      try {
-        const parsed = await verifyToken(sessionCookie.value);
-        const notExpired = new Date(parsed.expires) > new Date();
-        if (notExpired) {
-          return NextResponse.redirect(new URL("/admin", request.url));
-        }
-      } catch {
-        // token non valido, lascia passare alla pagina di sign-in
-      }
-    }
     return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
@@ -82,8 +75,6 @@ export async function proxy(request: NextRequest) {
   // Il proxy verifica SOLO che esista una sessione valida e non scaduta.
   // La verifica RBAC reale (isAdmin flag o permesso admin:access via ruolo)
   // avviene nel Server Component tramite requireAdminPage() in lib/rbac/guards.ts.
-  // Non controlliamo role === "admin" qui perché un ruolo custom con permesso
-  // admin:access deve poter accedere al pannello senza avere role="admin" nel token.
   if (isAdminRoute) {
     if (!isLoggedIn) {
       const url = new URL("/admin/sign-in", request.url);
@@ -100,14 +91,11 @@ export async function proxy(request: NextRequest) {
       }
       // Sessione valida → passa al Server Component che farà il check RBAC
     } catch {
-      const url = new URL("/admin/sign-in", request.url);
-      return NextResponse.redirect(url);
+      return NextResponse.redirect(new URL("/admin/sign-in", request.url));
     }
   }
 
   // --- ROUTE PRIVATE CONOSCIUTE: richiede login ---
-  // Solo le route esplicitamente elencate in PRIVATE_ROUTE_PREFIXES
-  // vengono protette. Route sconosciute passano e mostrano il 404.
   if (isPrivateRoute && !isLoggedIn) {
     return NextResponse.redirect(new URL("/sign-in", request.url));
   }
@@ -135,7 +123,6 @@ export async function proxy(request: NextRequest) {
       });
     } catch {
       res.cookies.delete("session");
-      // Solo se era su una route privata nota, redirect al login
       if (isPrivateRoute || isAdminRoute) {
         return NextResponse.redirect(new URL("/sign-in", request.url));
       }
