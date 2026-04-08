@@ -2,16 +2,18 @@
 "use client";
 
 import type { AppSettings } from "@/lib/db/settings-queries";
-import { Mail, Settings, SlidersHorizontal } from "lucide-react";
+import { Mail, Map, Settings, SlidersHorizontal } from "lucide-react";
 import { useState } from "react";
 import { BehaviourTab } from "./tabs/behaviour-tab";
 import { EmailTab } from "./tabs/email-tab";
 import { GeneralTab } from "./tabs/general-tab";
+import { RoutesTab } from "./tabs/routes-tab";
 
 const TABS = [
   { id: "general", label: "Generale", icon: Settings },
   { id: "behaviour", label: "Comportamento", icon: SlidersHorizontal },
   { id: "email", label: "Email", icon: Mail },
+  { id: "routes", label: "Route", icon: Map },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
@@ -50,6 +52,7 @@ export function SettingsTabs({ settings }: { settings: AppSettings }) {
       {active === "general" && <GeneralTab settings={settings} />}
       {active === "behaviour" && <BehaviourTab settings={settings} />}
       {active === "email" && <EmailTab settings={settings} />}
+      {active === "routes" && <RoutesTab />}
     </div>
   );
 }
