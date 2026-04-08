@@ -1,4 +1,5 @@
 import { DynamicWrapper } from "@/components/dynamic-wrapper";
+import { JsonLdScript } from "@/components/json-ld-script";
 import { getAppSettings } from "@/lib/db/settings-queries";
 import type { Viewport } from "next";
 import { Manrope } from "next/font/google";
@@ -53,7 +54,7 @@ async function MaintenanceOverlay() {
           textAlign: "center",
           boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
         }}>
-        <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>🔧</div>
+        <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>\uD83D\uDD27</div>
         <h2
           style={{
             fontSize: "1.25rem",
@@ -82,6 +83,11 @@ export default function RootLayout({
     <html
       lang="en"
       className={`bg-white dark:bg-gray-950 text-black dark:text-white ${manrope.className}`}>
+      <head>
+        <Suspense fallback={null}>
+          <JsonLdScript />
+        </Suspense>
+      </head>
       <body className="min-h-[100dvh] bg-gray-50">
         <Suspense>
           <DynamicWrapper>{children}</DynamicWrapper>
