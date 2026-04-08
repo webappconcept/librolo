@@ -28,6 +28,12 @@ const getCachedSettings = unstable_cache(
   { revalidate: 60, tags: ["settings"] },
 );
 
+/** Identica alla funzione in lib/seo.ts — replicata per evitare import cross-layer. */
+function resolvePlaceholders(text: string, appName: string): string {
+  if (!text || !appName) return text;
+  return text.replace(/\{appName\}/gi, appName);
+}
+
 export async function JsonLdScript() {
   const headersList = await headers();
   const pathname = headersList.get("x-pathname") ?? "/";
@@ -51,19 +57,26 @@ export async function JsonLdScript() {
 
   const siteUrl = domain ? `${domain}${pathname}` : undefined;
 
+  // Risolve i placeholder {appName} in tutti i campi testuali
+  const resolve = (text?: string | null) =>
+    text ? resolvePlaceholders(text, appName) : undefined;
+
+  const name = resolve(page.title) || appName;
+  const description = resolve(page.description);
+
   // Costruisce il base object JSON-LD con i campi disponibili nel DB
   const jsonLd: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": page.jsonLdType,
-    name: page.title || appName,
-    ...(page.description ? { description: page.description } : {}),
+    name,
+    ...(description ? { description } : {}),
     ...(siteUrl ? { url: siteUrl } : {}),
     ...(page.ogImage ? { image: page.ogImage } : {}),
   };
 
   // Campi aggiuntivi specifici per tipo
   if (page.jsonLdType === "Article" || page.jsonLdType === "BlogPosting") {
-    jsonLd.headline = page.title || appName;
+    jsonLd.headline = name;
     if (page.updatedAt) {
       jsonLd.dateModified = page.updatedAt.toISOString();
     }
