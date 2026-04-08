@@ -4,6 +4,7 @@ import {
   BarChart2,
   BookOpen,
   ChevronDown,
+  KeyRound,
   LayoutDashboard,
   Search,
   Settings,
@@ -23,6 +24,7 @@ const NAV_TOP = [
 const USERS_SUB = [
   { href: "/admin/users", label: "Gestione Utenti", icon: Users },
   { href: "/admin/roles", label: "Gestione Ruoli", icon: ShieldCheck },
+  { href: "/admin/permissions", label: "Permessi", icon: KeyRound },
 ];
 
 const NAV_BOTTOM = [
@@ -41,8 +43,11 @@ interface AdminSidebarProps {
 export default function AdminSidebar({ appName, open, onClose }: AdminSidebarProps) {
   const pathname = usePathname();
 
-  // Il gruppo Utenti è aperto se siamo su una delle sottopagine, oppure se l'utente lo apre manualmente
-  const usersGroupActive = pathname.startsWith("/admin/users") || pathname.startsWith("/admin/roles");
+  // Il gruppo Utenti è aperto se siamo su una delle sottopagine
+  const usersGroupActive =
+    pathname.startsWith("/admin/users") ||
+    pathname.startsWith("/admin/roles") ||
+    pathname.startsWith("/admin/permissions");
   const [usersOpen, setUsersOpen] = useState(usersGroupActive);
 
   function isActive(href: string, exact?: boolean) {
@@ -50,7 +55,19 @@ export default function AdminSidebar({ appName, open, onClose }: AdminSidebarPro
     return pathname === href || pathname.startsWith(href + "/");
   }
 
-  function NavLink({ href, label, icon: Icon, exact, sub }: { href: string; label: string; icon: React.ElementType; exact?: boolean; sub?: boolean }) {
+  function NavLink({
+    href,
+    label,
+    icon: Icon,
+    exact,
+    sub,
+  }: {
+    href: string;
+    label: string;
+    icon: React.ElementType;
+    exact?: boolean;
+    sub?: boolean;
+  }) {
     const active = isActive(href, exact);
     return (
       <Link
@@ -74,14 +91,20 @@ export default function AdminSidebar({ appName, open, onClose }: AdminSidebarPro
             e.currentTarget.style.background = "transparent";
             e.currentTarget.style.color = "var(--admin-sidebar-text)";
           }
-        }}>
+        }}
+      >
         <Icon
           size={sub ? 15 : 18}
-          style={{ color: active ? "var(--admin-accent)" : "var(--admin-sidebar-icon-inactive)" }}
+          style={{
+            color: active ? "var(--admin-accent)" : "var(--admin-sidebar-icon-inactive)",
+          }}
         />
         {label}
         {active && (
-          <span className="ml-auto w-1.5 h-1.5 rounded-full" style={{ background: "var(--admin-accent)" }} />
+          <span
+            className="ml-auto w-1.5 h-1.5 rounded-full"
+            style={{ background: "var(--admin-accent)" }}
+          />
         )}
       </Link>
     );
@@ -90,23 +113,26 @@ export default function AdminSidebar({ appName, open, onClose }: AdminSidebarPro
   const content = (
     <aside
       className="w-[var(--admin-sidebar-width)] h-full flex flex-col"
-      style={{ background: "var(--admin-sidebar-bg)", color: "var(--admin-sidebar-text-active)" }}>
-
+      style={{ background: "var(--admin-sidebar-bg)", color: "var(--admin-sidebar-text-active)" }}
+    >
       {/* Logo */}
       <div
         className="flex items-center justify-between px-6 py-5"
-        style={{ borderBottom: "1px solid var(--admin-sidebar-border)" }}>
+        style={{ borderBottom: "1px solid var(--admin-sidebar-border)" }}
+      >
         <div className="flex items-center gap-3">
           <div
             className="w-8 h-8 rounded-lg flex items-center justify-center"
-            style={{ background: "var(--admin-accent)" }}>
+            style={{ background: "var(--admin-accent)" }}
+          >
             <BookOpen size={16} className="text-white" />
           </div>
           <div>
             <span className="font-bold text-sm tracking-wide">{appName}</span>
             <span
               className="block text-[10px] uppercase tracking-widest"
-              style={{ color: "var(--admin-sidebar-text-faint)" }}>
+              style={{ color: "var(--admin-sidebar-text-faint)" }}
+            >
               Admin Panel
             </span>
           </div>
@@ -116,8 +142,11 @@ export default function AdminSidebar({ appName, open, onClose }: AdminSidebarPro
             onClick={onClose}
             className="lg:hidden p-1 rounded-lg transition-colors"
             style={{ color: "var(--admin-sidebar-text)" }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--admin-sidebar-item-hover-bg)")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.background = "var(--admin-sidebar-item-hover-bg)")
+            }
+            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+          >
             <X size={18} />
           </button>
         )}
@@ -136,8 +165,13 @@ export default function AdminSidebar({ appName, open, onClose }: AdminSidebarPro
             onClick={() => setUsersOpen((v) => !v)}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors"
             style={{
-              background: usersGroupActive && !usersOpen ? "var(--admin-sidebar-item-active-bg)" : "transparent",
-              color: usersGroupActive ? "var(--admin-sidebar-text-active)" : "var(--admin-sidebar-text)",
+              background:
+                usersGroupActive && !usersOpen
+                  ? "var(--admin-sidebar-item-active-bg)"
+                  : "transparent",
+              color: usersGroupActive
+                ? "var(--admin-sidebar-text-active)"
+                : "var(--admin-sidebar-text)",
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.background = "var(--admin-sidebar-item-hover-bg)";
@@ -145,14 +179,21 @@ export default function AdminSidebar({ appName, open, onClose }: AdminSidebarPro
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.background =
-                usersGroupActive && !usersOpen ? "var(--admin-sidebar-item-active-bg)" : "transparent";
+                usersGroupActive && !usersOpen
+                  ? "var(--admin-sidebar-item-active-bg)"
+                  : "transparent";
               e.currentTarget.style.color = usersGroupActive
                 ? "var(--admin-sidebar-text-active)"
                 : "var(--admin-sidebar-text)";
-            }}>
+            }}
+          >
             <Users
               size={18}
-              style={{ color: usersGroupActive ? "var(--admin-accent)" : "var(--admin-sidebar-icon-inactive)" }}
+              style={{
+                color: usersGroupActive
+                  ? "var(--admin-accent)"
+                  : "var(--admin-sidebar-icon-inactive)",
+              }}
             />
             <span className="flex-1 text-left">Utenti</span>
             <ChevronDown
@@ -165,10 +206,11 @@ export default function AdminSidebar({ appName, open, onClose }: AdminSidebarPro
             />
           </button>
 
-          {/* Sottovoci */}
+          {/* Sottovoci — altezza dinamica basata sul numero di item */}
           <div
             className="overflow-hidden transition-all duration-200"
-            style={{ maxHeight: usersOpen ? "120px" : "0px", opacity: usersOpen ? 1 : 0 }}>
+            style={{ maxHeight: usersOpen ? "180px" : "0px", opacity: usersOpen ? 1 : 0 }}
+          >
             <div className="mt-0.5 space-y-0.5 pb-0.5">
               {USERS_SUB.map(({ href, label, icon }) => (
                 <NavLink key={href} href={href} label={label} icon={icon} sub />
@@ -188,7 +230,8 @@ export default function AdminSidebar({ appName, open, onClose }: AdminSidebarPro
         <Link
           href="/"
           className="text-xs transition-colors"
-          style={{ color: "var(--admin-sidebar-text-faint)" }}>
+          style={{ color: "var(--admin-sidebar-text-faint)" }}
+        >
           ← Torna all'app
         </Link>
       </div>
