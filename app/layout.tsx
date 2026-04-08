@@ -1,20 +1,10 @@
 import { DynamicWrapper } from "@/components/dynamic-wrapper";
 import { getAppSettings } from "@/lib/db/settings-queries";
-import { generatePageMetadata } from "@/lib/seo";
-import type { Metadata, Viewport } from "next";
+import type { Viewport } from "next";
 import { Manrope } from "next/font/google";
 import { headers } from "next/headers";
 import { Suspense } from "react";
 import "./globals.css";
-
-export async function generateMetadata(): Promise<Metadata> {
-  const headersList = await headers();
-  const pathname = headersList.get("x-pathname") ?? "/";
-  return generatePageMetadata(pathname, {
-    title: "Librolo",
-    description: "Benvenuto su Librolo.",
-  });
-}
 
 export const viewport: Viewport = {
   maximumScale: 1,

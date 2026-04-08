@@ -3,11 +3,8 @@ import { unstable_cache } from "next/cache";
 import { getSeoPage as _getSeoPage } from "@/lib/db/seo-queries";
 import { getAppSettings as _getAppSettings } from "@/lib/db/settings-queries";
 
-const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME ?? "Librolo";
-
 /**
- * Versione cached di getSeoPage — revalidata ogni 60s o su tag 'seo'.
- * Usata in generatePageMetadata per non bloccare lo stream SSR.
+ * Versione cached di getSeoPage — revalidata ogni 60s o su revalidateTag('seo').
  */
 const getCachedSeoPage = unstable_cache(
   (pathname: string) => _getSeoPage(pathname),
@@ -16,7 +13,7 @@ const getCachedSeoPage = unstable_cache(
 );
 
 /**
- * Versione cached di getAppSettings — revalidata ogni 60s o su tag 'settings'.
+ * Versione cached di getAppSettings — revalidata ogni 60s o su revalidateTag('settings').
  */
 const getCachedAppSettings = unstable_cache(
   () => _getAppSettings(),
@@ -25,7 +22,7 @@ const getCachedAppSettings = unstable_cache(
 );
 
 /**
- * Restituisce il dominio configurato nelle impostazioni (es. "https://librolo.it").
+ * Restituisce il dominio configurato nelle impostazioni.
  * Normalizza aggiungendo "https://" se mancante e rimuovendo lo slash finale.
  */
 export async function getSiteUrl(): Promise<string> {
@@ -49,16 +46,15 @@ function resolvePlaceholders(text: string, appName: string): string {
  * Converte il valore stringa salvato in DB nel formato robots atteso da Next.js.
  */
 function mapRobots(robots?: string | null): Metadata["robots"] | undefined {
-  if (robots === "noindex,nofollow") {
-    return { index: false, follow: false };
-  }
-  if (robots === "noindex,follow") {
-    return { index: false, follow: true };
-  }
+  if (robots === "noindex,nofollow") return { index: false, follow: false };
+  if (robots === "noindex,follow") return { index: false, follow: true };
   return undefined;
 }
 
-/** Genera metadata per una pagina leggendo da DB (con cache), con fallback sensati. */
+/**
+ * Genera metadata per una pagina leggendo da DB (con cache), con fallback sensati.
+ * Il nome dell'app viene letto dinamicamente dalle impostazioni — mai hardcoded.
+ */
 export async function generatePageMetadata(
   pathname: string,
   defaults?: { title?: string; description?: string },
@@ -69,14 +65,14 @@ export async function generatePageMetadata(
     getSiteUrl(),
   ]);
 
-  const appName = settings.app_name?.trim() || APP_NAME;
+  const appName = settings.app_name?.trim() || "App";
   const resolve = (text: string) => resolvePlaceholders(text, appName);
 
-  const title = resolve(row?.title || defaults?.title || APP_NAME);
+  const title = resolve(row?.title || defaults?.title || appName);
   const description = resolve(
     row?.description ||
-    defaults?.description ||
-    `Benvenuto su ${APP_NAME}.`
+      defaults?.description ||
+      `Benvenuto su ${appName}.`,
   );
   const ogTitle = resolve(row?.ogTitle || title);
   const ogDescription = resolve(row?.ogDescription || description);
