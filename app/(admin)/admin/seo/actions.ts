@@ -1,7 +1,7 @@
 "use server";
 
 import { deleteSeoPage, renameSeoPage, upsertSeoPage } from "@/lib/db/seo-queries";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
 
 const ROBOTS_VALUES = ["", "noindex,nofollow", "noindex,follow"] as const;
@@ -49,11 +49,13 @@ export async function upsertSeoPageAction(
 
   if (originalPathname && originalPathname !== data.pathname) {
     await renameSeoPage(originalPathname, data);
+    revalidateTag("seo");
     revalidatePath("/admin/seo");
     revalidatePath(originalPathname);
     revalidatePath(data.pathname);
   } else {
     await upsertSeoPage(data);
+    revalidateTag("seo");
     revalidatePath("/admin/seo");
     revalidatePath(data.pathname);
   }
@@ -66,6 +68,7 @@ export async function deleteSeoPageAction(
 ): Promise<{ error?: string; success?: boolean }> {
   if (!pathname) return { error: "Pathname mancante" };
   await deleteSeoPage(pathname);
+  revalidateTag("seo");
   revalidatePath("/admin/seo");
   revalidatePath(pathname);
   return { success: true };
