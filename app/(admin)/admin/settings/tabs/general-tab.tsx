@@ -3,7 +3,7 @@
 
 import { AdminToast } from "@/app/(admin)/admin/_components/toast";
 import type { AppSettings } from "@/lib/db/settings-queries";
-import { Loader2, Save } from "lucide-react";
+import { Globe, Loader2, Save } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { saveAppSettings, type ActionState } from "../actions";
@@ -46,15 +46,16 @@ function GeneralTabInner({ settings }: { settings: AppSettings }) {
           <h3
             className="text-sm font-semibold mb-5"
             style={{ color: "var(--admin-text)" }}>
-            Identità dell'app
+            Identit&agrave; dell&apos;app
           </h3>
 
           <div className="space-y-4 max-w-lg">
+            {/* Nome */}
             <div>
               <label
                 className="block text-xs font-medium mb-1.5"
                 style={{ color: "var(--admin-text-muted)" }}>
-                Nome dell'app
+                Nome dell&apos;app
               </label>
               <input
                 name="app_name"
@@ -71,10 +72,11 @@ function GeneralTabInner({ settings }: { settings: AppSettings }) {
               <p
                 className="text-[11px] mt-1"
                 style={{ color: "var(--admin-text-faint)" }}>
-                Usato nell'header, nelle email e nei meta tag.
+                Usato nell&apos;header, nelle email e nei meta tag.
               </p>
             </div>
 
+            {/* Descrizione */}
             <div>
               <label
                 className="block text-xs font-medium mb-1.5"
@@ -98,6 +100,39 @@ function GeneralTabInner({ settings }: { settings: AppSettings }) {
                 style={{ color: "var(--admin-text-faint)" }}>
                 Mostrata come sottotitolo e nei meta description. Max 160
                 caratteri.
+              </p>
+            </div>
+
+            {/* Dominio */}
+            <div>
+              <label
+                className="block text-xs font-medium mb-1.5"
+                style={{ color: "var(--admin-text-muted)" }}>
+                <span className="flex items-center gap-1.5">
+                  <Globe size={12} />
+                  Dominio del sito
+                </span>
+              </label>
+              <input
+                name="app_domain"
+                defaultValue={settings.app_domain ?? ""}
+                maxLength={253}
+                placeholder="librolo.it"
+                className="w-full px-3 py-2 text-sm rounded-lg focus:outline-none transition-colors"
+                style={{
+                  background: "var(--admin-page-bg)",
+                  border: "1px solid var(--admin-input-border)",
+                  color: "var(--admin-text)",
+                }}
+              />
+              <p
+                className="text-[11px] mt-1"
+                style={{ color: "var(--admin-text-faint)" }}>
+                Usato nella preview SEO, nei canonical URL e in tutti i link
+                assoluti. Scrivi solo il dominio (es.{" "}
+                <code className="font-mono">librolo.it</code>) oppure con
+                prefisso (es.{" "}
+                <code className="font-mono">https://librolo.it</code>).
               </p>
             </div>
           </div>
