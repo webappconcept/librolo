@@ -1,11 +1,16 @@
 // app/(admin)/admin/users/[id]/page.tsx
 import { getAdminUserActivity, getAdminUserById } from "@/lib/db/admin-queries";
 import { getAdminRoles } from "@/lib/db/roles-queries";
+import { getAllPermissions, getPermissionsByRole, getUserPermissionOverrides } from "@/lib/rbac/permissions-queries";
+import { db } from "@/lib/db/drizzle";
+import { roles } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 import {
   Activity,
   ArrowLeft,
   Calendar,
   CreditCard,
+  Key,
   Mail,
   ShieldCheck,
   ShieldX,
@@ -15,6 +20,8 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { ActivityList } from "./_components/activity-list";
 import { BanButton, RoleSelector } from "./_components/user-detail-client";
+import { UserAccessTab } from "./_components/user-access-tab";
+import { UserDetailTabs } from "./_components/user-detail-tabs";
 
 function StatusBadge({ user }: { user: Awaited<ReturnType<typeof getAdminUserById>> }) {
   if (!user) return null;
@@ -31,13 +38,27 @@ function StatusBadge({ user }: { user: Awaited<ReturnType<typeof getAdminUserByI
 }
 
 async function UserContent({ id }: { id: number }) {
-  const [user, activity, availableRoles] = await Promise.all([
+  const [user, activity, availableRoles, allPermissions] = await Promise.all([
     getAdminUserById(id),
     getAdminUserActivity(id),
     getAdminRoles(),
+    getAllPermissions(),
   ]);
 
   if (!user) notFound();
+
+  // Carica permessi del ruolo e override in parallelo
+  const userRoleRow = await db
+    .select()
+    .from(roles)
+    .where(eq(roles.name, user.role))
+    .limit(1)
+    .then((r) => r[0] ?? null);
+
+  const [rolePerms, overrides] = await Promise.all([
+    userRoleRow ? getPermissionsByRole(userRoleRow.id) : Promise.resolve([]),
+    getUserPermissionOverrides(id),
+  ]);
 
   const initials =
     [user.firstName, user.lastName]
@@ -46,6 +67,72 @@ async function UserContent({ id }: { id: number }) {
       .join("") || user.email[0].toUpperCase();
 
   const isPremium = user.subscriptionStatus === "active";
+
+  // Contenuto tab Info
+  const infoContent = (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Info account */}
+      <div className="rounded-xl shadow-sm p-5"
+        style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-card-border)" }}>
+        <h4 className="text-sm font-semibold mb-4" style={{ color: "var(--admin-text)" }}>Informazioni account</h4>
+        <div className="space-y-3">
+          {[
+            { icon: Mail, label: "Email", value: user.email },
+            { icon: Calendar, label: "Iscritto il", value: new Date(user.createdAt).toLocaleDateString("it-IT", { day: "numeric", month: "long", year: "numeric" }) },
+            { icon: CreditCard, label: "Piano", value: user.planName ?? "Free" },
+            { icon: isPremium ? ShieldCheck : ShieldX, label: "Stripe", value: user.stripeCustomerId ?? "Non collegato" },
+          ].map(({ icon: Icon, label, value }) => (
+            <div key={label} className="flex items-center gap-3">
+              <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+                style={{ background: "var(--admin-hover-bg)" }}>
+                <Icon size={13} style={{ color: "var(--admin-text-faint)" }} />
+              </div>
+              <div>
+                <p className="text-[11px]" style={{ color: "var(--admin-text-faint)" }}>{label}</p>
+                <p className="text-sm font-medium" style={{ color: "var(--admin-text)" }}>{value}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Gestione ruolo */}
+      <div className="rounded-xl shadow-sm p-5"
+        style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-card-border)" }}>
+        <div className="flex items-center justify-between mb-4">
+          <h4 className="text-sm font-semibold" style={{ color: "var(--admin-text)" }}>Ruolo</h4>
+          <Link href="/admin/roles" className="text-xs transition-colors" style={{ color: "var(--admin-accent)" }}>
+            Gestisci ruoli →
+          </Link>
+        </div>
+        <RoleSelector user={user} availableRoles={availableRoles} />
+      </div>
+    </div>
+  );
+
+  // Contenuto tab Attività
+  const activityContent = (
+    <div className="rounded-xl shadow-sm p-5"
+      style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-card-border)" }}>
+      <div className="flex items-center gap-2 mb-4">
+        <Activity size={15} style={{ color: "var(--admin-text-faint)" }} />
+        <h4 className="text-sm font-semibold" style={{ color: "var(--admin-text)" }}>Attività recenti</h4>
+        <span className="text-xs" style={{ color: "var(--admin-text-faint)" }}>({activity.length})</span>
+      </div>
+      <ActivityList activity={activity} />
+    </div>
+  );
+
+  // Contenuto tab Accessi
+  const accessContent = (
+    <UserAccessTab
+      userId={id}
+      rolePerms={rolePerms}
+      overrides={overrides}
+      allPermissions={allPermissions}
+      userRole={userRoleRow as any}
+    />
+  );
 
   return (
     <div className="space-y-6">
@@ -66,10 +153,8 @@ async function UserContent({ id }: { id: number }) {
                 </h3>
                 <StatusBadge user={user} />
               </div>
-              <p className="text-sm mt-0.5" style={{ color: "var(--admin-text-faint)" }}>
-                {user.email}
-              </p>
-              <div className="flex items-center gap-2 mt-1.5">
+              <p className="text-sm mt-0.5" style={{ color: "var(--admin-text-faint)" }}>{user.email}</p>
+              <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                 <span
                   className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
                   style={{
@@ -79,18 +164,23 @@ async function UserContent({ id }: { id: number }) {
                   }}>
                   {user.roleLabel ?? user.role}
                 </span>
-                <span
-                  className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
-                    isPremium ? "bg-orange-100 text-orange-700" : "bg-gray-100 text-gray-500"
-                  }`}>
+                <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
+                  isPremium ? "bg-orange-100 text-orange-700" : "bg-gray-100 text-gray-500"
+                }`}>
                   {isPremium ? "Premium" : "Free"}
                 </span>
-                <span
-                  className={`text-[11px] font-medium ${
-                    user.emailVerified ? "text-emerald-600" : "text-[var(--admin-text-faint)]"
-                  }`}>
+                <span className={`text-[11px] font-medium ${
+                  user.emailVerified ? "text-emerald-600" : "text-[var(--admin-text-faint)]"
+                }`}>
                   {user.emailVerified ? "✓ Email verificata" : "Email non verificata"}
                 </span>
+                {overrides.length > 0 && (
+                  <span
+                    className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                    style={{ background: "#eff6ff", color: "#2563eb" }}>
+                    <Key size={9} /> {overrides.length} override
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -110,58 +200,13 @@ async function UserContent({ id }: { id: number }) {
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Info account */}
-        <div className="rounded-xl shadow-sm p-5"
-          style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-card-border)" }}>
-          <h4 className="text-sm font-semibold mb-4" style={{ color: "var(--admin-text)" }}>Informazioni account</h4>
-          <div className="space-y-3">
-            {[
-              { icon: Mail, label: "Email", value: user.email },
-              { icon: Calendar, label: "Iscritto il", value: new Date(user.createdAt).toLocaleDateString("it-IT", { day: "numeric", month: "long", year: "numeric" }) },
-              { icon: CreditCard, label: "Piano", value: user.planName ?? "Free" },
-              { icon: isPremium ? ShieldCheck : ShieldX, label: "Stripe", value: user.stripeCustomerId ?? "Non collegato" },
-            ].map(({ icon: Icon, label, value }) => (
-              <div key={label} className="flex items-center gap-3">
-                <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-                  style={{ background: "var(--admin-hover-bg)" }}>
-                  <Icon size={13} style={{ color: "var(--admin-text-faint)" }} />
-                </div>
-                <div>
-                  <p className="text-[11px]" style={{ color: "var(--admin-text-faint)" }}>{label}</p>
-                  <p className="text-sm font-medium" style={{ color: "var(--admin-text)" }}>{value}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Gestione ruolo */}
-        <div className="rounded-xl shadow-sm p-5"
-          style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-card-border)" }}>
-          <div className="flex items-center justify-between mb-4">
-            <h4 className="text-sm font-semibold" style={{ color: "var(--admin-text)" }}>Ruolo</h4>
-            <Link
-              href="/admin/roles"
-              className="text-xs transition-colors"
-              style={{ color: "var(--admin-accent)" }}>
-              Gestisci ruoli →
-            </Link>
-          </div>
-          <RoleSelector user={user} availableRoles={availableRoles} />
-        </div>
-      </div>
-
-      {/* Storico attività */}
-      <div className="rounded-xl shadow-sm p-5"
-        style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-card-border)" }}>
-        <div className="flex items-center gap-2 mb-4">
-          <Activity size={15} style={{ color: "var(--admin-text-faint)" }} />
-          <h4 className="text-sm font-semibold" style={{ color: "var(--admin-text)" }}>Attività recenti</h4>
-          <span className="text-xs" style={{ color: "var(--admin-text-faint)" }}>({activity.length})</span>
-        </div>
-        <ActivityList activity={activity} />
-      </div>
+      {/* Tabs */}
+      <UserDetailTabs
+        infoContent={infoContent}
+        activityContent={activityContent}
+        accessContent={accessContent}
+        overridesCount={overrides.length}
+      />
     </div>
   );
 }
@@ -178,9 +223,7 @@ export default async function AdminUserDetailPage({
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-2">
-        <Link
-          href="/admin/users"
-          className="admin-breadcrumb-link flex items-center gap-1.5 text-sm">
+        <Link href="/admin/users" className="admin-breadcrumb-link flex items-center gap-1.5 text-sm">
           <ArrowLeft size={15} />
           Utenti
         </Link>
