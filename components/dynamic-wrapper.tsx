@@ -1,5 +1,5 @@
 import { getUser } from "@/lib/db/queries";
-import { SWRConfig } from "swr";
+import { SWRProvider } from "@/components/swr-provider";
 
 export async function DynamicWrapper({
   children,
@@ -9,13 +9,8 @@ export async function DynamicWrapper({
   const user = await getUser();
 
   return (
-    <SWRConfig
-      value={{
-        fallback: {
-          "/api/user": user,
-        },
-      }}>
+    <SWRProvider fallback={{ "/api/user": user }}>
       {children}
-    </SWRConfig>
+    </SWRProvider>
   );
 }
