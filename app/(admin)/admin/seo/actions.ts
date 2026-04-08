@@ -33,11 +33,11 @@ const schema = z.object({
     .regex(/^\//, { message: "Il pathname deve iniziare con /" }),
   originalPathname: z.string().optional(),
   label: z.string().min(1, "Il nome è obbligatorio").max(100),
-  title: z.string().max(70).optional(),
-  description: z.string().max(160).optional(),
-  ogTitle: z.string().max(70).optional(),
-  ogDescription: z.string().max(200).optional(),
-  ogImage: z.string().url().optional().or(z.literal("")),
+  title: z.string().max(70).optional().or(z.literal("")).transform(v => v || null),
+  description: z.string().max(160).optional().or(z.literal("")).transform(v => v || null),
+  ogTitle: z.string().max(70).optional().or(z.literal("")).transform(v => v || null),
+  ogDescription: z.string().max(200).optional().or(z.literal("")).transform(v => v || null),
+  ogImage: z.string().url().optional().or(z.literal("")).transform(v => v || null),
   robots: z
     .enum(ROBOTS_VALUES)
     .optional()
@@ -49,7 +49,9 @@ const schema = z.object({
   jsonLdType: z
     .string()
     .optional()
-    .transform((v) => (v && JSON_LD_TYPES.includes(v as JsonLdType) ? v : null)),
+    .transform((v) =>
+      v && JSON_LD_TYPES.includes(v as JsonLdType) ? (v as JsonLdType) : null
+    ),
 });
 
 export async function upsertSeoPageAction(
@@ -60,14 +62,14 @@ export async function upsertSeoPageAction(
     pathname: formData.get("pathname"),
     originalPathname: formData.get("originalPathname") || undefined,
     label: formData.get("label"),
-    title: formData.get("title") || undefined,
-    description: formData.get("description") || undefined,
-    ogTitle: formData.get("ogTitle") || undefined,
-    ogDescription: formData.get("ogDescription") || undefined,
-    ogImage: formData.get("ogImage") || undefined,
-    robots: formData.get("robots") || "",
-    jsonLdEnabled: formData.get("jsonLdEnabled") || undefined,
-    jsonLdType: formData.get("jsonLdType") || undefined,
+    title: formData.get("title") ?? "",
+    description: formData.get("description") ?? "",
+    ogTitle: formData.get("ogTitle") ?? "",
+    ogDescription: formData.get("ogDescription") ?? "",
+    ogImage: formData.get("ogImage") ?? "",
+    robots: formData.get("robots") ?? "",
+    jsonLdEnabled: formData.get("jsonLdEnabled") ?? "false",
+    jsonLdType: formData.get("jsonLdType") ?? "",
   };
 
   const parsed = schema.safeParse(raw);
