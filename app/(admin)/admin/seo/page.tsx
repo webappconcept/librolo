@@ -1,10 +1,20 @@
 import { getAllSeoPages } from "@/lib/db/seo-queries";
+import { getAppSettings } from "@/lib/db/settings-queries";
 import { Suspense } from "react";
 import SeoManager from "./_components/seo-manager";
 
 async function SeoContent() {
-  const pages = await getAllSeoPages();
-  return <SeoManager initialPages={pages} />;
+  const [pages, settings] = await Promise.all([
+    getAllSeoPages(),
+    getAppSettings(),
+  ]);
+
+  // Normalizza il dominio: aggiunge https:// se mancante, rimuove slash finale
+  let domain = settings.app_domain?.trim() ?? "";
+  if (domain && !/^https?:\/\//i.test(domain)) domain = `https://${domain}`;
+  domain = domain.replace(/\/$/, "");
+
+  return <SeoManager initialPages={pages} domain={domain} />;
 }
 
 export default function SeoPage() {

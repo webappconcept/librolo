@@ -16,12 +16,14 @@ function Serp({
   title,
   description,
   pathname,
+  domain,
 }: {
   title: string;
   description: string;
   pathname: string;
+  domain: string;
 }) {
-  const domain = "librolo.it";
+  const displayDomain = domain || "https://il-tuo-dominio.it";
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-4 text-sm">
       <p className="text-xs text-gray-400 mb-1 font-medium uppercase tracking-wide">
@@ -33,7 +35,7 @@ function Serp({
         )}
       </p>
       <p className="text-[#006621] text-xs">
-        {domain}{pathname}
+        {displayDomain}{pathname}
       </p>
       <p className="text-[#545454] text-sm mt-0.5 line-clamp-2">
         {description || (
@@ -48,9 +50,11 @@ function Serp({
 
 function SeoForm({
   page,
+  domain,
   onClose,
 }: {
   page?: SeoPage | null;
+  domain: string;
   onClose: () => void;
 }) {
   const isEdit = !!page;
@@ -123,6 +127,7 @@ function SeoForm({
             title={title}
             description={description}
             pathname={pathname}
+            domain={domain}
           />
 
           <div className="space-y-1.5">
@@ -241,8 +246,10 @@ function SeoForm({
 
 export default function SeoManager({
   initialPages,
+  domain,
 }: {
   initialPages: SeoPage[];
+  domain: string;
 }) {
   const [search, setSearch] = useState("");
   const [editPage, setEditPage] = useState<SeoPage | null | "new">(null);
@@ -364,6 +371,7 @@ export default function SeoManager({
       {editPage !== null && (
         <SeoForm
           page={editPage === "new" ? null : editPage}
+          domain={domain}
           onClose={() => setEditPage(null)}
         />
       )}
