@@ -9,7 +9,7 @@ import {
   roles,
   users,
 } from "@/lib/db/schema";
-import { and, eq, gt, isNull, or, desc } from "drizzle-orm";
+import { and, eq, gt, isNull, or, desc, sql } from "drizzle-orm";
 
 /** Tutti i permessi, ordinati per gruppo poi per key */
 export async function getAllPermissions() {
@@ -31,7 +31,6 @@ export async function getPermissionsByRole(roleId: number) {
 
 /** Override individuali di un utente (attivi e scaduti) */
 export async function getUserPermissionOverrides(userId: number) {
-  const now = new Date();
   return db
     .select({
       id: userPermissions.id,
@@ -56,7 +55,14 @@ export async function getUsersWithPermission(permissionKey: string) {
 
   // Via ruolo
   const viaRole = await db
-    .select({ id: users.id, email: users.email, firstName: users.firstName, lastName: users.lastName, role: users.role, source: db.sql<string>`'role'` })
+    .select({
+      id: users.id,
+      email: users.email,
+      firstName: users.firstName,
+      lastName: users.lastName,
+      role: users.role,
+      source: sql<string>`'role'`,
+    })
     .from(users)
     .innerJoin(roles, eq(users.role, roles.name))
     .innerJoin(rolePermissions, eq(rolePermissions.roleId, roles.id))
@@ -65,7 +71,14 @@ export async function getUsersWithPermission(permissionKey: string) {
 
   // Via override attivo granted=true
   const viaOverride = await db
-    .select({ id: users.id, email: users.email, firstName: users.firstName, lastName: users.lastName, role: users.role, source: db.sql<string>`'override'` })
+    .select({
+      id: users.id,
+      email: users.email,
+      firstName: users.firstName,
+      lastName: users.lastName,
+      role: users.role,
+      source: sql<string>`'override'`,
+    })
     .from(userPermissions)
     .innerJoin(users, eq(userPermissions.userId, users.id))
     .innerJoin(permissions, eq(userPermissions.permissionId, permissions.id))
