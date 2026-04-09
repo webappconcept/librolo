@@ -7,10 +7,11 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import { changeStaffRole } from "../actions";
 
-const STAFF_ROLES: { name: string; label: string; color: string }[] = [
-  { name: "admin",   label: "Admin",    color: "#ef4444" },
-  { name: "editor",  label: "Editore",  color: "#3b82f6" },
-  { name: "support", label: "Supporto", color: "#10b981" },
+// Solo nomi e label dei ruoli di sistema — il colore viene sempre dal DB (user.roleColor)
+const STAFF_ROLES: { name: string; label: string }[] = [
+  { name: "admin",   label: "Admin" },
+  { name: "editor",  label: "Editore" },
+  { name: "support", label: "Supporto" },
 ];
 
 function RoleBadge({ label, color }: { label: string; color: string }) {
@@ -37,7 +38,9 @@ function StaffRow({ user }: { user: AdminUser }) {
       .map((n) => n![0].toUpperCase())
       .join("") || user.email[0].toUpperCase();
 
-  const currentRole = STAFF_ROLES.find((r) => r.name === user.role);
+  // Colore e label sempre dal DB tramite join con roles
+  const roleColor = user.roleColor ?? "#6b7280";
+  const roleLabel = user.roleLabel ?? user.role;
 
   function handleRoleChange(roleName: string) {
     setOpen(false);
@@ -55,7 +58,7 @@ function StaffRow({ user }: { user: AdminUser }) {
         <div className="flex items-center gap-3">
           <div
             className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
-            style={{ background: currentRole?.color ?? "var(--admin-accent)" }}>
+            style={{ background: roleColor }}>
             {initials}
           </div>
           <div>
@@ -79,10 +82,7 @@ function StaffRow({ user }: { user: AdminUser }) {
             disabled={pending}
             className="flex items-center gap-1.5 transition-opacity disabled:opacity-50"
             title="Cambia ruolo">
-            <RoleBadge
-              label={currentRole?.label ?? user.roleLabel ?? user.role}
-              color={currentRole?.color ?? user.roleColor ?? "#6b7280"}
-            />
+            <RoleBadge label={roleLabel} color={roleColor} />
             <UserCog size={13} style={{ color: "var(--admin-text-faint)" }} />
           </button>
           {open && (
@@ -101,9 +101,12 @@ function StaffRow({ user }: { user: AdminUser }) {
                   style={{ color: "var(--admin-text)" }}
                   onMouseEnter={(e) => (e.currentTarget.style.background = "var(--admin-hover-bg)")}
                   onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+                  {/* Il pallino usa il colore attuale solo se è il ruolo selezionato, altrimenti neutro */}
                   <span
                     className="w-2 h-2 rounded-full shrink-0"
-                    style={{ background: r.color }}
+                    style={{
+                      background: r.name === user.role ? roleColor : "var(--admin-text-faint)",
+                    }}
                   />
                   {r.label}
                   {r.name === user.role && (
