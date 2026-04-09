@@ -171,6 +171,56 @@ export async function createPermission(formData: FormData) {
   return { success: true };
 }
 
+// Schema per l'aggiornamento — la key NON è modificabile
+const UpdatePermissionSchema = z.object({
+  label: z.string().min(2).max(150),
+  description: z.string().max(500).optional(),
+  group: z.string().min(1).max(100),
+});
+
+/**
+ * Aggiorna label, description e group di un permesso esistente.
+ * La `key` è intenzionalmente esclusa: modificarla romperebbe
+ * tutti i controlli hasPermission() hardcodati nel codebase.
+ * I permessi di sistema possono comunque essere aggiornati (solo i campi UI).
+ */
+export async function updatePermission(permissionId: number, formData: FormData) {
+  const admin = await requireAdmin();
+
+  const parsed = UpdatePermissionSchema.safeParse(
+    Object.fromEntries(formData),
+  );
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0].message };
+  }
+
+  const [existing] = await db
+    .select({ id: permissions.id, key: permissions.key })
+    .from(permissions)
+    .where(eq(permissions.id, permissionId))
+    .limit(1);
+
+  if (!existing) {
+    return { error: "Permesso non trovato." };
+  }
+
+  const { label, description, group } = parsed.data;
+
+  await db
+    .update(permissions)
+    .set({ label, description: description ?? null, group })
+    .where(eq(permissions.id, permissionId));
+
+  await logRbacAction(
+    admin.id,
+    ActivityType.PERMISSION_GRANTED,
+    `update_permission key=${existing.key} label=${label} group=${group}`,
+  );
+
+  revalidatePath("/admin/permissions");
+  return { success: true };
+}
+
 /**
  * Restituisce il numero di assegnazioni collegate a un permesso
  * (ruoli + override individuali). Usato dal dialog di conferma.
