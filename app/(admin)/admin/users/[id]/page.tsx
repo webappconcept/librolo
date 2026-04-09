@@ -10,7 +10,6 @@ import {
   ArrowLeft,
   Calendar,
   CreditCard,
-  Key,
   Mail,
   ShieldCheck,
   ShieldX,
@@ -170,6 +169,7 @@ async function UserContent({ id }: { id: number }) {
         infoContent={infoContent}
         activityContent={activityContent}
         accessContent={accessContent}
+        overridesCount={overrides.length}
       />
     </div>
   );
