@@ -43,31 +43,31 @@ export const SYSTEM_PERMISSIONS: SystemPermission[] = [
   // ── Gestione utenti ────────────────────────────────────────────────
   {
     key: "users:view",
-    group: "Gestione utenti",
+    group: "Utenti",
     label: "Visualizza elenco utenti",
     description: "Lettura della lista utenti nel pannello admin.",
   },
   {
     key: "users:edit",
-    group: "Gestione utenti",
+    group: "Utenti",
     label: "Modifica profilo utente",
     description: "Aggiornamento dei dati profilo di qualsiasi utente.",
   },
   {
     key: "users:delete",
-    group: "Gestione utenti",
+    group: "Utenti",
     label: "Elimina utente",
     description: "Cancellazione soft (soft-delete) di un account utente.",
   },
   {
     key: "users:ban",
-    group: "Gestione utenti",
+    group: "Utenti",
     label: "Banna / sbanna utente",
     description: "Imposta o rimuove bannedAt su un utente.",
   },
   {
     key: "users:impersonate",
-    group: "Gestione utenti",
+    group: "Utenti",
     label: "Impersona utente",
     description: "Permette di agire come un altro utente per debug/supporto.",
   },
