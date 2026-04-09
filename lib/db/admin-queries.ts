@@ -78,40 +78,41 @@ export type AdminUser = {
 
 export async function getAdminUsers({
   search = "",
-  role = "",
-  plan = "",
-  verified = "",
   page = 1,
   perPage = 20,
+  filter = "all",
 }: {
   search?: string;
-  role?: string;
-  plan?: string;
-  /** "true" | "false" | "" */
-  verified?: string;
   page?: number;
   perPage?: number;
-}): Promise<{ users: AdminUser[]; total: number }> {
-  const conditions = [
+  filter?: "all" | "active" | "banned" | "premium" | "free";
+} = {}) {
+  noStore();
+
+  const offset = (page - 1) * perPage;
+
+  const baseWhere = and(
+    isNull(users.deletedAt),
+    sql`${users.isAdmin} = false`,
     search
-      ? sql`(${users.email} ILIKE ${"%" + search + "%"} OR ${users.firstName} ILIKE ${"%" + search + "%"} OR ${users.lastName} ILIKE ${"%" + search + "%"})`
+      ? sql`(
+          ${users.email} ILIKE ${"%" + search + "%"} OR
+          ${users.firstName} ILIKE ${"%" + search + "%"} OR
+          ${users.lastName} ILIKE ${"%" + search + "%"}
+        )`
       : undefined,
-    role ? sql`${users.role} = ${role}` : undefined,
-    plan === "premium"
-      ? sql`${users.subscriptionStatus} = 'active'`
-      : plan === "free"
-        ? sql`(${users.subscriptionStatus} IS NULL OR ${users.subscriptionStatus} != 'active')`
-        : undefined,
-    verified === "true"
-      ? sql`${users.emailVerified} = true`
-      : verified === "false"
-        ? sql`${users.emailVerified} = false`
-        : undefined,
-  ].filter(Boolean) as any[];
+    filter === "banned"
+      ? isNotNull(users.bannedAt)
+      : filter === "premium"
+        ? and(isNotNull(users.stripeSubscriptionId), sql`${users.subscriptionStatus} = 'active'`)
+        : filter === "free"
+          ? sql`(${users.stripeSubscriptionId} IS NULL OR ${users.subscriptionStatus} != 'active')`
+          : filter === "active"
+            ? isNull(users.bannedAt)
+            : undefined,
+  );
 
-  const where = conditions.length > 0 ? and(...conditions) : undefined;
-
-  const [rows, totalRows] = await Promise.all([
+  const [rows, totalCount] = await Promise.all([
     db
       .select({
         id: users.id,
@@ -127,53 +128,36 @@ export async function getAdminUsers({
         subscriptionStatus: users.subscriptionStatus,
         emailVerified: users.emailVerified,
         createdAt: users.createdAt,
-        deletedAt: users.deletedAt,
         bannedAt: users.bannedAt,
+        deletedAt: users.deletedAt,
         bannedReason: users.bannedReason,
       })
       .from(users)
       .leftJoin(roles, eq(users.role, roles.name))
-      .where(where)
-      .orderBy(sql`${users.createdAt} DESC`)
+      .where(baseWhere)
+      .orderBy(desc(users.createdAt))
       .limit(perPage)
-      .offset((page - 1) * perPage),
-    db.select({ count: count() }).from(users).where(where),
+      .offset(offset),
+    db.select({ count: count() }).from(users).leftJoin(roles, eq(users.role, roles.name)).where(baseWhere),
   ]);
 
-  return { users: rows, total: totalRows[0].count };
+  return {
+    users: rows as AdminUser[],
+    total: totalCount[0].count,
+    page,
+    perPage,
+    totalPages: Math.ceil(totalCount[0].count / perPage),
+  };
 }
 
-export type AdminUserDetail = {
-  id: number;
-  firstName: string | null;
-  lastName: string | null;
-  email: string;
-  role: string;
-  roleLabel: string | null;
-  roleColor: string | null;
-  isAdmin: boolean;
-  isStaff: boolean;
-  planName: string | null;
-  subscriptionStatus: string | null;
-  stripeCustomerId: string | null;
-  emailVerified: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-  deletedAt: Date | null;
-  bannedAt: Date | null;
-  bannedReason: string | null;
-};
-
-export async function getAdminUserById(id: number): Promise<AdminUserDetail | null> {
-  const result = await db
+export async function getAdminUserById(id: number) {
+  const [user] = await db
     .select({
       id: users.id,
       firstName: users.firstName,
       lastName: users.lastName,
       email: users.email,
       role: users.role,
-      roleLabel: roles.label,
-      roleColor: roles.color,
       isAdmin: users.isAdmin,
       isStaff: users.isStaff,
       planName: users.planName,
@@ -181,17 +165,15 @@ export async function getAdminUserById(id: number): Promise<AdminUserDetail | nu
       stripeCustomerId: users.stripeCustomerId,
       emailVerified: users.emailVerified,
       createdAt: users.createdAt,
-      updatedAt: users.updatedAt,
-      deletedAt: users.deletedAt,
       bannedAt: users.bannedAt,
+      deletedAt: users.deletedAt,
       bannedReason: users.bannedReason,
     })
     .from(users)
-    .leftJoin(roles, eq(users.role, roles.name))
     .where(eq(users.id, id))
     .limit(1);
 
-  return result[0] ?? null;
+  return user ?? null;
 }
 
 export type AdminUserActivity = {
@@ -213,6 +195,29 @@ export async function getAdminUserActivity(userId: number): Promise<AdminUserAct
     .where(eq(activityLogs.userId, userId))
     .orderBy(desc(activityLogs.timestamp))
     .limit(30);
+
+  return result;
+}
+
+/**
+ * Recupera gli activity log globali con email dell'utente.
+ * Usato dalla pagina /admin/logs.
+ */
+export async function getActivityLogs({ limit = 200 }: { limit?: number } = {}) {
+  noStore();
+  const result = await db
+    .select({
+      id: activityLogs.id,
+      userId: activityLogs.userId,
+      userEmail: users.email,
+      action: activityLogs.action,
+      ipAddress: activityLogs.ipAddress,
+      timestamp: activityLogs.timestamp,
+    })
+    .from(activityLogs)
+    .leftJoin(users, eq(activityLogs.userId, users.id))
+    .orderBy(desc(activityLogs.timestamp))
+    .limit(limit);
 
   return result;
 }
