@@ -29,11 +29,11 @@ const USERS_SUB = [
 ];
 
 const NAV_BOTTOM = [
-  { href: "/admin/logs", label: "Log attività", icon: ClipboardList },
   { href: "/admin/moderation", label: "Moderazione", icon: ShieldAlert },
   { href: "/admin/analytics", label: "Analytics", icon: BarChart2 },
   { href: "/admin/seo", label: "SEO", icon: Search },
   { href: "/admin/settings", label: "Impostazioni", icon: Settings },
+  { href: "/admin/logs", label: "Log attività", icon: ClipboardList },
 ];
 
 interface AdminSidebarProps {
@@ -230,7 +230,7 @@ export default function AdminSidebar({ appName, open, onClose }: AdminSidebarPro
           className="text-xs transition-colors"
           style={{ color: "var(--admin-sidebar-text-faint)" }}
         >
-          ← Torna all’app
+          ← Torna all&apos;app
         </Link>
       </div>
     </aside>
