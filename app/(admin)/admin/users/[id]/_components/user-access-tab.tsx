@@ -28,13 +28,7 @@ type Props = {
 };
 
 // ─── Badge permesso ───────────────────────────────────────────────────
-function PermBadge({
-  granted,
-  label,
-}: {
-  granted: boolean;
-  label: string;
-}) {
+function PermBadge({ granted, label }: { granted: boolean; label: string }) {
   return (
     <span
       className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full"
@@ -75,6 +69,8 @@ function AddOverrideForm({
     setError(null);
     const fd = new FormData(e.currentTarget);
     fd.set("userId", String(userId));
+    // Allega l'offset timezone del browser (in minuti, convenzione JS: negativo per UTC+)
+    fd.set("tzOffset", String(new Date().getTimezoneOffset()));
     startTransition(async () => {
       const res = await addOverride(fd);
       if (res?.error) {
@@ -85,8 +81,7 @@ function AddOverrideForm({
     });
   }
 
-  const inputCls =
-    "w-full px-3 py-2 text-sm rounded-lg outline-none border focus:ring-2";
+  const inputCls = "w-full px-3 py-2 text-sm rounded-lg outline-none border focus:ring-2";
   const inputStyle = {
     background: "var(--admin-bg)",
     borderColor: "var(--admin-card-border)",
@@ -97,22 +92,15 @@ function AddOverrideForm({
     <form
       onSubmit={handleSubmit}
       className="rounded-xl p-5 space-y-4"
-      style={{
-        background: "var(--admin-card-bg)",
-        border: "2px solid var(--admin-accent)",
-      }}>
-      <h4
-        className="text-sm font-semibold"
-        style={{ color: "var(--admin-text)" }}>
+      style={{ background: "var(--admin-card-bg)", border: "2px solid var(--admin-accent)" }}>
+      <h4 className="text-sm font-semibold" style={{ color: "var(--admin-text)" }}>
         Aggiungi override
       </h4>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Permesso */}
         <div>
-          <label
-            className="block text-xs font-medium mb-1"
-            style={{ color: "var(--admin-text-muted)" }}>
+          <label className="block text-xs font-medium mb-1" style={{ color: "var(--admin-text-muted)" }}>
             Permesso
           </label>
           <select name="permissionId" required className={inputCls} style={inputStyle}>
@@ -120,9 +108,7 @@ function AddOverrideForm({
             {Object.entries(groups).map(([group, perms]) => (
               <optgroup key={group} label={group}>
                 {perms.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.key}
-                  </option>
+                  <option key={p.id} value={p.id}>{p.key}</option>
                 ))}
               </optgroup>
             ))}
@@ -131,9 +117,7 @@ function AddOverrideForm({
 
         {/* Tipo */}
         <div>
-          <label
-            className="block text-xs font-medium mb-1"
-            style={{ color: "var(--admin-text-muted)" }}>
+          <label className="block text-xs font-medium mb-1" style={{ color: "var(--admin-text-muted)" }}>
             Tipo
           </label>
           <select name="granted" required className={inputCls} style={inputStyle}>
@@ -145,9 +129,7 @@ function AddOverrideForm({
 
       {/* Scadenza */}
       <div>
-        <label
-          className="block text-xs font-medium mb-1"
-          style={{ color: "var(--admin-text-muted)" }}>
+        <label className="block text-xs font-medium mb-1" style={{ color: "var(--admin-text-muted)" }}>
           Scadenza{" "}
           <span style={{ color: "var(--admin-text-faint)" }}>(lascia vuoto = permanente)</span>
         </label>
@@ -161,9 +143,7 @@ function AddOverrideForm({
 
       {/* Motivazione */}
       <div>
-        <label
-          className="block text-xs font-medium mb-1"
-          style={{ color: "var(--admin-text-muted)" }}>
+        <label className="block text-xs font-medium mb-1" style={{ color: "var(--admin-text-muted)" }}>
           Motivazione (opzionale)
         </label>
         <textarea
@@ -182,10 +162,7 @@ function AddOverrideForm({
           type="button"
           onClick={onClose}
           className="px-4 py-2 text-sm rounded-lg"
-          style={{
-            color: "var(--admin-text-muted)",
-            background: "var(--admin-hover-bg)",
-          }}>
+          style={{ color: "var(--admin-text-muted)", background: "var(--admin-hover-bg)" }}>
           Annulla
         </button>
         <button
@@ -206,13 +183,7 @@ function AddOverrideForm({
 }
 
 // ─── Root ─────────────────────────────────────────────────────────────
-export function UserAccessTab({
-  userId,
-  rolePerms,
-  overrides,
-  allPermissions,
-  userRole,
-}: Props) {
+export function UserAccessTab({ userId, rolePerms, overrides, allPermissions, userRole }: Props) {
   const [showAdd, setShowAdd] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [purging, startPurgeTransition] = useTransition();
@@ -222,7 +193,6 @@ export function UserAccessTab({
     (ov) => ov.expiresAt && new Date(ov.expiresAt) < new Date(),
   ).length;
 
-  // Raggruppa permessi del ruolo per gruppo
   const roleGroups = rolePerms.reduce(
     (acc, p) => {
       if (!acc[p.group]) acc[p.group] = [];
@@ -249,17 +219,10 @@ export function UserAccessTab({
   return (
     <div className="space-y-6">
       {/* Permessi ereditati dal ruolo */}
-      <div
-        className="rounded-xl p-5"
-        style={{
-          background: "var(--admin-card-bg)",
-          border: "1px solid var(--admin-card-border)",
-        }}>
+      <div className="rounded-xl p-5" style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-card-border)" }}>
         <div className="flex items-center gap-2 mb-4">
           <Shield size={15} style={{ color: "var(--admin-text-faint)" }} />
-          <h4 className="text-sm font-semibold" style={{ color: "var(--admin-text)" }}>
-            Permessi dal ruolo
-          </h4>
+          <h4 className="text-sm font-semibold" style={{ color: "var(--admin-text)" }}>Permessi dal ruolo</h4>
           {userRole && (
             <span
               className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
@@ -271,24 +234,18 @@ export function UserAccessTab({
               {userRole.label}
             </span>
           )}
-          <span
-            className="text-xs ml-auto"
-            style={{ color: "var(--admin-text-faint)" }}>
+          <span className="text-xs ml-auto" style={{ color: "var(--admin-text-faint)" }}>
             {rolePerms.length} permessi
           </span>
         </div>
 
         {rolePerms.length === 0 ? (
-          <p className="text-sm" style={{ color: "var(--admin-text-faint)" }}>
-            Nessun permesso assegnato al ruolo.
-          </p>
+          <p className="text-sm" style={{ color: "var(--admin-text-faint)" }}>Nessun permesso assegnato al ruolo.</p>
         ) : (
           <div className="space-y-3">
             {Object.entries(roleGroups).map(([group, perms]) => (
               <div key={group}>
-                <p
-                  className="text-[10px] font-bold uppercase tracking-widest mb-1.5"
-                  style={{ color: "var(--admin-text-faint)" }}>
+                <p className="text-[10px] font-bold uppercase tracking-widest mb-1.5" style={{ color: "var(--admin-text-faint)" }}>
                   {group}
                 </p>
                 <div className="flex flex-wrap gap-1.5">
@@ -296,11 +253,7 @@ export function UserAccessTab({
                     <span
                       key={p.key}
                       className="inline-flex items-center gap-1 text-[11px] font-mono px-2 py-1 rounded-lg"
-                      style={{
-                        background: "var(--admin-hover-bg)",
-                        color: "var(--admin-text-muted)",
-                        border: "1px solid var(--admin-card-border)",
-                      }}
+                      style={{ background: "var(--admin-hover-bg)", color: "var(--admin-text-muted)", border: "1px solid var(--admin-card-border)" }}
                       title={p.label}>
                       <Check size={9} style={{ color: "#16a34a" }} />
                       {p.key}
@@ -314,37 +267,19 @@ export function UserAccessTab({
       </div>
 
       {/* Override individuali */}
-      <div
-        className="rounded-xl p-5"
-        style={{
-          background: "var(--admin-card-bg)",
-          border: "1px solid var(--admin-card-border)",
-        }}>
+      <div className="rounded-xl p-5" style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-card-border)" }}>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <h4
-              className="text-sm font-semibold"
-              style={{ color: "var(--admin-text)" }}>
-              Override individuali
-            </h4>
-            <span
-              className="text-xs"
-              style={{ color: "var(--admin-text-faint)" }}>
-              ({overrides.length})
-            </span>
+            <h4 className="text-sm font-semibold" style={{ color: "var(--admin-text)" }}>Override individuali</h4>
+            <span className="text-xs" style={{ color: "var(--admin-text-faint)" }}>({overrides.length})</span>
           </div>
           <div className="flex items-center gap-2">
-            {/* Pulsante purge — visibile solo se ci sono scaduti */}
             {expiredCount > 0 && (
               <button
                 onClick={handlePurgeExpired}
                 disabled={purging}
                 className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg disabled:opacity-50"
-                style={{
-                  color: "var(--admin-text-muted)",
-                  background: "var(--admin-hover-bg)",
-                  border: "1px solid var(--admin-card-border)",
-                }}>
+                style={{ color: "var(--admin-text-muted)", background: "var(--admin-hover-bg)", border: "1px solid var(--admin-card-border)" }}>
                 {purging ? (
                   <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
                 ) : (
@@ -366,11 +301,7 @@ export function UserAccessTab({
 
         {showAdd && (
           <div className="mb-4">
-            <AddOverrideForm
-              userId={userId}
-              allPermissions={allPermissions}
-              onClose={() => setShowAdd(false)}
-            />
+            <AddOverrideForm userId={userId} allPermissions={allPermissions} onClose={() => setShowAdd(false)} />
           </div>
         )}
 
@@ -392,93 +323,54 @@ export function UserAccessTab({
         ) : (
           <div className="space-y-2">
             {overrides.map((ov) => {
-              const isExpired = ov.expiresAt
-                ? new Date(ov.expiresAt) < new Date()
-                : false;
+              const isExpired = ov.expiresAt ? new Date(ov.expiresAt) < new Date() : false;
               return (
                 <div
                   key={ov.id}
                   className="flex items-center gap-3 rounded-lg px-3 py-2.5"
                   style={{
-                    background: isExpired
-                      ? "var(--admin-bg)"
-                      : ov.granted
-                      ? "#f0fdf4"
-                      : "#fef2f2",
-                    border: `1px solid ${
-                      isExpired
-                        ? "var(--admin-card-border)"
-                        : ov.granted
-                        ? "#bbf7d0"
-                        : "#fecaca"
-                    }`,
+                    background: isExpired ? "var(--admin-bg)" : ov.granted ? "#f0fdf4" : "#fef2f2",
+                    border: `1px solid ${isExpired ? "var(--admin-card-border)" : ov.granted ? "#bbf7d0" : "#fecaca"}`,
                     opacity: isExpired ? 0.6 : 1,
                   }}>
-                  {/* Tipo */}
                   <div className="shrink-0">
-                    {ov.granted ? (
-                      <Check size={14} style={{ color: "#16a34a" }} />
-                    ) : (
-                      <X size={14} style={{ color: "#dc2626" }} />
-                    )}
+                    {ov.granted ? <Check size={14} style={{ color: "#16a34a" }} /> : <X size={14} style={{ color: "#dc2626" }} />}
                   </div>
 
-                  {/* Info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <code
-                        className="text-[11px] font-mono"
-                        style={{ color: "var(--admin-text)" }}>
+                      <code className="text-[11px] font-mono" style={{ color: "var(--admin-text)" }}>
                         {ov.permissionKey}
                       </code>
-                      <PermBadge
-                        granted={ov.granted}
-                        label={ov.granted ? "Concesso" : "Revocato"}
-                      />
+                      <PermBadge granted={ov.granted} label={ov.granted ? "Concesso" : "Revocato"} />
                       {isExpired && (
                         <span
                           className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full"
-                          style={{
-                            background: "#fef9c3",
-                            color: "#854d0e",
-                          }}>
-                          <Clock size={8} />
-                          Scaduto
+                          style={{ background: "#fef9c3", color: "#854d0e" }}>
+                          <Clock size={8} /> Scaduto
                         </span>
                       )}
                     </div>
                     {ov.reason && (
-                      <p
-                        className="text-[11px] mt-0.5 truncate"
-                        style={{ color: "var(--admin-text-muted)" }}>
+                      <p className="text-[11px] mt-0.5 truncate" style={{ color: "var(--admin-text-muted)" }}>
                         {ov.reason}
                       </p>
                     )}
                     {ov.expiresAt && !isExpired && (
-                      <p
-                        className="text-[10px] mt-0.5"
-                        style={{ color: "var(--admin-text-faint)" }}>
+                      <p className="text-[10px] mt-0.5" style={{ color: "var(--admin-text-faint)" }}>
                         Scade: {new Date(ov.expiresAt).toLocaleString("it-IT")}
                       </p>
                     )}
                   </div>
 
-                  {/* Rimuovi */}
                   <button
                     onClick={() => handleRemove(ov.id)}
                     disabled={deletingId === ov.id}
                     className="shrink-0 w-7 h-7 flex items-center justify-center rounded-lg transition-colors disabled:opacity-40"
                     title="Rimuovi override"
-                    style={{
-                      color: "var(--admin-text-faint)",
-                      background: "transparent",
-                    }}
-                    onMouseEnter={(e) =>
-                      ((e.currentTarget as HTMLButtonElement).style.background = "var(--admin-hover-bg)")
-                    }
-                    onMouseLeave={(e) =>
-                      ((e.currentTarget as HTMLButtonElement).style.background = "transparent")
-                    }>
+                    style={{ color: "var(--admin-text-faint)", background: "transparent" }}
+                    onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "var(--admin-hover-bg)")}
+                    onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "transparent")}>
                     {deletingId === ov.id ? (
                       <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
                     ) : (

@@ -6,9 +6,6 @@ import {
   removeUserPermissionOverride,
   purgeExpiredOverrides,
 } from "@/lib/rbac/permissions-queries";
-import { db } from "@/lib/db/drizzle";
-import { permissions } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
 import { getUser } from "@/lib/db/queries";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -18,10 +15,25 @@ const OverrideSchema = z.object({
   permissionId: z.coerce.number().int().positive(),
   granted: z.string().transform((v) => v === "true"),
   reason: z.string().max(500).optional(),
-  expiresAt: z
-    .string()
-    .optional()
-    .transform((v) => (v && v.trim() !== "" ? new Date(v) : undefined)),
+  /**
+   * Riceviamo due campi separati:
+   * - expiresAt: stringa datetime-local (es. "2026-04-09T08:10") — ora locale del browser
+   * - tzOffset: offset in minuti da UTC (es. -180 per EEST UTC+3)
+   *
+   * Convertiamo in UTC sottraendo l'offset:
+   *   utcMs = localMs + offsetMinutes * 60_000
+   */
+  expiresAt: z.string().optional(),
+  tzOffset: z.coerce.number().default(0),
+}).transform((data) => {
+  let expiresAt: Date | undefined;
+  if (data.expiresAt && data.expiresAt.trim() !== "") {
+    // new Date("2026-04-09T08:10") è interpretato come UTC in Node — correggere con l'offset
+    const localMs = new Date(data.expiresAt).getTime();
+    // tzOffset è negativo per UTC+ (convenzione JS getTimezoneOffset)
+    expiresAt = new Date(localMs + data.tzOffset * 60_000);
+  }
+  return { ...data, expiresAt };
 });
 
 export async function addOverride(formData: FormData) {
