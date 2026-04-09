@@ -11,25 +11,17 @@ import { PermissionsInfoCard } from "./_components/permissions-info-card";
 export const metadata = { title: "Permessi" };
 
 async function PermissionsContent() {
-  const [allPermissions, roles] = await Promise.all([
+  const [allPermissions, roles, matrix] = await Promise.all([
     getAllPermissions(),
     getAdminRoles(),
+    db.select({ roleId: rolePermissions.roleId, permissionId: rolePermissions.permissionId }).from(rolePermissions),
   ]);
-
-  const matrix = await db.select().from(rolePermissions);
-  const rolePermsMap: Record<number, Set<number>> = {};
-  for (const row of matrix) {
-    if (!rolePermsMap[row.roleId]) rolePermsMap[row.roleId] = new Set();
-    rolePermsMap[row.roleId].add(row.permissionId);
-  }
 
   return (
     <PermissionsManager
       permissions={allPermissions}
       roles={roles}
-      rolePermsMap={Object.fromEntries(
-        Object.entries(rolePermsMap).map(([k, v]) => [k, Array.from(v)])
-      )}
+      rolePermissions={matrix}
     />
   );
 }
