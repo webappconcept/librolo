@@ -67,6 +67,64 @@ export async function toggleRolePermission(
   revalidatePath("/admin/roles");
 }
 
+/**
+ * Assegna un permesso a un ruolo (usato dalla RoleMatrix con optimistic UI).
+ */
+export async function grantPermissionToRole(roleId: number, permissionId: number) {
+  const admin = await requireAdmin();
+
+  const [role] = await db
+    .select({ name: roles.name })
+    .from(roles)
+    .where(eq(roles.id, roleId))
+    .limit(1);
+  const [perm] = await db
+    .select({ key: permissions.key })
+    .from(permissions)
+    .where(eq(permissions.id, permissionId))
+    .limit(1);
+
+  await addPermissionToRole(roleId, permissionId);
+
+  await logRbacAction(
+    admin.id,
+    ActivityType.ROLE_PERMISSION_ADDED,
+    `role=${role?.name ?? roleId} perm=${perm?.key ?? permissionId}`,
+  );
+
+  revalidatePath("/admin/permissions");
+  revalidatePath("/admin/roles");
+}
+
+/**
+ * Revoca un permesso da un ruolo (usato dalla RoleMatrix con optimistic UI).
+ */
+export async function revokePermissionFromRole(roleId: number, permissionId: number) {
+  const admin = await requireAdmin();
+
+  const [role] = await db
+    .select({ name: roles.name })
+    .from(roles)
+    .where(eq(roles.id, roleId))
+    .limit(1);
+  const [perm] = await db
+    .select({ key: permissions.key })
+    .from(permissions)
+    .where(eq(permissions.id, permissionId))
+    .limit(1);
+
+  await removePermissionFromRole(roleId, permissionId);
+
+  await logRbacAction(
+    admin.id,
+    ActivityType.ROLE_PERMISSION_REMOVED,
+    `role=${role?.name ?? roleId} perm=${perm?.key ?? permissionId}`,
+  );
+
+  revalidatePath("/admin/permissions");
+  revalidatePath("/admin/roles");
+}
+
 // Crea un nuovo permesso nel catalogo
 const CreatePermissionSchema = z.object({
   key: z
@@ -178,7 +236,7 @@ export async function deletePermission(permissionId: number) {
   );
 
   revalidatePath("/admin/permissions");
-  revalidatePath("/admin/users");
+  revalidatePath("/admin/roles");
   return { success: true };
 }
 
