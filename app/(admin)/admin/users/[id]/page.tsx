@@ -122,7 +122,7 @@ async function UserContent({ id }: { id: number }) {
         <h4 className="text-sm font-semibold" style={{ color: "var(--admin-text)" }}>Attività recente</h4>
       </div>
       <Suspense fallback={<p className="text-sm" style={{ color: "var(--admin-text-faint)" }}>Caricamento...</p>}>
-        <ActivityList userId={id} activity={activity} />
+        <ActivityList activity={activity} />
       </Suspense>
     </div>
   );
