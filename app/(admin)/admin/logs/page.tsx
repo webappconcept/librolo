@@ -6,13 +6,27 @@ import { Suspense } from "react";
 
 export const metadata = { title: "Log attività" };
 
-async function LogsContent() {
-  const logs = await getActivityLogs({ limit: 200 });
-  return <LogsClient logs={logs} />;
+async function LogsContent({
+  page,
+  tab,
+}: {
+  page: number;
+  tab: string;
+}) {
+  const data = await getActivityLogs({ page, perPage: 20, tab });
+  return <LogsClient data={data} />;
 }
 
-export default async function AdminLogsPage() {
+export default async function AdminLogsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string; tab?: string }>;
+}) {
   await requireAdminPage();
+
+  const params = await searchParams;
+  const page = Math.max(1, Number(params.page ?? 1));
+  const tab = params.tab ?? "rbac";
 
   return (
     <div className="space-y-5">
@@ -21,11 +35,12 @@ export default async function AdminLogsPage() {
           Log attività
         </h2>
         <p className="text-sm mt-0.5" style={{ color: "var(--admin-text-faint)" }}>
-          Traccia delle operazioni eseguite dagli amministratori sul pannello.
+          Traccia delle operazioni eseguite in app e in amministrazione
         </p>
       </div>
 
       <Suspense
+        key={`${tab}-${page}`}
         fallback={
           <div className="flex items-center justify-center h-40">
             <div
@@ -34,7 +49,7 @@ export default async function AdminLogsPage() {
             />
           </div>
         }>
-        <LogsContent />
+        <LogsContent page={page} tab={tab} />
       </Suspense>
     </div>
   );
