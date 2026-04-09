@@ -17,11 +17,19 @@ import { useState } from "react";
 // Helpers
 // ---------------------------------------------------------------------------
 
-function SectionTitle({ icon: Icon, children }: { icon: React.ElementType; children: React.ReactNode }) {
+function SectionTitle({
+  icon: Icon,
+  children,
+}: {
+  icon: React.ElementType;
+  children: React.ReactNode;
+}) {
   return (
     <div className="flex items-center gap-2 mb-2">
       <Icon size={14} style={{ color: "var(--admin-accent)" }} />
-      <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--admin-text-muted)" }}>
+      <span
+        className="text-xs font-semibold uppercase tracking-wide"
+        style={{ color: "var(--admin-text-muted)" }}>
         {children}
       </span>
     </div>
@@ -33,11 +41,12 @@ function Step({ n, children }: { n: number; children: React.ReactNode }) {
     <li className="flex items-start gap-2.5">
       <span
         className="shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white mt-0.5"
-        style={{ background: "var(--admin-accent)" }}
-      >
+        style={{ background: "var(--admin-accent)" }}>
         {n}
       </span>
-      <span className="text-sm leading-relaxed" style={{ color: "var(--admin-text-muted)" }}>
+      <span
+        className="text-sm leading-relaxed"
+        style={{ color: "var(--admin-text-muted)" }}>
         {children}
       </span>
     </li>
@@ -52,8 +61,7 @@ function Pill({ children }: { children: React.ReactNode }) {
         background: "var(--admin-hover-bg)",
         color: "var(--admin-text)",
         border: "1px solid var(--admin-card-border)",
-      }}
-    >
+      }}>
       {children}
     </code>
   );
@@ -72,27 +80,31 @@ export function PermissionsInfoCard() {
       style={{
         border: "1px solid var(--admin-card-border)",
         background: "var(--admin-card-bg)",
-      }}
-    >
+      }}>
       {/* Trigger */}
       <button
         onClick={() => setOpen((v) => !v)}
         className="w-full flex items-center gap-3 px-4 py-3.5 text-left transition-colors"
         style={{
           background: open ? "var(--admin-hover-bg)" : "transparent",
-        }}
-      >
+        }}>
         <div
           className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-          style={{ background: "color-mix(in oklch, var(--admin-accent) 12%, transparent)" }}
-        >
+          style={{
+            background:
+              "color-mix(in oklch, var(--admin-accent) 12%, transparent)",
+          }}>
           <Info size={14} style={{ color: "var(--admin-accent)" }} />
         </div>
         <div className="flex-1">
-          <span className="text-sm font-medium" style={{ color: "var(--admin-text)" }}>
+          <span
+            className="text-sm font-medium"
+            style={{ color: "var(--admin-text)" }}>
             Come funziona il sistema dei permessi?
           </span>
-          <span className="block text-xs" style={{ color: "var(--admin-text-faint)" }}>
+          <span
+            className="block text-xs"
+            style={{ color: "var(--admin-text-faint)" }}>
             Guida rapida, configurazione e esempio di utilizzo nel codice
           </span>
         </div>
@@ -109,18 +121,18 @@ export function PermissionsInfoCard() {
       {/* Contenuto collassabile */}
       <div
         className="transition-all duration-300 ease-in-out overflow-hidden"
-        style={{ maxHeight: open ? "1200px" : "0px", opacity: open ? 1 : 0 }}
-      >
+        style={{ maxHeight: open ? "1200px" : "0px", opacity: open ? 1 : 0 }}>
         <div
           className="px-5 pb-5 pt-1 grid gap-5"
-          style={{ borderTop: "1px solid var(--admin-card-border)" }}
-        >
-
+          style={{ borderTop: "1px solid var(--admin-card-border)" }}>
           {/* Come funziona */}
           <div className="pt-4">
             <SectionTitle icon={BookOpen}>Come funziona</SectionTitle>
-            <p className="text-sm leading-relaxed" style={{ color: "var(--admin-text-muted)" }}>
-              Il sistema RBAC (Role-Based Access Control) si basa su tre livelli sovrapposti:
+            <p
+              className="text-sm leading-relaxed"
+              style={{ color: "var(--admin-text-muted)" }}>
+              Il sistema RBAC (Role-Based Access Control) si basa su tre livelli
+              sovrapposti:
             </p>
             <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
               {[
@@ -146,15 +158,18 @@ export function PermissionsInfoCard() {
                   style={{
                     background: "var(--admin-hover-bg)",
                     border: "1px solid var(--admin-card-border)",
-                  }}
-                >
+                  }}>
                   <div className="flex items-center gap-2 mb-1.5">
                     <Icon size={13} style={{ color: "var(--admin-accent)" }} />
-                    <span className="text-xs font-semibold" style={{ color: "var(--admin-text)" }}>
+                    <span
+                      className="text-xs font-semibold"
+                      style={{ color: "var(--admin-text)" }}>
                       {title}
                     </span>
                   </div>
-                  <p className="text-[12px] leading-relaxed" style={{ color: "var(--admin-text-faint)" }}>
+                  <p
+                    className="text-[12px] leading-relaxed"
+                    style={{ color: "var(--admin-text-faint)" }}>
                     {desc}
                   </p>
                 </div>
@@ -164,25 +179,32 @@ export function PermissionsInfoCard() {
 
           {/* Setup */}
           <div>
-            <SectionTitle icon={CheckCircle2}>Configurazione iniziale</SectionTitle>
+            <SectionTitle icon={CheckCircle2}>
+              Configurazione iniziale
+            </SectionTitle>
             <ol className="space-y-2.5">
               <Step n={1}>
-                Vai su <strong>Catalogo permessi</strong> (tab accanto) e crea i permessi che ti servono.
-                Usa nomi nel formato <Pill>risorsa:azione</Pill>, ad esempio{" "}
-                <Pill>posts:publish</Pill>, <Pill>users:ban</Pill>, <Pill>admin:access</Pill>.
+                Vai su <strong>Catalogo permessi</strong> (tab accanto) e crea i
+                permessi che ti servono. Usa nomi nel formato{" "}
+                <Pill>risorsa:azione</Pill>, ad esempio{" "}
+                <Pill>posts:publish</Pill>, <Pill>users:ban</Pill>,{" "}
+                <Pill>admin:access</Pill>.
               </Step>
               <Step n={2}>
-                Vai su <strong>Matrice ruoli</strong> e attiva/disattiva i toggle per assegnare
-                i permessi ai ruoli. Ogni cella è un toggle: verde = permesso assegnato.
+                Vai su <strong>Matrice ruoli</strong> e attiva/disattiva i
+                toggle per assegnare i permessi ai ruoli. Ogni cella è un
+                toggle: verde = permesso assegnato.
               </Step>
               <Step n={3}>
                 Per eccezioni individuali, apri il dettaglio di un utente in{" "}
-                <strong>Gestione Utenti</strong> → tab <strong>Accessi</strong> → sezione Override.
-                Puoi concedere o revocare un permesso con scadenza opzionale.
+                <strong>Utenti</strong> → tab <strong>Accessi</strong> → sezione
+                Override. Puoi concedere o revocare un permesso con scadenza
+                opzionale.
               </Step>
               <Step n={4}>
-                Nel codice dell'app, usa la funzione <Pill>can()</Pill> per verificare
-                se l'utente corrente ha un determinato permesso (vedi esempio sotto).
+                Nel codice dell'app, usa la funzione <Pill>can()</Pill> per
+                verificare se l'utente corrente ha un determinato permesso (vedi
+                esempio sotto).
               </Step>
             </ol>
           </div>
@@ -203,7 +225,9 @@ export function PermissionsInfoCard() {
               ].map(({ key, desc }) => (
                 <div key={key} className="flex items-center gap-2">
                   <Pill>{key}</Pill>
-                  <span className="text-[12px]" style={{ color: "var(--admin-text-faint)" }}>
+                  <span
+                    className="text-[12px]"
+                    style={{ color: "var(--admin-text-faint)" }}>
                     {desc}
                   </span>
                 </div>
@@ -213,18 +237,19 @@ export function PermissionsInfoCard() {
 
           {/* Esempio codice */}
           <div>
-            <SectionTitle icon={Code2}>Esempio di utilizzo nel codice</SectionTitle>
+            <SectionTitle icon={Code2}>
+              Esempio di utilizzo nel codice
+            </SectionTitle>
             <div
               className="rounded-lg overflow-x-auto"
               style={{
                 background: "var(--admin-hover-bg)",
                 border: "1px solid var(--admin-card-border)",
-              }}
-            >
+              }}>
               <pre
                 className="text-[12px] leading-relaxed p-4 font-mono"
-                style={{ color: "var(--admin-text-muted)" }}
-              >{`// In un Server Component o Server Action
+                style={{ color: "var(--admin-text-muted)" }}>
+                {`// In un Server Component o Server Action
 import { can } from "@/lib/rbac/can";
 import { getSession } from "@/lib/auth/session";
 
@@ -251,12 +276,14 @@ export async function publishPost(postId: number) {
 }`}
               </pre>
             </div>
-            <p className="text-[12px] mt-2" style={{ color: "var(--admin-text-faint)" }}>
-              La funzione <Pill>can(userId, key)</Pill> risolve automaticamente ruolo +
-              override individuali (grant/revoke) e rispetta le scadenze.
+            <p
+              className="text-[12px] mt-2"
+              style={{ color: "var(--admin-text-faint)" }}>
+              La funzione <Pill>can(userId, key)</Pill> risolve automaticamente
+              ruolo + override individuali (grant/revoke) e rispetta le
+              scadenze.
             </p>
           </div>
-
         </div>
       </div>
     </div>
