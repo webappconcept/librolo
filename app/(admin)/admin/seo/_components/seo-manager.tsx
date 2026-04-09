@@ -18,17 +18,17 @@ const JSON_LD_TOGGLE_HINT =
   'Inietta un blocco <script type="application/ld+json"> nella pagina per i rich result di Google.';
 
 const JSON_LD_TYPE_HINTS: Record<JsonLdType, string> = {
-  WebPage: "Pagina web generica \u2014 ideale per homepage e pagine istituzionali",
-  Article: "Articolo o notizia \u2014 migliora l'aspetto nei risultati di Google News",
-  BlogPosting: "Post di blog \u2014 simile ad Article, ottimizzato per contenuti blog",
-  Product: "Scheda prodotto \u2014 mostra prezzo e disponibilit\u00e0 nei risultati",
-  FAQPage: "Pagina FAQ \u2014 abilita i rich result con domande e risposte espansi",
-  BreadcrumbList: "Breadcrumb \u2014 mostra il percorso di navigazione nei risultati",
-  Organization: "Organizzazione \u2014 dati aziendali (nome, logo, contatti)",
-  LocalBusiness: "Attivit\u00e0 locale \u2014 indirizzo, orari e valutazioni su Google Maps",
-  Person: "Persona \u2014 profilo autore o collaboratore",
-  Event: "Evento \u2014 data, luogo e biglietti nei risultati di ricerca",
-  VideoObject: "Video \u2014 miniatura e durata nei rich result di YouTube/Google",
+  WebPage: "Pagina web generica — ideale per homepage e pagine istituzionali",
+  Article: "Articolo o notizia — migliora l'aspetto nei risultati di Google News",
+  BlogPosting: "Post di blog — simile ad Article, ottimizzato per contenuti blog",
+  Product: "Scheda prodotto — mostra prezzo e disponibilità nei risultati",
+  FAQPage: "Pagina FAQ — abilita i rich result con domande e risposte espansi",
+  BreadcrumbList: "Breadcrumb — mostra il percorso di navigazione nei risultati",
+  Organization: "Organizzazione — dati aziendali (nome, logo, contatti)",
+  LocalBusiness: "Attività locale — indirizzo, orari e valutazioni su Google Maps",
+  Person: "Persona — profilo autore o collaboratore",
+  Event: "Evento — data, luogo e biglietti nei risultati di ricerca",
+  VideoObject: "Video — miniatura e durata nei rich result di YouTube/Google",
 };
 
 function charClass(len: number, max: number) {
@@ -97,11 +97,11 @@ function Serp({
           <span
             className="text-xs px-2 py-0.5 rounded-full font-medium"
             style={{
-              background: "var(--admin-warning-bg, #fffbeb)",
-              color: "var(--admin-warning, #d97706)",
-              border: "1px solid var(--admin-warning-border, #fde68a)",
+              background: "color-mix(in srgb, var(--admin-accent) 12%, var(--admin-card-bg))",
+              color: "var(--admin-accent)",
+              border: "1px solid color-mix(in srgb, var(--admin-accent) 25%, transparent)",
             }}>
-            noindex \u2014 non verr\u00e0 indicizzata
+            noindex &mdash; non verrà indicizzata
           </span>
         )}
       </div>
@@ -261,7 +261,7 @@ function SeoForm({
                   }}>
                   {page!.pathname}
                 </div>
-                <p style={hintStyle}>Il percorso URL non pu\u00f2 essere modificato.</p>
+                <p style={hintStyle}>Il percorso URL non può essere modificato.</p>
               </>
             ) : unconfiguredRoutes.length > 0 ? (
               <>
@@ -283,7 +283,7 @@ function SeoForm({
                   }}>
                   <Info size={13} className="mt-0.5 shrink-0" style={{ color: "var(--admin-accent)" }} />
                   <p className="text-xs leading-relaxed" style={{ color: "var(--admin-text-muted)" }}>
-                    La lista dei percorsi \u00e8 definita in{" "}
+                    La lista dei percorsi è definita in{" "}
                     <code
                       className="font-mono px-1 py-0.5 rounded"
                       style={{ background: "var(--admin-hover-bg)", color: "var(--admin-accent)" }}>
@@ -301,9 +301,9 @@ function SeoForm({
                   background: "color-mix(in srgb, #22c55e 8%, var(--admin-card-bg))",
                   border: "1px solid color-mix(in srgb, #22c55e 25%, transparent)",
                 }}>
-                <span style={{ color: "#22c55e" }}>\u2713</span>
+                <span style={{ color: "#22c55e" }}>✓</span>
                 <p className="text-xs font-medium" style={{ color: "var(--admin-text-muted)" }}>
-                  Tutte le pagine dell&apos;app sono gi\u00e0 configurate.
+                  Tutte le pagine dell&apos;app sono già configurate.
                 </p>
               </div>
             )}
@@ -595,7 +595,7 @@ export default function SeoManager({
         <button
           onClick={() => setEditPage("new")}
           disabled={allConfigured}
-          title={allConfigured ? "Tutte le pagine sono gi\u00e0 configurate" : "Aggiungi pagina"}
+          title={allConfigured ? "Tutte le pagine sono già configurate" : "Aggiungi pagina"}
           className="flex items-center gap-2 px-4 py-2 text-sm text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           style={{ background: "var(--admin-accent)" }}
           onMouseEnter={(e) => { if (!allConfigured) e.currentTarget.style.filter = "brightness(0.9)"; }}
@@ -680,9 +680,9 @@ export default function SeoManager({
                   <span
                     className="hidden sm:inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium shrink-0"
                     style={{
-                      background: "color-mix(in srgb, var(--admin-accent) 12%, var(--admin-card-bg))",
-                      color: "var(--admin-accent)",
-                      border: "1px solid color-mix(in srgb, var(--admin-accent) 25%, transparent)",
+                      background: "color-mix(in srgb, #8b5cf6 12%, var(--admin-card-bg))",
+                      color: "#8b5cf6",
+                      border: "1px solid color-mix(in srgb, #8b5cf6 25%, transparent)",
                     }}>
                     {page.jsonLdType}
                   </span>
