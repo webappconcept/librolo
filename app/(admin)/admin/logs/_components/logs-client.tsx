@@ -31,7 +31,6 @@ type Props = { logs: LogEntry[] };
 const TABS = [
   { id: "rbac", label: "RBAC", icon: KeyRound },
   { id: "auth", label: "Autenticazione", icon: LogIn },
-  { id: "all", label: "Tutti", icon: Activity },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
@@ -158,9 +157,7 @@ export function LogsClient({ logs }: Props) {
             const count =
               tab.id === "rbac"
                 ? logs.filter((l) => { const t = getActionType(l.action); return t && RBAC_TYPES.has(t); }).length
-                : tab.id === "auth"
-                ? logs.filter((l) => { const t = getActionType(l.action); return t && AUTH_TYPES.has(t); }).length
-                : logs.length;
+                : logs.filter((l) => { const t = getActionType(l.action); return t && AUTH_TYPES.has(t); }).length;
             return (
               <button
                 key={tab.id}
