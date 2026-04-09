@@ -7,11 +7,10 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import { changeStaffRole } from "../actions";
 
-// Ruoli di sistema staff — label e colori fissi
 const STAFF_ROLES: { name: string; label: string; color: string }[] = [
-  { name: "admin",    label: "Admin",    color: "#ef4444" },
-  { name: "editor",   label: "Editore",  color: "#3b82f6" },
-  { name: "support",  label: "Supporto", color: "#10b981" },
+  { name: "admin",   label: "Admin",    color: "#ef4444" },
+  { name: "editor",  label: "Editore",  color: "#3b82f6" },
+  { name: "support", label: "Supporto", color: "#10b981" },
 ];
 
 function RoleBadge({ label, color }: { label: string; color: string }) {
@@ -52,7 +51,6 @@ function StaffRow({ user }: { user: AdminUser }) {
       onMouseEnter={(e) => (e.currentTarget.style.background = "var(--admin-hover-bg)")}
       onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
 
-      {/* Avatar + nome */}
       <td className="px-4 py-3">
         <div className="flex items-center gap-3">
           <div
@@ -74,7 +72,6 @@ function StaffRow({ user }: { user: AdminUser }) {
         </div>
       </td>
 
-      {/* Ruolo con cambio inline */}
       <td className="px-4 py-3">
         <div className="relative inline-block">
           <button
@@ -119,7 +116,6 @@ function StaffRow({ user }: { user: AdminUser }) {
         </div>
       </td>
 
-      {/* Email verificata */}
       <td className="px-4 py-3 hidden lg:table-cell">
         <span
           className={`text-[11px] font-medium ${
@@ -130,25 +126,19 @@ function StaffRow({ user }: { user: AdminUser }) {
         </span>
       </td>
 
-      {/* Data aggiunta */}
       <td className="px-4 py-3 hidden lg:table-cell">
         <span className="text-xs" style={{ color: "var(--admin-text-faint)" }}>
           {new Date(user.createdAt).toLocaleDateString("it-IT")}
         </span>
       </td>
 
-      {/* Link scheda utente */}
       <td className="px-4 py-3">
         <Link
           href={`/admin/users/${user.id}`}
           className="text-xs font-medium px-2.5 py-1.5 rounded-lg transition-colors"
-          style={{
-            background: "var(--admin-hover-bg)",
-            color: "var(--admin-text-muted)",
-          }}
+          style={{ background: "var(--admin-hover-bg)", color: "var(--admin-text-muted)" }}
           onMouseEnter={(e) => (e.currentTarget.style.background = "var(--admin-input-border)")}
-          onMouseLeave={(e) => (e.currentTarget.style.background = "var(--admin-hover-bg)")}
-        >
+          onMouseLeave={(e) => (e.currentTarget.style.background = "var(--admin-hover-bg)")}>
           Scheda
         </Link>
       </td>

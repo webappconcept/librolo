@@ -1,9 +1,9 @@
 // app/(admin)/admin/staff/page.tsx
-import { getStaffUsers } from \"@/lib/db/admin-queries\";
-import { getAdminRoles } from \"@/lib/db/roles-queries\";
-import { Search } from \"lucide-react\";
-import { Suspense } from \"react\";
-import StaffTable from \"./_components/staff-table\";
+import { getStaffUsers } from "@/lib/db/admin-queries";
+import { getAdminRoles } from "@/lib/db/roles-queries";
+import { Search } from "lucide-react";
+import { Suspense } from "react";
+import StaffTable from "./_components/staff-table";
 
 async function StaffContent({
   search,
@@ -19,48 +19,48 @@ async function StaffContent({
 
   const buildHref = (p: number) => {
     const params = new URLSearchParams();
-    if (search) params.set(\"q\", search);
-    if (role) params.set(\"role\", role);
-    if (p > 1) params.set(\"page\", String(p));
+    if (search) params.set("q", search);
+    if (role) params.set("role", role);
+    if (p > 1) params.set("page", String(p));
     const qs = params.toString();
-    return `/admin/staff${qs ? `?${qs}` : \"\"}`;
+    return `/admin/staff${qs ? `?${qs}` : ""}`;
   };
 
   return (
     <>
-      <p className=\"text-sm -mt-4\" style={{ color: \"var(--admin-text-faint)\" }}>
+      <p className="text-sm -mt-4" style={{ color: "var(--admin-text-faint)" }}>
         {total} membri dello staff
       </p>
 
       <div
-        className=\"rounded-xl shadow-sm\"
+        className="rounded-xl shadow-sm"
         style={{
-          background: \"var(--admin-card-bg)\",
-          border: \"1px solid var(--admin-card-border)\",
+          background: "var(--admin-card-bg)",
+          border: "1px solid var(--admin-card-border)",
         }}>
         <StaffTable users={users} />
 
         {totalPages > 1 && (
           <div
-            className=\"flex items-center justify-between px-4 py-3\"
-            style={{ borderTop: \"1px solid var(--admin-divider)\" }}>
-            <span className=\"text-xs\" style={{ color: \"var(--admin-text-faint)\" }}>
+            className="flex items-center justify-between px-4 py-3"
+            style={{ borderTop: "1px solid var(--admin-divider)" }}>
+            <span className="text-xs" style={{ color: "var(--admin-text-faint)" }}>
               Pagina {page} di {totalPages}
             </span>
-            <div className=\"flex gap-2\">
+            <div className="flex gap-2">
               {page > 1 && (
                 <a
                   href={buildHref(page - 1)}
-                  className=\"px-3 py-1.5 text-xs rounded-lg transition-colors\"
-                  style={{ background: \"var(--admin-hover-bg)\", color: \"var(--admin-text-muted)\" }}>
+                  className="px-3 py-1.5 text-xs rounded-lg transition-colors"
+                  style={{ background: "var(--admin-hover-bg)", color: "var(--admin-text-muted)" }}>
                   ← Precedente
                 </a>
               )}
               {page < totalPages && (
                 <a
                   href={buildHref(page + 1)}
-                  className=\"px-3 py-1.5 text-xs text-white rounded-lg transition-colors\"
-                  style={{ background: \"var(--admin-accent)\" }}>
+                  className="px-3 py-1.5 text-xs text-white rounded-lg transition-colors"
+                  style={{ background: "var(--admin-accent)" }}>
                   Successiva →
                 </a>
               )}
@@ -75,20 +75,20 @@ async function StaffContent({
 function StaffTableSkeleton() {
   return (
     <div
-      className=\"rounded-xl shadow-sm p-4 space-y-3\"
+      className="rounded-xl shadow-sm p-4 space-y-3"
       style={{
-        background: \"var(--admin-card-bg)\",
-        border: \"1px solid var(--admin-card-border)\",
+        background: "var(--admin-card-bg)",
+        border: "1px solid var(--admin-card-border)",
       }}>
       {Array.from({ length: 5 }).map((_, i) => (
-        <div key={i} className=\"flex items-center gap-4\">
-          <div className=\"w-8 h-8 rounded-full animate-pulse shrink-0\" style={{ background: \"var(--admin-hover-bg)\" }} />
-          <div className=\"flex-1 space-y-1.5\">
-            <div className=\"h-3 rounded animate-pulse w-1/3\" style={{ background: \"var(--admin-hover-bg)\" }} />
-            <div className=\"h-2.5 rounded animate-pulse w-1/2\" style={{ background: \"var(--admin-divider)\" }} />
+        <div key={i} className="flex items-center gap-4">
+          <div className="w-8 h-8 rounded-full animate-pulse shrink-0" style={{ background: "var(--admin-hover-bg)" }} />
+          <div className="flex-1 space-y-1.5">
+            <div className="h-3 rounded animate-pulse w-1/3" style={{ background: "var(--admin-hover-bg)" }} />
+            <div className="h-2.5 rounded animate-pulse w-1/2" style={{ background: "var(--admin-divider)" }} />
           </div>
-          <div className=\"h-5 w-16 rounded-full animate-pulse\" style={{ background: \"var(--admin-hover-bg)\" }} />
-          <div className=\"h-5 w-20 rounded animate-pulse\" style={{ background: \"var(--admin-hover-bg)\" }} />
+          <div className="h-5 w-16 rounded-full animate-pulse" style={{ background: "var(--admin-hover-bg)" }} />
+          <div className="h-5 w-20 rounded animate-pulse" style={{ background: "var(--admin-hover-bg)" }} />
         </div>
       ))}
     </div>
@@ -101,76 +101,74 @@ export default async function AdminStaffPage({
   searchParams: Promise<{ q?: string; role?: string; page?: string }>;
 }) {
   const params = await searchParams;
-  const search = params.q ?? \"\";
-  const role = params.role ?? \"\";
+  const search = params.q ?? "";
+  const role = params.role ?? "";
   const page = Number(params.page ?? 1);
 
-  // Solo ruoli admin/staff per il filtro
   const allRoles = await getAdminRoles();
   const staffRoles = allRoles.filter((r) => r.isAdmin || r.isStaff);
 
   const hasFilters = !!(search || role);
 
   return (
-    <div className=\"space-y-5\">
+    <div className="space-y-5">
       <div>
-        <h2 className=\"text-xl font-bold\" style={{ color: \"var(--admin-text)\" }}>Staff</h2>
-        <p className=\"text-sm mt-0.5\" style={{ color: \"var(--admin-text-muted)\" }}>
+        <h2 className="text-xl font-bold" style={{ color: "var(--admin-text)" }}>Staff</h2>
+        <p className="text-sm mt-0.5" style={{ color: "var(--admin-text-muted)" }}>
           Gestione amministratori e membri dello staff
         </p>
       </div>
 
-      {/* Filtri */}
       <div
-        className=\"rounded-xl shadow-sm p-4\"
-        style={{ background: \"var(--admin-card-bg)\", border: \"1px solid var(--admin-card-border)\" }}>
-        <form className=\"flex flex-wrap gap-3\">
-          <div className=\"relative flex-1 min-w-[200px]\">
+        className="rounded-xl shadow-sm p-4"
+        style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-card-border)" }}>
+        <form className="flex flex-wrap gap-3">
+          <div className="relative flex-1 min-w-[200px]">
             <Search
               size={15}
-              className=\"absolute left-3 top-1/2 -translate-y-1/2\"
-              style={{ color: \"var(--admin-text-faint)\" }}
+              className="absolute left-3 top-1/2 -translate-y-1/2"
+              style={{ color: "var(--admin-text-faint)" }}
             />
             <input
-              name=\"q\"
+              name="q"
               defaultValue={search}
-              placeholder=\"Cerca per nome o email...\"
-              className=\"w-full pl-9 pr-3 py-2 text-sm rounded-lg focus:outline-none transition-colors\"
+              placeholder="Cerca per nome o email..."
+              className="w-full pl-9 pr-3 py-2 text-sm rounded-lg focus:outline-none transition-colors"
               style={{
-                background: \"var(--admin-page-bg)\",
-                border: \"1px solid var(--admin-input-border)\",
-                color: \"var(--admin-text)\",
+                background: "var(--admin-page-bg)",
+                border: "1px solid var(--admin-input-border)",
+                color: "var(--admin-text)",
               }}
             />
           </div>
 
           <select
-            name=\"role\"
+            name="role"
             defaultValue={role}
-            className=\"px-3 py-2 text-sm rounded-lg focus:outline-none transition-colors\"
+            className="px-3 py-2 text-sm rounded-lg focus:outline-none transition-colors"
             style={{
-              background: \"var(--admin-page-bg)\",
-              border: \"1px solid var(--admin-input-border)\",
-              color: role ? \"var(--admin-text)\" : \"var(--admin-text-muted)\",
+              background: "var(--admin-page-bg)",
+              border: "1px solid var(--admin-input-border)",
+              color: role ? "var(--admin-text)" : "var(--admin-text-muted)",
             }}>
-            <option value=\"\">Tutti i ruoli</option>
+            <option value="">Tutti i ruoli</option>
             {staffRoles.map((r) => (
               <option key={r.name} value={r.name}>{r.label}</option>
             ))}
           </select>
 
           <button
-            type=\"submit\"
-            className=\"px-4 py-2 text-white text-sm font-medium rounded-lg transition-colors\"
-            style={{ background: \"var(--admin-accent)\" }}>
+            type="submit"
+            className="px-4 py-2 text-white text-sm font-medium rounded-lg transition-colors"
+            style={{ background: "var(--admin-accent)" }}>
             Filtra
           </button>
 
           {hasFilters && (
             <a
-              href=\"/admin/staff\"
-              className=\"px-4 py-2 text-sm font-medium rounded-lg transition-colors\"
-              style={{ background: \"var(--admin-hover-bg)\", color: \"var(--admin-text-muted)\" }}>
+              href="/admin/staff"
+              className="px-4 py-2 text-sm font-medium rounded-lg transition-colors"
+              style={{ background: "var(--admin-hover-bg)", color: "var(--admin-text-muted)" }}>
               Reset
             </a>
           )}
