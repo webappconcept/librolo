@@ -227,24 +227,76 @@ export async function getAdminUserActivity(userId: number): Promise<AdminUserAct
 }
 
 /**
- * Recupera gli activity log globali con email dell'utente.
+ * Recupera gli activity log globali con email dell'utente — paginati lato server.
  * Usato dalla pagina /admin/logs.
  */
-export async function getActivityLogs({ limit = 200 }: { limit?: number } = {}) {
+export async function getActivityLogs({
+  page = 1,
+  perPage = 20,
+  tab = "rbac",
+}: {
+  page?: number;
+  perPage?: number;
+  tab?: string;
+} = {}) {
   noStore();
-  const result = await db
-    .select({
-      id: activityLogs.id,
-      userId: activityLogs.userId,
-      userEmail: users.email,
-      action: activityLogs.action,
-      ipAddress: activityLogs.ipAddress,
-      timestamp: activityLogs.timestamp,
-    })
-    .from(activityLogs)
-    .leftJoin(users, eq(activityLogs.userId, users.id))
-    .orderBy(desc(activityLogs.timestamp))
-    .limit(limit);
 
-  return result;
+  const offset = (page - 1) * perPage;
+
+  // Costruisci il filtro SQL per tab
+  const RBAC_ACTIONS = [
+    "PERMISSION_GRANTED",
+    "PERMISSION_REVOKED",
+    "ROLE_PERMISSION_ADDED",
+    "ROLE_PERMISSION_REMOVED",
+    "ADMIN_CHANGE_ROLE",
+    "ADMIN_BAN_USER",
+    "ADMIN_UNBAN_USER",
+    "ADMIN_DELETE_USER",
+  ];
+  const AUTH_ACTIONS = [
+    "SIGN_IN",
+    "SIGN_UP",
+    "SIGN_OUT",
+    "UPDATE_PASSWORD",
+    "PASSWORD_RESET_REQUESTED",
+    "PASSWORD_RESET_COMPLETED",
+    "EMAIL_VERIFIED",
+  ];
+
+  const actionList = tab === "rbac" ? RBAC_ACTIONS : tab === "auth" ? AUTH_ACTIONS : null;
+
+  const whereClause = actionList
+    ? sql`split_part(${activityLogs.action}, ' | ', 1) = ANY(ARRAY[${sql.raw(actionList.map((a) => `'${a}'`).join(","))}])`
+    : undefined;
+
+  const [rows, totalCount] = await Promise.all([
+    db
+      .select({
+        id: activityLogs.id,
+        userId: activityLogs.userId,
+        userEmail: users.email,
+        action: activityLogs.action,
+        ipAddress: activityLogs.ipAddress,
+        timestamp: activityLogs.timestamp,
+      })
+      .from(activityLogs)
+      .leftJoin(users, eq(activityLogs.userId, users.id))
+      .where(whereClause)
+      .orderBy(desc(activityLogs.timestamp))
+      .limit(perPage)
+      .offset(offset),
+    db
+      .select({ count: count() })
+      .from(activityLogs)
+      .where(whereClause),
+  ]);
+
+  return {
+    logs: rows,
+    total: totalCount[0].count,
+    page,
+    perPage,
+    totalPages: Math.ceil(totalCount[0].count / perPage),
+  };
 }
