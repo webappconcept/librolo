@@ -9,8 +9,8 @@ import {
   ChevronDown,
   ChevronRight,
   HelpCircle,
-  Info,
   Loader2,
+  Pencil,
   Plus,
   Search,
   Shield,
@@ -25,6 +25,7 @@ import {
   deletePermission,
   grantPermissionToRole,
   revokePermissionFromRole,
+  updatePermission,
 } from "../actions";
 
 // ─── Types ────────────────────────────────────────────────────────────
@@ -51,15 +52,193 @@ function PermissionBadge({ perm }: { perm: Permission }) {
   );
 }
 
+// ─── EditPermissionForm ───────────────────────────────────────────────
+function EditPermissionForm({
+  perm,
+  onSuccess,
+  onCancel,
+}: {
+  perm: Permission;
+  onSuccess: (updated: Partial<Permission>) => void;
+  onCancel: () => void;
+}) {
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  const inputCls = "w-full px-3 py-2 text-sm rounded-lg outline-none focus:ring-2";
+  const inputStyle = {
+    background: "var(--admin-input-bg)",
+    border: "1px solid var(--admin-input-border)",
+    color: "var(--admin-text)",
+  };
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    setError(null);
+    startTransition(async () => {
+      const res = await updatePermission(perm.id, fd);
+      if (res?.error) {
+        setError(res.error);
+      } else {
+        onSuccess({
+          label: fd.get("label") as string,
+          description: (fd.get("description") as string) || null,
+          group: fd.get("group") as string,
+        });
+      }
+    });
+  }
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="mt-2 rounded-xl p-4 space-y-3"
+      style={{
+        background: "var(--admin-card-bg)",
+        border: "1px solid var(--admin-card-border)",
+      }}>
+      <p
+        className="text-[11px] font-semibold uppercase tracking-widest"
+        style={{ color: "var(--admin-text-faint)" }}>
+        Modifica permesso
+      </p>
+
+      {/* key — sola lettura con spiegazione */}
+      <div>
+        <label
+          className="block text-xs font-medium mb-1"
+          style={{ color: "var(--admin-text-muted)" }}>
+          Chiave{" "}
+          <span
+            className="font-normal text-[11px]"
+            style={{ color: "var(--admin-text-faint)" }}>
+            (non modificabile)
+          </span>
+        </label>
+        <div
+          className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm"
+          style={{
+            background: "var(--admin-hover-bg)",
+            border: "1px solid var(--admin-card-border)",
+          }}>
+          <code
+            className="font-mono text-[12px]"
+            style={{ color: "var(--admin-text-muted)" }}>
+            {perm.key}
+          </code>
+          <span
+            className="text-[10px] px-1.5 py-0.5 rounded ml-auto"
+            style={{
+              background: "var(--admin-card-border)",
+              color: "var(--admin-text-faint)",
+            }}>
+            {perm.isSystem ? "sistema" : "custom"}
+          </span>
+        </div>
+        <p
+          className="text-[11px] mt-1 flex items-center gap-1"
+          style={{ color: "var(--admin-text-faint)" }}>
+          <AlertTriangle size={10} />
+          Modificare la chiave romperebbe i controlli nel codice sorgente
+        </p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label
+            className="block text-xs font-medium mb-1"
+            style={{ color: "var(--admin-text-muted)" }}>
+            Etichetta *
+          </label>
+          <input
+            name="label"
+            required
+            defaultValue={perm.label}
+            placeholder="Es. Pubblica articoli"
+            className={inputCls}
+            style={inputStyle}
+          />
+        </div>
+        <div>
+          <label
+            className="block text-xs font-medium mb-1"
+            style={{ color: "var(--admin-text-muted)" }}>
+            Gruppo *
+          </label>
+          <input
+            name="group"
+            required
+            defaultValue={perm.group}
+            placeholder="Es. Contenuti"
+            className={inputCls}
+            style={inputStyle}
+          />
+        </div>
+        <div className="col-span-2">
+          <label
+            className="block text-xs font-medium mb-1"
+            style={{ color: "var(--admin-text-muted)" }}>
+            Descrizione
+          </label>
+          <input
+            name="description"
+            defaultValue={perm.description ?? ""}
+            placeholder="Opzionale"
+            className={inputCls}
+            style={inputStyle}
+          />
+        </div>
+      </div>
+
+      {error && (
+        <p
+          className="text-xs flex items-center gap-1"
+          style={{ color: "#dc2626" }}>
+          <AlertTriangle size={12} /> {error}
+        </p>
+      )}
+
+      <div className="flex items-center justify-end gap-2">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="px-3 py-1.5 text-sm rounded-lg transition-colors"
+          style={{
+            background: "var(--admin-hover-bg)",
+            color: "var(--admin-text-muted)",
+          }}>
+          Annulla
+        </button>
+        <button
+          type="submit"
+          disabled={pending}
+          className="px-3 py-1.5 text-sm rounded-lg font-medium transition-colors disabled:opacity-60 flex items-center gap-1.5"
+          style={{ background: "var(--admin-accent)", color: "#fff" }}>
+          {pending ? (
+            <>
+              <Loader2 size={12} className="animate-spin" /> Salvataggio...
+            </>
+          ) : (
+            "Salva modifiche"
+          )}
+        </button>
+      </div>
+    </form>
+  );
+}
+
 // ─── PermissionCatalog ────────────────────────────────────────────────
 function PermissionCatalog({
   permissions,
   systemKeys,
   onDelete,
+  onUpdate,
 }: {
   permissions: Permission[];
   systemKeys: Props["systemKeys"];
   onDelete: (id: number) => Promise<void>;
+  onUpdate: (id: number, patch: Partial<Permission>) => void;
 }) {
   const [search, setSearch] = useState("");
   const [showCreate, setShowCreate] = useState(false);
@@ -276,6 +455,7 @@ function PermissionCatalog({
           group={group}
           perms={perms as Permission[]}
           onDelete={onDelete}
+          onUpdate={onUpdate}
         />
       ))}
 
@@ -296,14 +476,17 @@ function GroupSection({
   group,
   perms,
   onDelete,
+  onUpdate,
 }: {
   group: string;
   perms: Permission[];
   onDelete: (id: number) => Promise<void>;
+  onUpdate: (id: number, patch: Partial<Permission>) => void;
 }) {
   const [open, setOpen] = useState(true);
   const [deletingId, setDeletingId] = useState<number | null>(null);
-  const [pendingId, startTransition] = useTransition();
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [, startTransition] = useTransition();
 
   function handleDelete(id: number) {
     startTransition(async () => {
@@ -354,76 +537,133 @@ function GroupSection({
           className="divide-y"
           style={{ borderTop: "1px solid var(--admin-card-border)" }}>
           {perms.map((perm) => (
-            <div
-              key={perm.id}
-              className="flex items-center justify-between gap-3 px-4 py-3"
-              style={{ background: "var(--admin-card-bg)" }}>
-              <div className="flex items-start gap-3 min-w-0">
-                <div
-                  className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
-                  style={{ background: "var(--admin-hover-bg)" }}>
-                  <Shield
-                    size={11}
-                    style={{ color: "var(--admin-text-faint)" }}
-                  />
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <PermissionBadge perm={perm} />
-                    <span
-                      className="text-sm font-medium truncate"
-                      style={{ color: "var(--admin-text)" }}>
-                      {perm.label}
-                    </span>
+            <div key={perm.id}>
+              <div
+                className="flex items-center justify-between gap-3 px-4 py-3"
+                style={{ background: "var(--admin-card-bg)" }}>
+                <div className="flex items-start gap-3 min-w-0">
+                  <div
+                    className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
+                    style={{ background: "var(--admin-hover-bg)" }}>
+                    <Shield
+                      size={11}
+                      style={{ color: "var(--admin-text-faint)" }}
+                    />
                   </div>
-                  {perm.description && (
-                    <p
-                      className="text-[11px] mt-0.5"
-                      style={{ color: "var(--admin-text-faint)" }}>
-                      {perm.description}
-                    </p>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <PermissionBadge perm={perm} />
+                      <span
+                        className="text-sm font-medium truncate"
+                        style={{ color: "var(--admin-text)" }}>
+                        {perm.label}
+                      </span>
+                    </div>
+                    {perm.description && (
+                      <p
+                        className="text-[11px] mt-0.5"
+                        style={{ color: "var(--admin-text-faint)" }}>
+                        {perm.description}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1 shrink-0">
+                  {/* Bottone edit */}
+                  {editingId !== perm.id && deletingId !== perm.id && (
+                    <button
+                      onClick={() => {
+                        setEditingId(perm.id);
+                        setDeletingId(null);
+                      }}
+                      className="p-1.5 rounded-lg transition-colors"
+                      style={{ color: "var(--admin-text-muted)" }}
+                      onMouseEnter={(e) =>
+                        (e.currentTarget.style.background = "var(--admin-hover-bg)")
+                      }
+                      onMouseLeave={(e) =>
+                        (e.currentTarget.style.background = "transparent")
+                      }
+                      title={`Modifica "${perm.label}"`}
+                      aria-label={`Modifica permesso ${perm.label}`}>
+                      <Pencil size={13} />
+                    </button>
+                  )}
+
+                  {/* Bottone delete / conferma */}
+                  {deletingId === perm.id ? (
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => handleDelete(perm.id)}
+                        className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors disabled:opacity-50"
+                        title="Conferma eliminazione">
+                        <Check size={13} />
+                      </button>
+                      <button
+                        onClick={() => setDeletingId(null)}
+                        className="p-1.5 rounded-lg transition-colors"
+                        style={{ color: "var(--admin-text-muted)" }}
+                        title="Annulla">
+                        <X size={13} />
+                      </button>
+                    </div>
+                  ) : editingId !== perm.id ? (
+                    <button
+                      onClick={() => {
+                        setDeletingId(perm.id);
+                        setEditingId(null);
+                      }}
+                      disabled={perm.isSystem}
+                      className="p-1.5 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                      style={{ color: "var(--admin-text-muted)" }}
+                      onMouseEnter={(e) => {
+                        if (!perm.isSystem)
+                          e.currentTarget.style.background = "#fef2f2";
+                      }}
+                      onMouseLeave={(e) =>
+                        (e.currentTarget.style.background = "transparent")
+                      }
+                      title={
+                        perm.isSystem
+                          ? "I permessi di sistema non possono essere eliminati"
+                          : `Elimina "${perm.label}"`
+                      }
+                      aria-label={
+                        perm.isSystem
+                          ? "Permesso di sistema, non eliminabile"
+                          : `Elimina permesso ${perm.label}`
+                      }>
+                      <Trash2 size={13} />
+                    </button>
+                  ) : (
+                    /* Quando si sta editando: mostra solo X per annullare */
+                    <button
+                      onClick={() => setEditingId(null)}
+                      className="p-1.5 rounded-lg transition-colors"
+                      style={{ color: "var(--admin-text-muted)" }}
+                      title="Annulla modifica">
+                      <X size={13} />
+                    </button>
                   )}
                 </div>
               </div>
 
-              <div className="flex items-center gap-1 shrink-0">
-                {deletingId === perm.id ? (
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => handleDelete(perm.id)}
-                      disabled={!!pendingId}
-                      className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors disabled:opacity-50"
-                      title="Conferma eliminazione">
-                      {pendingId ? (
-                        <div className="w-3 h-3 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
-                      ) : (
-                        <Check size={13} />
-                      )}
-                    </button>
-                    <button
-                      onClick={() => setDeletingId(null)}
-                      className="p-1.5 rounded-lg transition-colors"
-                      style={{ color: "var(--admin-text-muted)" }}
-                      title="Annulla">
-                      <X size={13} />
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setDeletingId(perm.id)}
-                    className="p-1.5 rounded-lg transition-colors"
-                    style={{ color: "var(--admin-text-muted)" }}
-                    onMouseEnter={(e) =>
-                      (e.currentTarget.style.background = "#fef2f2")
-                    }
-                    onMouseLeave={(e) =>
-                      (e.currentTarget.style.background = "transparent")
-                    }
-                    title="Elimina">
-                    <Trash2 size={13} />
-                  </button>
-                )}
-              </div>
+              {/* Form di edit inline */}
+              {editingId === perm.id && (
+                <div
+                  className="px-4 pb-4"
+                  style={{ background: "var(--admin-card-bg)" }}>
+                  <EditPermissionForm
+                    perm={perm}
+                    onSuccess={(patch) => {
+                      onUpdate(perm.id, patch);
+                      setEditingId(null);
+                    }}
+                    onCancel={() => setEditingId(null)}
+                  />
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -557,12 +797,10 @@ function RoleMatrix({
               onClick={() => setSelectedRole(r.id)}
               className="w-full text-left px-3 py-2.5 transition-colors"
               style={{
-                // ✦ CONTRASTO: ruolo attivo — background accent tenue ma chiaramente distinto
                 background: isActive
                   ? "color-mix(in oklch, var(--admin-accent) 14%, var(--admin-card-bg))"
                   : "transparent",
                 borderBottom: "1px solid var(--admin-card-border)",
-                // ✦ Bordo sinistro accent per enfatizzare la selezione
                 borderLeft: isActive
                   ? "3px solid var(--admin-accent)"
                   : "3px solid transparent",
@@ -575,7 +813,6 @@ function RoleMatrix({
                 <span
                   className="text-xs truncate"
                   style={{
-                    // ✦ CONTRASTO: testo attivo più scuro e grassetto
                     color: isActive
                       ? "var(--admin-text)"
                       : "var(--admin-text-muted)",
@@ -588,7 +825,6 @@ function RoleMatrix({
                 <span
                   className="text-[10px]"
                   style={{
-                    // ✦ CONTRASTO: count permessi più visibile se ruolo attivo
                     color: isActive
                       ? "var(--admin-text-muted)"
                       : "var(--admin-text-faint)",
@@ -673,11 +909,9 @@ function RoleMatrix({
                         className="flex items-center justify-between gap-3 px-4 py-2.5 transition-colors"
                         style={{
                           borderTop: "1px solid var(--admin-card-border)",
-                          // ✦ CONTRASTO: da 5% a 12% — sfondo assegnato ben visibile
                           background: has
                             ? "color-mix(in oklch, var(--admin-accent) 12%, var(--admin-card-bg))"
                             : "var(--admin-card-bg)",
-                          // ✦ Bordo sinistro sottile per le righe con permesso assegnato
                           borderLeft: has
                             ? "3px solid var(--admin-accent)"
                             : "3px solid transparent",
@@ -718,11 +952,9 @@ function RoleMatrix({
                                 : `Assegna permesso ${perm.label}`
                           }
                           style={{
-                            // ✦ CONTRASTO bottone assegnato: background accent pieno al 25%
                             background: has
                               ? "color-mix(in oklch, var(--admin-accent) 25%, transparent)"
                               : "var(--admin-input-bg)",
-                            // ✦ Bordo sottile per rendere il bottone visibile anche nello stato non-assegnato
                             border: has
                               ? "1px solid color-mix(in oklch, var(--admin-accent) 40%, transparent)"
                               : "1px solid var(--admin-input-border)",
@@ -730,13 +962,11 @@ function RoleMatrix({
                           {has ? (
                             <ShieldCheck
                               size={14}
-                              // ✦ CONTRASTO: colore accent pieno, non mischiato
                               style={{ color: "var(--admin-accent)" }}
                             />
                           ) : (
                             <ShieldOff
                               size={14}
-                              // ✦ CONTRASTO: da --admin-text-faint a --admin-text-muted (più scuro)
                               style={{ color: "var(--admin-text-muted)" }}
                             />
                           )}
@@ -877,14 +1107,35 @@ export function PermissionsManager({
   const [activeTab, setActiveTab] = useState<TabId>("catalog");
   const [optimisticPerms, applyOptimistic] = useOptimistic(
     initialPermissions,
-    (state, id: number) => state.filter((p) => p.id !== id),
+    (
+      state,
+      action:
+        | { type: "delete"; id: number }
+        | { type: "update"; id: number; patch: Partial<Permission> },
+    ) => {
+      if (action.type === "delete") {
+        return state.filter((p) => p.id !== action.id);
+      }
+      return state.map((p) =>
+        p.id === action.id ? { ...p, ...action.patch } : p,
+      );
+    },
   );
   const [, startTransition] = useTransition();
 
-  async function handleDelete(id: number) {
-    startTransition(async () => {
-      applyOptimistic(id);
-      await deletePermission(id);
+  function handleDelete(id: number) {
+    return new Promise<void>((resolve) => {
+      startTransition(async () => {
+        applyOptimistic({ type: "delete", id });
+        await deletePermission(id);
+        resolve();
+      });
+    });
+  }
+
+  function handleUpdate(id: number, patch: Partial<Permission>) {
+    startTransition(() => {
+      applyOptimistic({ type: "update", id, patch });
     });
   }
 
@@ -923,6 +1174,7 @@ export function PermissionsManager({
           permissions={optimisticPerms}
           systemKeys={systemKeys}
           onDelete={handleDelete}
+          onUpdate={handleUpdate}
         />
       )}
       {activeTab === "matrix" && (
