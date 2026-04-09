@@ -78,11 +78,17 @@ export type AdminUser = {
 
 export async function getAdminUsers({
   search = "",
+  role = "",
+  plan = "",
+  verified = "",
   page = 1,
   perPage = 20,
-  filter = "all",
+  filter,
 }: {
   search?: string;
+  role?: string;
+  plan?: string;
+  verified?: string;
   page?: number;
   perPage?: number;
   filter?: "all" | "active" | "banned" | "premium" | "free";
@@ -90,6 +96,15 @@ export async function getAdminUsers({
   noStore();
 
   const offset = (page - 1) * perPage;
+
+  const normalizedFilter =
+    filter && filter !== "all"
+      ? filter
+      : plan === "premium"
+        ? "premium"
+        : plan === "free"
+          ? "free"
+          : undefined;
 
   const baseWhere = and(
     isNull(users.deletedAt),
@@ -101,13 +116,19 @@ export async function getAdminUsers({
           ${users.lastName} ILIKE ${"%" + search + "%"}
         )`
       : undefined,
-    filter === "banned"
+    role ? eq(users.role, role) : undefined,
+    verified === "true"
+      ? sql`${users.emailVerified} = true`
+      : verified === "false"
+        ? sql`${users.emailVerified} = false`
+        : undefined,
+    normalizedFilter === "banned"
       ? isNotNull(users.bannedAt)
-      : filter === "premium"
+      : normalizedFilter === "premium"
         ? and(isNotNull(users.stripeSubscriptionId), sql`${users.subscriptionStatus} = 'active'`)
-        : filter === "free"
+        : normalizedFilter === "free"
           ? sql`(${users.stripeSubscriptionId} IS NULL OR ${users.subscriptionStatus} != 'active')`
-          : filter === "active"
+          : normalizedFilter === "active"
             ? isNull(users.bannedAt)
             : undefined,
   );
