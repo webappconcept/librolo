@@ -1,10 +1,13 @@
 // app/(admin)/admin/logs/_components/logs-client.tsx
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { ActivityType } from "@/lib/db/schema";
 import {
   Activity,
+  ChevronLeft,
+  ChevronRight,
   Filter,
   KeyRound,
   LogIn,
@@ -25,27 +28,22 @@ type LogEntry = {
   timestamp: Date;
 };
 
-type Props = { logs: LogEntry[] };
+type PaginatedData = {
+  logs: LogEntry[];
+  total: number;
+  page: number;
+  perPage: number;
+  totalPages: number;
+};
 
-// --- Tabs disponibili (aggiungere qui i futuri tab) ---
+type Props = { data: PaginatedData };
+
 const TABS = [
   { id: "rbac", label: "RBAC", icon: KeyRound },
   { id: "auth", label: "Autenticazione", icon: LogIn },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
-
-// Prefissi ActivityType per categoria
-const RBAC_TYPES = new Set([
-  ActivityType.PERMISSION_GRANTED,
-  ActivityType.PERMISSION_REVOKED,
-  ActivityType.ROLE_PERMISSION_ADDED,
-  ActivityType.ROLE_PERMISSION_REMOVED,
-  ActivityType.ADMIN_CHANGE_ROLE,
-  ActivityType.ADMIN_BAN_USER,
-  ActivityType.ADMIN_UNBAN_USER,
-  ActivityType.ADMIN_DELETE_USER,
-]);
 
 const AUTH_TYPES = new Set([
   ActivityType.SIGN_IN,
@@ -58,7 +56,6 @@ const AUTH_TYPES = new Set([
 ]);
 
 function getActionType(action: string): ActivityType | null {
-  // Il formato è "ACTIVITY_TYPE | detail" oppure solo "ACTIVITY_TYPE"
   const part = action.split(" | ")[0].trim() as ActivityType;
   return Object.values(ActivityType).includes(part) ? part : null;
 }
@@ -109,39 +106,33 @@ function TypeBadge({ type }: { type: ActivityType | null }) {
   );
 }
 
-export function LogsClient({ logs }: Props) {
-  const [activeTab, setActiveTab] = useState<TabId>("rbac");
+export function LogsClient({ data }: Props) {
+  const { logs, total, page, perPage, totalPages } = data;
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const activeTab = (searchParams.get("tab") ?? "rbac") as TabId;
   const [search, setSearch] = useState("");
 
-  const filtered = useMemo(() => {
-    let entries = logs;
+  function navigate(newPage: number, newTab?: string) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("page", String(newPage));
+    if (newTab !== undefined) params.set("tab", newTab);
+    router.push(`${pathname}?${params.toString()}`);
+  }
 
-    // Filtra per tab
-    if (activeTab === "rbac") {
-      entries = entries.filter((l) => {
-        const t = getActionType(l.action);
-        return t && RBAC_TYPES.has(t);
-      });
-    } else if (activeTab === "auth") {
-      entries = entries.filter((l) => {
-        const t = getActionType(l.action);
-        return t && AUTH_TYPES.has(t);
-      });
-    }
-
-    // Filtra per ricerca
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      entries = entries.filter(
+  const filtered = search.trim()
+    ? logs.filter(
         (l) =>
-          l.action.toLowerCase().includes(q) ||
-          (l.userEmail ?? "").toLowerCase().includes(q) ||
-          (l.ipAddress ?? "").includes(q),
-      );
-    }
+          l.action.toLowerCase().includes(search.toLowerCase()) ||
+          (l.userEmail ?? "").toLowerCase().includes(search.toLowerCase()) ||
+          (l.ipAddress ?? "").includes(search),
+      )
+    : logs;
 
-    return entries;
-  }, [logs, activeTab, search]);
+  const start = (page - 1) * perPage + 1;
+  const end = Math.min(page * perPage, total);
 
   return (
     <div className="space-y-4">
@@ -153,15 +144,10 @@ export function LogsClient({ logs }: Props) {
           {TABS.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
-            // Conta per tab
-            const count =
-              tab.id === "rbac"
-                ? logs.filter((l) => { const t = getActionType(l.action); return t && RBAC_TYPES.has(t); }).length
-                : logs.filter((l) => { const t = getActionType(l.action); return t && AUTH_TYPES.has(t); }).length;
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => navigate(1, tab.id)}
                 className="flex items-center gap-1.5 px-4 py-1.5 text-sm rounded-lg font-medium transition-all"
                 style={{
                   background: isActive ? "var(--admin-accent)" : "transparent",
@@ -170,14 +156,6 @@ export function LogsClient({ logs }: Props) {
                 }}>
                 <Icon size={13} />
                 {tab.label}
-                <span
-                  className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                  style={{
-                    background: isActive ? "rgba(255,255,255,0.25)" : "var(--admin-card-border)",
-                    color: isActive ? "#fff" : "var(--admin-text-faint)",
-                  }}>
-                  {count}
-                </span>
               </button>
             );
           })}
@@ -210,7 +188,7 @@ export function LogsClient({ logs }: Props) {
         <div className="flex items-center gap-2">
           <Filter size={12} style={{ color: "var(--admin-text-faint)" }} />
           <span className="text-xs" style={{ color: "var(--admin-text-faint)" }}>
-            {filtered.length} risultati per &ldquo;{search}&rdquo;
+            {filtered.length} risultati in questa pagina per &ldquo;{search}&rdquo;
           </span>
           <button
             onClick={() => setSearch("")}
@@ -247,14 +225,11 @@ export function LogsClient({ logs }: Props) {
                   style={{
                     borderBottom: isLast ? "none" : "1px solid var(--admin-card-border)",
                   }}>
-                  {/* Icona */}
                   <div
                     className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
                     style={{ background: "var(--admin-hover-bg)" }}>
                     <ActionIcon type={type} />
                   </div>
-
-                  {/* Contenuto */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <TypeBadge type={type} />
@@ -274,16 +249,12 @@ export function LogsClient({ logs }: Props) {
                         </span>
                       )}
                       {log.ipAddress && (
-                        <span
-                          className="text-[11px] font-mono"
-                          style={{ color: "var(--admin-text-faint)" }}>
+                        <span className="text-[11px] font-mono" style={{ color: "var(--admin-text-faint)" }}>
                           {log.ipAddress}
                         </span>
                       )}
                     </div>
                   </div>
-
-                  {/* Timestamp */}
                   <time
                     className="text-[11px] shrink-0 tabular-nums"
                     style={{ color: "var(--admin-text-faint)" }}
@@ -302,9 +273,72 @@ export function LogsClient({ logs }: Props) {
         )}
       </div>
 
-      <p className="text-xs text-right" style={{ color: "var(--admin-text-faint)" }}>
-        Ultimi {logs.length} eventi • ordinati dal più recente
-      </p>
+      {/* Paginazione */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between gap-4">
+          <span className="text-xs tabular-nums" style={{ color: "var(--admin-text-faint)" }}>
+            {start}–{end} di {total} eventi
+          </span>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => navigate(page - 1)}
+              disabled={page <= 1}
+              className="flex items-center justify-center w-8 h-8 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{ border: "1px solid var(--admin-card-border)", color: "var(--admin-text-muted)" }}
+              onMouseEnter={(e) => { if (page > 1) (e.currentTarget as HTMLButtonElement).style.background = "var(--admin-hover-bg)"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
+              aria-label="Pagina precedente">
+              <ChevronLeft size={15} />
+            </button>
+
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+              .reduce<(number | "...")[]>((acc, p, idx, arr) => {
+                if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push("...");
+                acc.push(p);
+                return acc;
+              }, [])
+              .map((p, idx) =>
+                p === "..." ? (
+                  <span key={`dots-${idx}`} className="w-8 text-center text-xs" style={{ color: "var(--admin-text-faint)" }}>
+                    &hellip;
+                  </span>
+                ) : (
+                  <button
+                    key={p}
+                    onClick={() => navigate(p as number)}
+                    className="w-8 h-8 rounded-lg text-xs font-medium transition-colors"
+                    style={{
+                      background: p === page ? "var(--admin-accent)" : "transparent",
+                      color: p === page ? "#fff" : "var(--admin-text-muted)",
+                      border: p === page ? "none" : "1px solid var(--admin-card-border)",
+                    }}
+                    onMouseEnter={(e) => { if (p !== page) (e.currentTarget as HTMLButtonElement).style.background = "var(--admin-hover-bg)"; }}
+                    onMouseLeave={(e) => { if (p !== page) (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}>
+                    {p}
+                  </button>
+                ),
+              )}
+
+            <button
+              onClick={() => navigate(page + 1)}
+              disabled={page >= totalPages}
+              className="flex items-center justify-center w-8 h-8 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{ border: "1px solid var(--admin-card-border)", color: "var(--admin-text-muted)" }}
+              onMouseEnter={(e) => { if (page < totalPages) (e.currentTarget as HTMLButtonElement).style.background = "var(--admin-hover-bg)"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
+              aria-label="Pagina successiva">
+              <ChevronRight size={15} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {totalPages <= 1 && (
+        <p className="text-xs text-right" style={{ color: "var(--admin-text-faint)" }}>
+          {total} eventi totali • ordinati dal più recente
+        </p>
+      )}
     </div>
   );
 }
