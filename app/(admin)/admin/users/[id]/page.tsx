@@ -1,7 +1,7 @@
 // app/(admin)/admin/users/[id]/page.tsx
 import { getAdminUserActivity, getAdminUserById } from "@/lib/db/admin-queries";
 import { getAdminRoles } from "@/lib/db/roles-queries";
-import { getAllPermissions, getPermissionsByRole, getUserPermissionOverrides } from "@/lib/rbac/permissions-queries";
+import { getAllPermissions, getPermissionsByRole, getUserPermissionOverrides, purgeExpiredOverrides } from "@/lib/rbac/permissions-queries";
 import { db } from "@/lib/db/drizzle";
 import { roles } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
@@ -46,6 +46,9 @@ async function UserContent({ id }: { id: number }) {
   ]);
 
   if (!user) notFound();
+
+  // Auto-purge override scaduti — silenzioso, nessun await bloccante per l'UI
+  void purgeExpiredOverrides(id);
 
   // Carica permessi del ruolo e override in parallelo
   const userRoleRow = await db
@@ -116,10 +119,11 @@ async function UserContent({ id }: { id: number }) {
       style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-card-border)" }}>
       <div className="flex items-center gap-2 mb-4">
         <Activity size={15} style={{ color: "var(--admin-text-faint)" }} />
-        <h4 className="text-sm font-semibold" style={{ color: "var(--admin-text)" }}>Attività recenti</h4>
-        <span className="text-xs" style={{ color: "var(--admin-text-faint)" }}>({activity.length})</span>
+        <h4 className="text-sm font-semibold" style={{ color: "var(--admin-text)" }}>Attività recente</h4>
       </div>
-      <ActivityList activity={activity} />
+      <Suspense fallback={<p className="text-sm" style={{ color: "var(--admin-text-faint)" }}>Caricamento...</p>}>
+        <ActivityList userId={id} activity={activity} />
+      </Suspense>
     </div>
   );
 
@@ -130,74 +134,35 @@ async function UserContent({ id }: { id: number }) {
       rolePerms={rolePerms}
       overrides={overrides}
       allPermissions={allPermissions}
-      userRole={userRoleRow as any}
+      userRole={userRoleRow}
     />
   );
 
   return (
     <div className="space-y-6">
-      {/* Header profilo */}
-      <div className="rounded-xl shadow-sm p-6"
-        style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-card-border)" }}>
-        <div className="flex items-start justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-4">
-            <div
-              className="w-16 h-16 rounded-2xl flex items-center justify-center text-white text-xl font-bold shrink-0"
-              style={{ background: user.roleColor ?? "var(--admin-accent)" }}>
-              {initials}
-            </div>
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-lg font-bold" style={{ color: "var(--admin-text)" }}>
-                  {user.firstName} {user.lastName}
-                </h3>
-                <StatusBadge user={user} />
-              </div>
-              <p className="text-sm mt-0.5" style={{ color: "var(--admin-text-faint)" }}>{user.email}</p>
-              <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                <span
-                  className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
-                  style={{
-                    background: (user.roleColor ?? "#6b7280") + "18",
-                    color: user.roleColor ?? "#6b7280",
-                    border: `1px solid ${(user.roleColor ?? "#6b7280")}40`,
-                  }}>
-                  {user.roleLabel ?? user.role}
-                </span>
-                <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
-                  isPremium ? "bg-orange-100 text-orange-700" : "bg-gray-100 text-gray-500"
-                }`}>
-                  {isPremium ? "Premium" : "Free"}
-                </span>
-                <span className={`text-[11px] font-medium ${
-                  user.emailVerified ? "text-emerald-600" : "text-[var(--admin-text-faint)]"
-                }`}>
-                  {user.emailVerified ? "✓ Email verificata" : "Email non verificata"}
-                </span>
-                {overrides.length > 0 && (
-                  <span
-                    className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                    style={{ background: "#eff6ff", color: "#2563eb" }}>
-                    <Key size={9} /> {overrides.length} override
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <BanButton user={user} />
-          </div>
+      {/* Header utente */}
+      <div className="flex items-start gap-4">
+        <div
+          className="w-14 h-14 rounded-2xl flex items-center justify-center text-lg font-bold shrink-0 text-white"
+          style={{ background: "var(--admin-accent)" }}>
+          {initials}
         </div>
-
-        {user.bannedAt && user.bannedReason && (
-          <div className="mt-4 px-4 py-3 bg-red-50 border border-red-100 rounded-lg">
-            <p className="text-xs font-medium text-red-600">Motivo sospensione</p>
-            <p className="text-sm text-red-700 mt-0.5">{user.bannedReason}</p>
-            <p className="text-xs text-red-400 mt-1">
-              Il {new Date(user.bannedAt).toLocaleDateString("it-IT", { day: "numeric", month: "long", year: "numeric" })}
-            </p>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h2 className="text-xl font-bold" style={{ color: "var(--admin-text)" }}>
+              {user.firstName && user.lastName
+                ? `${user.firstName} ${user.lastName}`
+                : user.email}
+            </h2>
+            <StatusBadge user={user} />
           </div>
-        )}
+          <p className="text-sm mt-0.5" style={{ color: "var(--admin-text-muted)" }}>
+            {user.email} · ID #{user.id}
+          </p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <BanButton user={user} />
+        </div>
       </div>
 
       {/* Tabs */}
@@ -205,37 +170,34 @@ async function UserContent({ id }: { id: number }) {
         infoContent={infoContent}
         activityContent={activityContent}
         accessContent={accessContent}
-        overridesCount={overrides.length}
       />
     </div>
   );
 }
 
-export default async function AdminUserDetailPage({
+export default async function AdminUserPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
   const userId = Number(id);
-  if (isNaN(userId)) notFound();
+  if (!userId || isNaN(userId)) notFound();
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-center gap-2">
-        <Link href="/admin/users" className="admin-breadcrumb-link flex items-center gap-1.5 text-sm">
-          <ArrowLeft size={15} />
-          Utenti
-        </Link>
-        <span style={{ color: "var(--admin-divider)" }}>/</span>
-        <span className="text-sm font-medium" style={{ color: "var(--admin-text-muted)" }}>Dettaglio</span>
-      </div>
-
+    <div className="space-y-6">
+      <Link
+        href="/admin/users"
+        className="inline-flex items-center gap-1.5 text-sm transition-colors"
+        style={{ color: "var(--admin-text-muted)" }}>
+        <ArrowLeft size={14} />
+        Tutti gli utenti
+      </Link>
       <Suspense
         fallback={
-          <div className="flex items-center justify-center h-40">
-            <div className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin"
-              style={{ borderColor: "var(--admin-accent)", borderTopColor: "transparent" }} />
+          <div className="animate-pulse space-y-4">
+            <div className="h-14 rounded-2xl" style={{ background: "var(--admin-hover-bg)" }} />
+            <div className="h-64 rounded-xl" style={{ background: "var(--admin-hover-bg)" }} />
           </div>
         }>
         <UserContent id={userId} />

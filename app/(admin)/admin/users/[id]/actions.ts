@@ -4,6 +4,7 @@
 import {
   addUserPermissionOverride,
   removeUserPermissionOverride,
+  purgeExpiredOverrides,
 } from "@/lib/rbac/permissions-queries";
 import { db } from "@/lib/db/drizzle";
 import { permissions } from "@/lib/db/schema";
@@ -52,4 +53,17 @@ export async function removeOverride(overrideId: number, userId: number) {
   await removeUserPermissionOverride(overrideId);
   revalidatePath(`/admin/users/${userId}`);
   return { success: true };
+}
+
+/**
+ * Elimina tutti gli override scaduti dell'utente.
+ * Chiamata sia manualmente dal pulsante UI sia automaticamente al caricamento della pagina.
+ */
+export async function purgeExpired(userId: number) {
+  const admin = await getUser();
+  if (!admin || !admin.isAdmin) return { error: "Non autorizzato" };
+
+  const deleted = await purgeExpiredOverrides(userId);
+  revalidatePath(`/admin/users/${userId}`);
+  return { success: true, deleted };
 }

@@ -9,7 +9,7 @@ import {
   roles,
   users,
 } from "@/lib/db/schema";
-import { and, eq, gt, isNull, or, desc, sql } from "drizzle-orm";
+import { and, eq, gt, isNull, lt, or, desc, sql } from "drizzle-orm";
 
 const USERS_WITH_PERMISSION_LIMIT = 200;
 
@@ -50,6 +50,24 @@ export async function getUserPermissionOverrides(userId: number) {
     .innerJoin(permissions, eq(userPermissions.permissionId, permissions.id))
     .where(eq(userPermissions.userId, userId))
     .orderBy(desc(userPermissions.updatedAt));
+}
+
+/**
+ * Elimina tutti gli override scaduti di un utente specifico.
+ * Restituisce il numero di righe eliminate.
+ */
+export async function purgeExpiredOverrides(userId: number): Promise<number> {
+  const now = new Date();
+  const result = await db
+    .delete(userPermissions)
+    .where(
+      and(
+        eq(userPermissions.userId, userId),
+        lt(userPermissions.expiresAt, now),
+      ),
+    )
+    .returning({ id: userPermissions.id });
+  return result.length;
 }
 
 /**

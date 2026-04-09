@@ -5,7 +5,7 @@ import type { Permission } from "@/lib/db/schema";
 import type { RoleRow } from "@/lib/db/roles-queries";
 import { Check, Clock, Plus, Shield, ShieldOff, Trash2, X } from "lucide-react";
 import { useTransition, useState } from "react";
-import { addOverride, removeOverride } from "../actions";
+import { addOverride, removeOverride, purgeExpired } from "../actions";
 
 type Override = {
   id: number;
@@ -215,7 +215,12 @@ export function UserAccessTab({
 }: Props) {
   const [showAdd, setShowAdd] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [purging, startPurgeTransition] = useTransition();
   const [, startTransition] = useTransition();
+
+  const expiredCount = overrides.filter(
+    (ov) => ov.expiresAt && new Date(ov.expiresAt) < new Date(),
+  ).length;
 
   // Raggruppa permessi del ruolo per gruppo
   const roleGroups = rolePerms.reduce(
@@ -232,6 +237,12 @@ export function UserAccessTab({
     startTransition(async () => {
       await removeOverride(overrideId, userId);
       setDeletingId(null);
+    });
+  }
+
+  function handlePurgeExpired() {
+    startPurgeTransition(async () => {
+      await purgeExpired(userId);
     });
   }
 
@@ -322,14 +333,35 @@ export function UserAccessTab({
               ({overrides.length})
             </span>
           </div>
-          {!showAdd && (
-            <button
-              onClick={() => setShowAdd(true)}
-              className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg text-white"
-              style={{ background: "var(--admin-accent)" }}>
-              <Plus size={12} /> Aggiungi
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {/* Pulsante purge — visibile solo se ci sono scaduti */}
+            {expiredCount > 0 && (
+              <button
+                onClick={handlePurgeExpired}
+                disabled={purging}
+                className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg disabled:opacity-50"
+                style={{
+                  color: "var(--admin-text-muted)",
+                  background: "var(--admin-hover-bg)",
+                  border: "1px solid var(--admin-card-border)",
+                }}>
+                {purging ? (
+                  <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Trash2 size={11} />
+                )}
+                Pulisci scaduti ({expiredCount})
+              </button>
+            )}
+            {!showAdd && (
+              <button
+                onClick={() => setShowAdd(true)}
+                className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg text-white"
+                style={{ background: "var(--admin-accent)" }}>
+                <Plus size={12} /> Aggiungi
+              </button>
+            )}
+          </div>
         </div>
 
         {showAdd && (
@@ -405,11 +437,12 @@ export function UserAccessTab({
                       />
                       {isExpired && (
                         <span
-                          className="text-[10px] px-1.5 py-0.5 rounded-full"
+                          className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full"
                           style={{
-                            background: "var(--admin-hover-bg)",
-                            color: "var(--admin-text-faint)",
+                            background: "#fef9c3",
+                            color: "#854d0e",
                           }}>
+                          <Clock size={8} />
                           Scaduto
                         </span>
                       )}
@@ -421,19 +454,11 @@ export function UserAccessTab({
                         {ov.reason}
                       </p>
                     )}
-                    {ov.expiresAt && (
+                    {ov.expiresAt && !isExpired && (
                       <p
-                        className="text-[10px] mt-0.5 flex items-center gap-1"
+                        className="text-[10px] mt-0.5"
                         style={{ color: "var(--admin-text-faint)" }}>
-                        <Clock size={9} />
-                        Scade il{" "}
-                        {new Date(ov.expiresAt).toLocaleDateString("it-IT", {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
+                        Scade: {new Date(ov.expiresAt).toLocaleString("it-IT")}
                       </p>
                     )}
                   </div>
@@ -442,19 +467,22 @@ export function UserAccessTab({
                   <button
                     onClick={() => handleRemove(ov.id)}
                     disabled={deletingId === ov.id}
-                    className="p-1.5 rounded-lg transition-colors shrink-0 disabled:opacity-50"
-                    style={{ color: "var(--admin-text-faint)" }}
+                    className="shrink-0 w-7 h-7 flex items-center justify-center rounded-lg transition-colors disabled:opacity-40"
+                    title="Rimuovi override"
+                    style={{
+                      color: "var(--admin-text-faint)",
+                      background: "transparent",
+                    }}
                     onMouseEnter={(e) =>
-                      (e.currentTarget.style.background = "#fef2f2")
+                      ((e.currentTarget as HTMLButtonElement).style.background = "var(--admin-hover-bg)")
                     }
                     onMouseLeave={(e) =>
-                      (e.currentTarget.style.background = "transparent")
-                    }
-                    title="Rimuovi override">
+                      ((e.currentTarget as HTMLButtonElement).style.background = "transparent")
+                    }>
                     {deletingId === ov.id ? (
-                      <div className="w-3 h-3 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
+                      <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
                     ) : (
-                      <Trash2 size={13} />
+                      <Trash2 size={12} />
                     )}
                   </button>
                 </div>
