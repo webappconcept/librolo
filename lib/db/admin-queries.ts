@@ -171,6 +171,72 @@ export async function getAdminUsers({
   };
 }
 
+export async function getStaffUsers({
+  search = "",
+  role = "",
+  page = 1,
+  perPage = 20,
+}: {
+  search?: string;
+  role?: string;
+  page?: number;
+  perPage?: number;
+} = {}) {
+  noStore();
+
+  const offset = (page - 1) * perPage;
+
+  const baseWhere = and(
+    isNull(users.deletedAt),
+    sql`${users.isAdmin} = true`,
+    search
+      ? sql`(
+          ${users.email} ILIKE ${"%" + search + "%"} OR
+          ${users.firstName} ILIKE ${"%" + search + "%"} OR
+          ${users.lastName} ILIKE ${"%" + search + "%"}
+        )`
+      : undefined,
+    role ? eq(users.role, role) : undefined,
+  );
+
+  const [rows, totalCount] = await Promise.all([
+    db
+      .select({
+        id: users.id,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        email: users.email,
+        role: users.role,
+        roleLabel: roles.label,
+        roleColor: roles.color,
+        isAdmin: users.isAdmin,
+        isStaff: users.isStaff,
+        planName: users.planName,
+        subscriptionStatus: users.subscriptionStatus,
+        emailVerified: users.emailVerified,
+        createdAt: users.createdAt,
+        bannedAt: users.bannedAt,
+        deletedAt: users.deletedAt,
+        bannedReason: users.bannedReason,
+      })
+      .from(users)
+      .leftJoin(roles, eq(users.role, roles.name))
+      .where(baseWhere)
+      .orderBy(desc(users.createdAt))
+      .limit(perPage)
+      .offset(offset),
+    db.select({ count: count() }).from(users).leftJoin(roles, eq(users.role, roles.name)).where(baseWhere),
+  ]);
+
+  return {
+    users: rows as AdminUser[],
+    total: totalCount[0].count,
+    page,
+    perPage,
+    totalPages: Math.ceil(totalCount[0].count / perPage),
+  };
+}
+
 export async function getAdminUserById(id: number) {
   const [user] = await db
     .select({
@@ -243,7 +309,6 @@ export async function getActivityLogs({
 
   const offset = (page - 1) * perPage;
 
-  // Costruisci il filtro SQL per tab
   const RBAC_ACTIONS = [
     "PERMISSION_GRANTED",
     "PERMISSION_REVOKED",
