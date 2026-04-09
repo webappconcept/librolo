@@ -176,6 +176,12 @@ export async function getAdminUserById(id: number) {
   return user ?? null;
 }
 
+/**
+ * Tipo del singolo utente restituito da getAdminUserById.
+ * Usato dai componenti client della pagina /admin/users/[id].
+ */
+export type AdminUserDetail = NonNullable<Awaited<ReturnType<typeof getAdminUserById>>>;
+
 export type AdminUserActivity = {
   id: number;
   action: string;
