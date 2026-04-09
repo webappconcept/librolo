@@ -104,10 +104,10 @@ function PermissionCatalog({
   }
 
   // Stile input uniforme al resto dell'admin
-  const inputCls = "w-full px-3 py-2 text-sm rounded-lg outline-none border focus:ring-2";
+  const inputCls = "w-full px-3 py-2 text-sm rounded-lg outline-none focus:ring-2";
   const inputStyle = {
-    background: "var(--admin-page-bg)",
-    borderColor: "var(--admin-input-border)",
+    background: "var(--admin-input-bg)",
+    border: "1px solid var(--admin-input-border)",
     color: "var(--admin-text)",
   };
 
@@ -127,7 +127,7 @@ function PermissionCatalog({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-8 pr-4 py-2 text-sm rounded-lg outline-none"
-            style={{ background: "var(--admin-page-bg)", borderColor: "var(--admin-input-border)", color: "var(--admin-text)", border: "1px solid var(--admin-input-border)" }}
+            style={{ background: "var(--admin-input-bg)", border: "1px solid var(--admin-input-border)", color: "var(--admin-text)" }}
           />
         </div>
         {!showCreate && (
@@ -145,7 +145,7 @@ function PermissionCatalog({
         <form
           onSubmit={handleCreate}
           className="rounded-xl p-4 space-y-3"
-          style={{ background: "var(--admin-card-bg)", border: "1px solid oklch(0 0 0 / 0.13)" }}>
+          style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-card-border)" }}>
           <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--admin-text-faint)" }}>
             Nuovo permesso
           </p>
@@ -478,7 +478,7 @@ function RoleMatrix({
                   onChange={(e) => setSearch(e.target.value)}
                   className="pl-7 pr-3 py-1.5 text-xs rounded-lg outline-none border"
                   style={{
-                    background: "var(--admin-page-bg)",
+                    background: "var(--admin-input-bg)",
                     borderColor: "var(--admin-input-border)",
                     color: "var(--admin-text)",
                   }}
