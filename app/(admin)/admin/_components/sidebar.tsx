@@ -14,6 +14,7 @@ import {
   Settings,
   ShieldAlert,
   ShieldCheck,
+  UserCog,
   Users,
   X,
 } from "lucide-react";
@@ -26,22 +27,23 @@ const NAV_TOP = [
 ];
 
 const USERS_SUB = [
-  { href: "/admin/users", label: "Gestione Utenti", icon: Users },
-  { href: "/admin/roles", label: "Gestione Ruoli", icon: ShieldCheck },
-  { href: "/admin/permissions", label: "Permessi", icon: KeyRound },
+  { href: "/admin/users",       label: "Gestione Utenti", icon: Users },
+  { href: "/admin/staff",       label: "Gestione Staff",  icon: UserCog },
+  { href: "/admin/roles",       label: "Gestione Ruoli",  icon: ShieldCheck },
+  { href: "/admin/permissions", label: "Permessi",        icon: KeyRound },
 ];
 
 const SEO_SUB = [
   { href: "/admin/seo/meta-tags", label: "Meta Tags", icon: FileText },
-  { href: "/admin/seo/robots", label: "Robots", icon: Globe },
-  { href: "/admin/seo/sitemap", label: "Sitemap", icon: Map },
+  { href: "/admin/seo/robots",    label: "Robots",    icon: Globe },
+  { href: "/admin/seo/sitemap",   label: "Sitemap",   icon: Map },
 ];
 
 const NAV_BOTTOM = [
-  { href: "/admin/moderation", label: "Moderazione", icon: ShieldAlert },
-  { href: "/admin/analytics", label: "Analytics", icon: BarChart2 },
-  { href: "/admin/settings", label: "Impostazioni", icon: Settings },
-  { href: "/admin/logs", label: "Log attività", icon: ClipboardList },
+  { href: "/admin/moderation", label: "Moderazione",   icon: ShieldAlert },
+  { href: "/admin/analytics",  label: "Analytics",     icon: BarChart2 },
+  { href: "/admin/settings",   label: "Impostazioni",  icon: Settings },
+  { href: "/admin/logs",       label: "Log attività",  icon: ClipboardList },
 ];
 
 interface AdminSidebarProps {
@@ -55,6 +57,7 @@ export default function AdminSidebar({ appName, open, onClose }: AdminSidebarPro
 
   const usersGroupActive =
     pathname.startsWith("/admin/users") ||
+    pathname.startsWith("/admin/staff") ||
     pathname.startsWith("/admin/roles") ||
     pathname.startsWith("/admin/permissions");
   const [usersOpen, setUsersOpen] = useState(usersGroupActive);
@@ -250,6 +253,7 @@ export default function AdminSidebar({ appName, open, onClose }: AdminSidebarPro
           isGroupActive={usersGroupActive}
           isOpen={usersOpen}
           onToggle={() => setUsersOpen((v) => !v)}
+          maxHeight="240px"
         >
           {USERS_SUB.map(({ href, label, icon }) => (
             <NavLink key={href} href={href} label={label} icon={icon} sub />
