@@ -6,7 +6,7 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { saveRobotsAction, type RobotsActionState } from "../actions";
 
 function buildDefaultRobots(domain: string): string {
-  const sitemapDomain = domain || "https://tuodominio.it";
+  const sitemapDomain = domain || "http://localhost:3000";
   return `User-agent: *
 Allow: /
 
@@ -17,9 +17,11 @@ Disallow: /admin/
 Sitemap: ${sitemapDomain}/sitemap.xml`;
 }
 
-const DEFAULT_HUMANS = `/* TEAM */
+function buildDefaultHumans(domain: string): string {
+  const siteDomain = domain || "http://localhost:3000";
+  return `/* TEAM */
 Chef: Nome Cognome
-Site: https://tuodominio.it
+Site: ${siteDomain}
 Location: Italia
 
 /* SITE */
@@ -27,6 +29,7 @@ Last update: ${new Date().toISOString().slice(0, 10)}
 Language: Italian
 Doctype: HTML5
 IDE: VS Code`;
+}
 
 const labelStyle = {
   fontSize: "0.65rem",
@@ -87,7 +90,7 @@ export default function RobotsEditor({
   const [robots, setRobots] = useState(
     initialRobots || buildDefaultRobots(domain),
   );
-  const [humans, setHumans] = useState(initialHumans || DEFAULT_HUMANS);
+  const [humans, setHumans] = useState(initialHumans || buildDefaultHumans(domain));
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const lastTs = useRef<number>(0);
 
