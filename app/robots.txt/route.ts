@@ -1,19 +1,21 @@
 import { db } from "@/lib/db/drizzle";
 import { appSettings } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const row = await db
-    .select()
-    .from(appSettings)
-    .where(eq(appSettings.key, "robots_txt"))
-    .then((r) => r[0]);
+  const rows = await db.select().from(appSettings);
+  const map = Object.fromEntries(rows.map((r) => [r.key, r.value]));
 
-  const content = row?.value?.trim() ||
-    `User-agent: *\nAllow: /\nDisallow: /admin/`;
+  // Dominio dalle impostazioni generali, con fallback
+  let domain = map["app_domain"]?.trim() ?? "";
+  if (domain && !/^https?:\/\//i.test(domain)) domain = `https://${domain}`;
+  domain = domain.replace(/\/$/, "") || "http://localhost:3000";
+
+  const content =
+    map["robots_txt"]?.trim() ||
+    `User-agent: *\nAllow: /\n\n# Blocca l'area admin\nDisallow: /admin/\n\n# Sitemap\nSitemap: ${domain}/sitemap.xml`;
 
   return new NextResponse(content, {
     status: 200,
