@@ -627,13 +627,14 @@ export default function SeoManager({
             return (
               <div
                 key={page.pathname}
-                className="flex items-center gap-4 px-4 py-3 rounded-xl transition-colors"
+                className="flex items-center gap-3 px-4 py-3 rounded-xl transition-colors"
                 style={{
                   background: "var(--admin-card-bg)",
                   border: "1px solid var(--admin-card-border)",
                 }}
                 onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.borderColor = "var(--admin-input-border)")}
                 onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.borderColor = "var(--admin-card-border)")}>
+
                 {/* Status dot */}
                 <div
                   className="w-2 h-2 rounded-full shrink-0"
@@ -641,17 +642,19 @@ export default function SeoManager({
                     background: complete ? "#22c55e" : hasTitle || hasDesc ? "#f59e0b" : "var(--admin-text-faint)",
                   }}
                 />
-                {/* Label + path */}
-                <div className="flex-1 min-w-0">
+
+                {/* Label + path — larghezza fissa, non cresce */}
+                <div className="shrink-0 w-40 min-w-0">
                   <p className="text-sm font-medium truncate" style={{ color: "var(--admin-text)" }}>
                     {page.label}
                   </p>
-                  <p className="text-xs font-mono" style={{ color: "var(--admin-text-faint)" }}>
+                  <p className="text-xs font-mono truncate" style={{ color: "var(--admin-text-faint)" }}>
                     {page.pathname}
                   </p>
                 </div>
-                {/* Title + desc preview */}
-                <div className="hidden sm:block flex-1 min-w-0">
+
+                {/* Title + desc preview — cresce e tronca */}
+                <div className="hidden sm:block flex-1 min-w-0 overflow-hidden">
                   {displayTitle ? (
                     <p className="text-xs truncate" style={{ color: "var(--admin-text-muted)" }}>{displayTitle}</p>
                   ) : (
@@ -663,30 +666,33 @@ export default function SeoManager({
                     <p className="text-xs italic" style={{ color: "var(--admin-text-faint)" }}>Nessuna descrizione</p>
                   )}
                 </div>
-                {/* Robots badge */}
-                {page.robots && (
-                  <span
-                    className="hidden sm:inline-flex text-xs px-2 py-0.5 rounded-full font-medium shrink-0"
-                    style={{
-                      background: "color-mix(in srgb, #d97706 12%, var(--admin-card-bg))",
-                      color: "#d97706",
-                      border: "1px solid color-mix(in srgb, #d97706 25%, transparent)",
-                    }}>
-                    {page.robots}
-                  </span>
-                )}
-                {/* JSON-LD badge */}
-                {page.jsonLdEnabled && page.jsonLdType && (
-                  <span
-                    className="hidden sm:inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium shrink-0"
-                    style={{
-                      background: "color-mix(in srgb, #8b5cf6 12%, var(--admin-card-bg))",
-                      color: "#8b5cf6",
-                      border: "1px solid color-mix(in srgb, #8b5cf6 25%, transparent)",
-                    }}>
-                    {page.jsonLdType}
-                  </span>
-                )}
+
+                {/* Badge robots + JSON-LD raggruppati — non si espandono */}
+                <div className="hidden sm:flex items-center gap-1.5 shrink-0">
+                  {page.robots && (
+                    <span
+                      className="inline-flex text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap"
+                      style={{
+                        background: "color-mix(in srgb, #d97706 12%, var(--admin-card-bg))",
+                        color: "#d97706",
+                        border: "1px solid color-mix(in srgb, #d97706 25%, transparent)",
+                      }}>
+                      {page.robots}
+                    </span>
+                  )}
+                  {page.jsonLdEnabled && page.jsonLdType && (
+                    <span
+                      className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap"
+                      style={{
+                        background: "color-mix(in srgb, #8b5cf6 12%, var(--admin-card-bg))",
+                        color: "#8b5cf6",
+                        border: "1px solid color-mix(in srgb, #8b5cf6 25%, transparent)",
+                      }}>
+                      {page.jsonLdType}
+                    </span>
+                  )}
+                </div>
+
                 {/* Actions */}
                 <div className="flex items-center gap-1 shrink-0">
                   <button
