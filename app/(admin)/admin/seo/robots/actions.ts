@@ -4,15 +4,20 @@ import { updateAppSetting } from "@/lib/db/settings-queries";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+export type RobotsActionState =
+  | Record<string, never>
+  | { timestamp: number; success: string }
+  | { timestamp: number; error: string };
+
 const schema = z.object({
   robots_txt: z.string().max(10000),
   humans_txt: z.string().max(10000),
 });
 
 export async function saveRobotsAction(
-  _: unknown,
+  _: RobotsActionState,
   formData: FormData,
-): Promise<{ error?: string; success?: boolean }> {
+): Promise<RobotsActionState> {
   const raw = {
     robots_txt: formData.get("robots_txt") ?? "",
     humans_txt: formData.get("humans_txt") ?? "",
@@ -20,7 +25,7 @@ export async function saveRobotsAction(
 
   const parsed = schema.safeParse(raw);
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Dati non validi" };
+    return { timestamp: Date.now(), error: parsed.error.issues[0]?.message ?? "Dati non validi" };
   }
 
   try {
@@ -33,8 +38,8 @@ export async function saveRobotsAction(
     revalidatePath("/admin/seo/robots");
   } catch (err) {
     console.error("[saveRobotsAction] error:", err);
-    return { error: "Errore nel salvataggio. Riprova." };
+    return { timestamp: Date.now(), error: "Errore nel salvataggio. Riprova." };
   }
 
-  return { success: true };
+  return { timestamp: Date.now(), success: "File salvati con successo" };
 }
