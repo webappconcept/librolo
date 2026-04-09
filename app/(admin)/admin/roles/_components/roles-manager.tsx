@@ -16,14 +16,13 @@ import { useTransition, useState } from "react";
 import { createRole, deleteRole, updateRole } from "../actions";
 
 // ─── Sanitizza lo slug in tempo reale ────────────────────────────────
-// Regole: solo a-z, 0-9, trattino. Spazi → trattino. Tutto il resto rimosso.
 function sanitizeSlug(raw: string): string {
   return raw
     .toLowerCase()
-    .replace(/\s+/g, "-")        // spazi (anche multipli) → singolo trattino
-    .replace(/[^a-z0-9-]/g, "")  // rimuove caratteri non validi
-    .replace(/-{2,}/g, "-")      // trattini multipli → uno solo
-    .replace(/^-+|-+$/g, "");    // strip trattini iniziali/finali
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "")
+    .replace(/-{2,}/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
 // ─── Colori preset ────────────────────────────────────────────────────
@@ -62,7 +61,6 @@ function RoleForm({
   const [color, setColor] = useState(initial?.color ?? "#6b7280");
   const [isAdmin, setIsAdmin] = useState(initial?.isAdmin ?? false);
   const [isStaff, setIsStaff] = useState(initial?.isStaff ?? false);
-  // slug controllato — inizializzato dal valore esistente già sanificato
   const [slug, setSlug] = useState(initial?.name ?? "");
   const isEdit = !!initial;
   const isSystem = initial?.isSystem ?? false;
@@ -74,7 +72,6 @@ function RoleForm({
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
-    // Sovrascrive il campo name con il valore già sanificato dallo state
     fd.set("name", slug);
     fd.set("color", color);
     fd.set("isAdmin", String(isAdmin));
@@ -82,12 +79,12 @@ function RoleForm({
     onSave(fd);
   }
 
+  // Stile identico alle Impostazioni: sfondo page-bg + bordo input-border
   const inputCls =
-    "w-full px-3 py-2 text-sm rounded-lg outline-none transition-all" +
-    " border focus:ring-2";
+    "w-full px-3 py-2 text-sm rounded-lg focus:outline-none transition-colors";
   const inputStyle = {
-    background: "var(--admin-bg)",
-    borderColor: "var(--admin-card-border)",
+    background: "var(--admin-page-bg)",
+    border: "1px solid var(--admin-input-border)",
     color: "var(--admin-text)",
   };
 
@@ -96,7 +93,7 @@ function RoleForm({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Slug */}
         <div>
-          <label className="block text-xs font-medium mb-1" style={{ color: "var(--admin-text-muted)" }}>
+          <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--admin-text-muted)" }}>
             Slug (identificatore interno)
           </label>
           <input
@@ -116,7 +113,6 @@ function RoleForm({
               letterSpacing: "0.02em",
             }}
           />
-          {/* Feedback visivo sotto il campo */}
           {isSystem ? (
             <p className="text-[11px] mt-1" style={{ color: "var(--admin-text-faint)" }}>
               Lo slug dei ruoli di sistema non può essere modificato.
@@ -136,7 +132,7 @@ function RoleForm({
 
         {/* Label */}
         <div>
-          <label className="block text-xs font-medium mb-1" style={{ color: "var(--admin-text-muted)" }}>
+          <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--admin-text-muted)" }}>
             Etichetta visibile
           </label>
           <input
@@ -152,7 +148,7 @@ function RoleForm({
 
       {/* Description */}
       <div>
-        <label className="block text-xs font-medium mb-1" style={{ color: "var(--admin-text-muted)" }}>
+        <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--admin-text-muted)" }}>
           Descrizione (opzionale)
         </label>
         <textarea
@@ -160,7 +156,7 @@ function RoleForm({
           defaultValue={initial?.description ?? ""}
           rows={2}
           placeholder="Cosa può fare questo ruolo..."
-          className={inputCls}
+          className={`${inputCls} resize-none`}
           style={inputStyle}
         />
       </div>
@@ -188,7 +184,7 @@ function RoleForm({
             value={color}
             onChange={(e) => setColor(e.target.value)}
             className="w-8 h-8 rounded cursor-pointer border"
-            style={{ borderColor: "var(--admin-card-border)" }}
+            style={{ borderColor: "var(--admin-input-border)" }}
             title="Colore personalizzato"
           />
           <span
@@ -201,7 +197,7 @@ function RoleForm({
 
       {/* Guard flag */}
       <div className="flex flex-col gap-3 pt-1">
-        <label className="flex items-start gap-3 cursor-pointer group">
+        <label className="flex items-start gap-3 cursor-pointer">
           <div className="mt-0.5">
             <button
               type="button"
@@ -211,7 +207,7 @@ function RoleForm({
               className="w-5 h-5 rounded border-2 flex items-center justify-center transition-colors"
               style={{
                 background: (isStaff || isAdmin) ? "var(--admin-accent)" : "transparent",
-                borderColor: (isStaff || isAdmin) ? "var(--admin-accent)" : "var(--admin-card-border)",
+                borderColor: (isStaff || isAdmin) ? "var(--admin-accent)" : "var(--admin-input-border)",
                 opacity: isAdmin ? 0.6 : 1,
               }}>
               {(isStaff || isAdmin) && <Check size={11} className="text-white" />}
@@ -225,7 +221,7 @@ function RoleForm({
           </div>
         </label>
 
-        <label className="flex items-start gap-3 cursor-pointer group">
+        <label className="flex items-start gap-3 cursor-pointer">
           <div className="mt-0.5">
             <button
               type="button"
@@ -239,15 +235,13 @@ function RoleForm({
               className="w-5 h-5 rounded border-2 flex items-center justify-center transition-colors"
               style={{
                 background: isAdmin ? "#7c3aed" : "transparent",
-                borderColor: isAdmin ? "#7c3aed" : "var(--admin-card-border)",
+                borderColor: isAdmin ? "#7c3aed" : "var(--admin-input-border)",
               }}>
               {isAdmin && <Check size={11} className="text-white" />}
             </button>
           </div>
           <div>
-            <p className="text-sm font-medium" style={{ color: "var(--admin-text)" }}>
-              Amministratore
-            </p>
+            <p className="text-sm font-medium" style={{ color: "var(--admin-text)" }}>Amministratore</p>
             <p className="text-xs" style={{ color: "var(--admin-text-faint)" }}>
               Accesso completo al pannello admin. Implica automaticamente lo Staff.
             </p>
