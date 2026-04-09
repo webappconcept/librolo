@@ -5,8 +5,11 @@ import {
   BookOpen,
   ChevronDown,
   ClipboardList,
+  FileText,
+  Globe,
   KeyRound,
   LayoutDashboard,
+  Map,
   Search,
   Settings,
   ShieldAlert,
@@ -28,10 +31,15 @@ const USERS_SUB = [
   { href: "/admin/permissions", label: "Permessi", icon: KeyRound },
 ];
 
+const SEO_SUB = [
+  { href: "/admin/seo/meta-tags", label: "Meta Tags", icon: FileText },
+  { href: "/admin/seo/robots", label: "Robots", icon: Globe },
+  { href: "/admin/seo/sitemap", label: "Sitemap", icon: Map },
+];
+
 const NAV_BOTTOM = [
   { href: "/admin/moderation", label: "Moderazione", icon: ShieldAlert },
   { href: "/admin/analytics", label: "Analytics", icon: BarChart2 },
-  { href: "/admin/seo", label: "SEO", icon: Search },
   { href: "/admin/settings", label: "Impostazioni", icon: Settings },
   { href: "/admin/logs", label: "Log attività", icon: ClipboardList },
 ];
@@ -50,6 +58,9 @@ export default function AdminSidebar({ appName, open, onClose }: AdminSidebarPro
     pathname.startsWith("/admin/roles") ||
     pathname.startsWith("/admin/permissions");
   const [usersOpen, setUsersOpen] = useState(usersGroupActive);
+
+  const seoGroupActive = pathname.startsWith("/admin/seo");
+  const [seoOpen, setSeoOpen] = useState(seoGroupActive);
 
   function isActive(href: string, exact?: boolean) {
     if (exact) return pathname === href;
@@ -111,6 +122,79 @@ export default function AdminSidebar({ appName, open, onClose }: AdminSidebarPro
     );
   }
 
+  function ExpandableGroup({
+    label,
+    icon: Icon,
+    isGroupActive,
+    isOpen,
+    onToggle,
+    children,
+    maxHeight = "180px",
+  }: {
+    label: string;
+    icon: React.ElementType;
+    isGroupActive: boolean;
+    isOpen: boolean;
+    onToggle: () => void;
+    children: React.ReactNode;
+    maxHeight?: string;
+  }) {
+    return (
+      <div>
+        <button
+          onClick={onToggle}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors"
+          style={{
+            background:
+              isGroupActive && !isOpen
+                ? "var(--admin-sidebar-item-active-bg)"
+                : "transparent",
+            color: isGroupActive
+              ? "var(--admin-sidebar-text-active)"
+              : "var(--admin-sidebar-text)",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "var(--admin-sidebar-item-hover-bg)";
+            e.currentTarget.style.color = "var(--admin-sidebar-text-active)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background =
+              isGroupActive && !isOpen
+                ? "var(--admin-sidebar-item-active-bg)"
+                : "transparent";
+            e.currentTarget.style.color = isGroupActive
+              ? "var(--admin-sidebar-text-active)"
+              : "var(--admin-sidebar-text)";
+          }}
+        >
+          <Icon
+            size={18}
+            style={{
+              color: isGroupActive
+                ? "var(--admin-accent)"
+                : "var(--admin-sidebar-icon-inactive)",
+            }}
+          />
+          <span className="flex-1 text-left">{label}</span>
+          <ChevronDown
+            size={15}
+            className="transition-transform duration-200"
+            style={{
+              transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
+              color: "var(--admin-sidebar-icon-inactive)",
+            }}
+          />
+        </button>
+        <div
+          className="overflow-hidden transition-all duration-200"
+          style={{ maxHeight: isOpen ? maxHeight : "0px", opacity: isOpen ? 1 : 0 }}
+        >
+          <div className="mt-0.5 space-y-0.5 pb-0.5">{children}</div>
+        </div>
+      </div>
+    );
+  }
+
   const content = (
     <aside
       className="w-[var(--admin-sidebar-width)] h-full flex flex-col"
@@ -160,65 +244,37 @@ export default function AdminSidebar({ appName, open, onClose }: AdminSidebarPro
         ))}
 
         {/* Gruppo espandibile Utenti */}
-        <div>
-          <button
-            onClick={() => setUsersOpen((v) => !v)}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors"
-            style={{
-              background:
-                usersGroupActive && !usersOpen
-                  ? "var(--admin-sidebar-item-active-bg)"
-                  : "transparent",
-              color: usersGroupActive
-                ? "var(--admin-sidebar-text-active)"
-                : "var(--admin-sidebar-text)",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "var(--admin-sidebar-item-hover-bg)";
-              e.currentTarget.style.color = "var(--admin-sidebar-text-active)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background =
-                usersGroupActive && !usersOpen
-                  ? "var(--admin-sidebar-item-active-bg)"
-                  : "transparent";
-              e.currentTarget.style.color = usersGroupActive
-                ? "var(--admin-sidebar-text-active)"
-                : "var(--admin-sidebar-text)";
-            }}
-          >
-            <Users
-              size={18}
-              style={{
-                color: usersGroupActive
-                  ? "var(--admin-accent)"
-                  : "var(--admin-sidebar-icon-inactive)",
-              }}
-            />
-            <span className="flex-1 text-left">Utenti</span>
-            <ChevronDown
-              size={15}
-              className="transition-transform duration-200"
-              style={{
-                transform: usersOpen ? "rotate(180deg)" : "rotate(0deg)",
-                color: "var(--admin-sidebar-icon-inactive)",
-              }}
-            />
-          </button>
+        <ExpandableGroup
+          label="Utenti"
+          icon={Users}
+          isGroupActive={usersGroupActive}
+          isOpen={usersOpen}
+          onToggle={() => setUsersOpen((v) => !v)}
+        >
+          {USERS_SUB.map(({ href, label, icon }) => (
+            <NavLink key={href} href={href} label={label} icon={icon} sub />
+          ))}
+        </ExpandableGroup>
 
-          <div
-            className="overflow-hidden transition-all duration-200"
-            style={{ maxHeight: usersOpen ? "180px" : "0px", opacity: usersOpen ? 1 : 0 }}
-          >
-            <div className="mt-0.5 space-y-0.5 pb-0.5">
-              {USERS_SUB.map(({ href, label, icon }) => (
-                <NavLink key={href} href={href} label={label} icon={icon} sub />
-              ))}
-            </div>
-          </div>
-        </div>
+        {NAV_BOTTOM.slice(0, 2).map(({ href, label, icon }) => (
+          <NavLink key={href} href={href} label={label} icon={icon} />
+        ))}
 
-        {NAV_BOTTOM.map(({ href, label, icon }) => (
+        {/* Gruppo espandibile SEO */}
+        <ExpandableGroup
+          label="SEO"
+          icon={Search}
+          isGroupActive={seoGroupActive}
+          isOpen={seoOpen}
+          onToggle={() => setSeoOpen((v) => !v)}
+          maxHeight="150px"
+        >
+          {SEO_SUB.map(({ href, label, icon }) => (
+            <NavLink key={href} href={href} label={label} icon={icon} sub />
+          ))}
+        </ExpandableGroup>
+
+        {NAV_BOTTOM.slice(2).map(({ href, label, icon }) => (
           <NavLink key={href} href={href} label={label} icon={icon} />
         ))}
       </nav>
