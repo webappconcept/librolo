@@ -557,8 +557,15 @@ function RoleMatrix({
               onClick={() => setSelectedRole(r.id)}
               className="w-full text-left px-3 py-2.5 transition-colors"
               style={{
-                background: isActive ? "var(--admin-hover-bg)" : "transparent",
+                // ✦ CONTRASTO: ruolo attivo — background accent tenue ma chiaramente distinto
+                background: isActive
+                  ? "color-mix(in oklch, var(--admin-accent) 14%, var(--admin-card-bg))"
+                  : "transparent",
                 borderBottom: "1px solid var(--admin-card-border)",
+                // ✦ Bordo sinistro accent per enfatizzare la selezione
+                borderLeft: isActive
+                  ? "3px solid var(--admin-accent)"
+                  : "3px solid transparent",
               }}>
               <div className="flex items-center gap-2">
                 <div
@@ -566,11 +573,13 @@ function RoleMatrix({
                   style={{ background: r.color }}
                 />
                 <span
-                  className="text-xs font-medium truncate"
+                  className="text-xs truncate"
                   style={{
+                    // ✦ CONTRASTO: testo attivo più scuro e grassetto
                     color: isActive
                       ? "var(--admin-text)"
                       : "var(--admin-text-muted)",
+                    fontWeight: isActive ? 600 : 400,
                   }}>
                   {r.label}
                 </span>
@@ -578,7 +587,12 @@ function RoleMatrix({
               <div className="flex items-center gap-1 mt-0.5 ml-4">
                 <span
                   className="text-[10px]"
-                  style={{ color: "var(--admin-text-faint)" }}>
+                  style={{
+                    // ✦ CONTRASTO: count permessi più visibile se ruolo attivo
+                    color: isActive
+                      ? "var(--admin-text-muted)"
+                      : "var(--admin-text-faint)",
+                  }}>
                   {count} permessi
                 </span>
               </div>
@@ -659,9 +673,14 @@ function RoleMatrix({
                         className="flex items-center justify-between gap-3 px-4 py-2.5 transition-colors"
                         style={{
                           borderTop: "1px solid var(--admin-card-border)",
+                          // ✦ CONTRASTO: da 5% a 12% — sfondo assegnato ben visibile
                           background: has
-                            ? "color-mix(in oklch, var(--admin-accent) 5%, var(--admin-card-bg))"
+                            ? "color-mix(in oklch, var(--admin-accent) 12%, var(--admin-card-bg))"
                             : "var(--admin-card-bg)",
+                          // ✦ Bordo sinistro sottile per le righe con permesso assegnato
+                          borderLeft: has
+                            ? "3px solid var(--admin-accent)"
+                            : "3px solid transparent",
                         }}>
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
@@ -688,23 +707,37 @@ function RoleMatrix({
                             role.isAdmin
                               ? "Admin ha tutti i permessi"
                               : has
-                                ? "Revoca"
-                                : "Assegna"
+                                ? `Revoca "${perm.label}"`
+                                : `Assegna "${perm.label}"`
+                          }
+                          aria-label={
+                            role.isAdmin
+                              ? "Admin ha tutti i permessi"
+                              : has
+                                ? `Revoca permesso ${perm.label}`
+                                : `Assegna permesso ${perm.label}`
                           }
                           style={{
+                            // ✦ CONTRASTO bottone assegnato: background accent pieno al 25%
                             background: has
-                              ? "color-mix(in oklch, var(--admin-accent) 15%, transparent)"
-                              : "var(--admin-hover-bg)",
+                              ? "color-mix(in oklch, var(--admin-accent) 25%, transparent)"
+                              : "var(--admin-input-bg)",
+                            // ✦ Bordo sottile per rendere il bottone visibile anche nello stato non-assegnato
+                            border: has
+                              ? "1px solid color-mix(in oklch, var(--admin-accent) 40%, transparent)"
+                              : "1px solid var(--admin-input-border)",
                           }}>
                           {has ? (
                             <ShieldCheck
                               size={14}
+                              // ✦ CONTRASTO: colore accent pieno, non mischiato
                               style={{ color: "var(--admin-accent)" }}
                             />
                           ) : (
                             <ShieldOff
                               size={14}
-                              style={{ color: "var(--admin-text-faint)" }}
+                              // ✦ CONTRASTO: da --admin-text-faint a --admin-text-muted (più scuro)
+                              style={{ color: "var(--admin-text-muted)" }}
                             />
                           )}
                         </button>
