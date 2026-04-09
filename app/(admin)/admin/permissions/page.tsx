@@ -4,6 +4,7 @@ import { getAdminRoles } from "@/lib/db/roles-queries";
 import { db } from "@/lib/db/drizzle";
 import { rolePermissions } from "@/lib/db/schema";
 import { requireAdminPage } from "@/lib/rbac/guards";
+import { SYSTEM_PERMISSIONS } from "@/lib/rbac/system-permissions";
 import { Suspense } from "react";
 import { PermissionsManager } from "./_components/permissions-manager";
 import { PermissionsInfoCard } from "./_components/permissions-info-card";
@@ -17,11 +18,18 @@ async function PermissionsContent() {
     db.select({ roleId: rolePermissions.roleId, permissionId: rolePermissions.permissionId }).from(rolePermissions),
   ]);
 
+  const systemKeys = SYSTEM_PERMISSIONS.map((p) => ({
+    key: p.key,
+    description: p.description,
+    group: p.group,
+  }));
+
   return (
     <PermissionsManager
       permissions={allPermissions}
       roles={roles}
       rolePermissions={matrix}
+      systemKeys={systemKeys}
     />
   );
 }
