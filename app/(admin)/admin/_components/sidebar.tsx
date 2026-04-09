@@ -4,6 +4,7 @@ import {
   BarChart2,
   BookOpen,
   ChevronDown,
+  ClipboardList,
   KeyRound,
   LayoutDashboard,
   Search,
@@ -28,6 +29,7 @@ const USERS_SUB = [
 ];
 
 const NAV_BOTTOM = [
+  { href: "/admin/logs", label: "Log attività", icon: ClipboardList },
   { href: "/admin/moderation", label: "Moderazione", icon: ShieldAlert },
   { href: "/admin/analytics", label: "Analytics", icon: BarChart2 },
   { href: "/admin/seo", label: "SEO", icon: Search },
@@ -43,7 +45,6 @@ interface AdminSidebarProps {
 export default function AdminSidebar({ appName, open, onClose }: AdminSidebarProps) {
   const pathname = usePathname();
 
-  // Il gruppo Utenti è aperto se siamo su una delle sottopagine
   const usersGroupActive =
     pathname.startsWith("/admin/users") ||
     pathname.startsWith("/admin/roles") ||
@@ -154,7 +155,6 @@ export default function AdminSidebar({ appName, open, onClose }: AdminSidebarPro
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-        {/* Voci sopra */}
         {NAV_TOP.map(({ href, label, icon, exact }) => (
           <NavLink key={href} href={href} label={label} icon={icon} exact={exact} />
         ))}
@@ -206,7 +206,6 @@ export default function AdminSidebar({ appName, open, onClose }: AdminSidebarPro
             />
           </button>
 
-          {/* Sottovoci — altezza dinamica basata sul numero di item */}
           <div
             className="overflow-hidden transition-all duration-200"
             style={{ maxHeight: usersOpen ? "180px" : "0px", opacity: usersOpen ? 1 : 0 }}
@@ -219,7 +218,6 @@ export default function AdminSidebar({ appName, open, onClose }: AdminSidebarPro
           </div>
         </div>
 
-        {/* Voci sotto */}
         {NAV_BOTTOM.map(({ href, label, icon }) => (
           <NavLink key={href} href={href} label={label} icon={icon} />
         ))}
@@ -232,7 +230,7 @@ export default function AdminSidebar({ appName, open, onClose }: AdminSidebarPro
           className="text-xs transition-colors"
           style={{ color: "var(--admin-sidebar-text-faint)" }}
         >
-          ← Torna all'app
+          ← Torna all’app
         </Link>
       </div>
     </aside>
