@@ -43,12 +43,13 @@ export async function getUserPermissionOverrides(userId: number) {
       reason: userPermissions.reason,
       expiresAt: userPermissions.expiresAt,
       createdAt: userPermissions.createdAt,
+      updatedAt: userPermissions.updatedAt,
       grantedById: userPermissions.grantedBy,
     })
     .from(userPermissions)
     .innerJoin(permissions, eq(userPermissions.permissionId, permissions.id))
     .where(eq(userPermissions.userId, userId))
-    .orderBy(desc(userPermissions.createdAt));
+    .orderBy(desc(userPermissions.updatedAt));
 }
 
 /**
@@ -129,16 +130,33 @@ export async function removePermissionFromRole(roleId: number, permissionId: num
     );
 }
 
-/** Aggiunge un override individuale */
+/**
+ * Aggiunge o aggiorna un override individuale (upsert).
+ * Se esiste già un override per (userId, permissionId), aggiorna
+ * granted / reason / expiresAt / grantedBy / updatedAt.
+ * In questo modo non si creano mai righe duplicate per la stessa coppia.
+ */
 export async function addUserPermissionOverride(data: {
   userId: number;
   permissionId: number;
   granted: boolean;
   grantedBy: number;
   reason?: string;
-  expiresAt?: Date;
+  expiresAt?: Date | null;
 }) {
-  return db.insert(userPermissions).values(data);
+  return db
+    .insert(userPermissions)
+    .values({ ...data, updatedAt: new Date() })
+    .onConflictDoUpdate({
+      target: [userPermissions.userId, userPermissions.permissionId],
+      set: {
+        granted: data.granted,
+        grantedBy: data.grantedBy,
+        reason: data.reason ?? null,
+        expiresAt: data.expiresAt ?? null,
+        updatedAt: new Date(),
+      },
+    });
 }
 
 /** Rimuove un override individuale */

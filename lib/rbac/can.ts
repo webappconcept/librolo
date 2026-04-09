@@ -16,7 +16,7 @@
  */
 import { db } from "@/lib/db/drizzle";
 import { permissions, rolePermissions, userPermissions, roles } from "@/lib/db/schema";
-import { and, eq, gt, isNull, or } from "drizzle-orm";
+import { and, eq, gt, isNull, or, desc } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { getUser } from "@/lib/db/queries";
 import "server-only";
@@ -38,7 +38,9 @@ export type UserLike = { id: number; role: string };
 export async function can(user: UserLike, permissionKey: string): Promise<boolean> {
   const now = new Date();
 
-  // 1. Override individuale (non scaduto) — ha sempre la priorità
+  // 1. Override individuale (non scaduto) — ha sempre la priorità.
+  // orderBy DESC + LIMIT 1 garantisce che, se esistono righe duplicate legacy,
+  // vinca sempre la più recente.
   const override = await db
     .select({ granted: userPermissions.granted })
     .from(userPermissions)
@@ -50,6 +52,7 @@ export async function can(user: UserLike, permissionKey: string): Promise<boolea
         or(isNull(userPermissions.expiresAt), gt(userPermissions.expiresAt, now)),
       ),
     )
+    .orderBy(desc(userPermissions.createdAt))
     .limit(1);
 
   if (override.length > 0) return override[0].granted;
@@ -91,9 +94,12 @@ export async function getUserPermissions(user: UserLike): Promise<Set<string>> {
 
   const set = new Set(rolePerms.map((p) => p.key));
 
-  // Override individuali (non scaduti) — vincono sul ruolo
+  // Override individuali (non scaduti) — vincono sul ruolo.
+  // orderBy DESC garantisce che, in caso di righe duplicate residue (prima
+  // dell'upsert), la riga più recente sia la prima e venga usata come valore.
+  // La Map deduplica: per ogni permissionKey vince il primo incontrato (= più recente).
   const overrides = await db
-    .select({ key: permissions.key, granted: userPermissions.granted })
+    .select({ key: permissions.key, granted: userPermissions.granted, createdAt: userPermissions.createdAt })
     .from(userPermissions)
     .innerJoin(permissions, eq(userPermissions.permissionId, permissions.id))
     .where(
@@ -101,11 +107,17 @@ export async function getUserPermissions(user: UserLike): Promise<Set<string>> {
         eq(userPermissions.userId, user.id),
         or(isNull(userPermissions.expiresAt), gt(userPermissions.expiresAt, now)),
       ),
-    );
+    )
+    .orderBy(desc(userPermissions.createdAt));
 
+  // Deduplicazione: teniamo solo la riga più recente per ogni permesso
+  const seenOverrides = new Map<string, boolean>();
   for (const o of overrides) {
-    if (o.granted) set.add(o.key);
-    else set.delete(o.key);
+    if (!seenOverrides.has(o.key)) seenOverrides.set(o.key, o.granted);
+  }
+  for (const [key, granted] of seenOverrides) {
+    if (granted) set.add(key);
+    else set.delete(key);
   }
 
   return set;

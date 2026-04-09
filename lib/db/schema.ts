@@ -6,6 +6,7 @@ import {
   serial,
   text,
   timestamp,
+  uniqueIndex,
   varchar,
 } from "drizzle-orm/pg-core";
 
@@ -18,15 +19,9 @@ export const users = pgTable("users", {
   role: varchar("role", { length: 50 }).notNull().default("member"),
   /** Guard indipendente dalla label del ruolo — usato da middleware e Server Actions */
   isAdmin: boolean("is_admin").notNull().default(false),
-  /** Guard per staff (editor, support, admin) */
   isStaff: boolean("is_staff").notNull().default(false),
   bannedAt: timestamp("banned_at"),
-  bannedReason: varchar("banned_reason", { length: 255 }),
-  stripeCustomerId: varchar("stripe_customer_id", { length: 255 }),
-  stripeSubscriptionId: varchar("stripe_subscription_id", { length: 255 }),
-  stripeProductId: varchar("stripe_product_id", { length: 255 }),
-  planName: varchar("plan_name", { length: 100 }),
-  subscriptionStatus: varchar("subscription_status", { length: 50 }),
+  bannedReason: text("banned_reason"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
   deletedAt: timestamp("deleted_at"),
@@ -37,17 +32,11 @@ export const roles = pgTable("roles", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 50 }).notNull().unique(),
   label: varchar("label", { length: 100 }).notNull(),
-  color: varchar("color", { length: 20 }).notNull().default("#6b7280"),
   description: text("description"),
+  color: varchar("color", { length: 20 }).notNull().default("#6b7280"),
   isAdmin: boolean("is_admin").notNull().default(false),
   isStaff: boolean("is_staff").notNull().default(false),
-  /** I ruoli di sistema non possono essere eliminati dall'UI */
-  isSystem: boolean("is_system").notNull().default(false),
-  /** Gerarchia: un admin può assegnare solo ruoli con level <= proprio */
-  level: integer("level").notNull().default(0),
-  /** Ruolo assegnato automaticamente ai nuovi utenti */
   isDefault: boolean("is_default").notNull().default(false),
-  sortOrder: integer("sort_order").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -56,21 +45,17 @@ export const roles = pgTable("roles", {
 // RBAC — Permessi
 // ---------------------------------------------------------------------------
 
-/** Catalogo completo dei permessi disponibili nell'app */
 export const permissions = pgTable("permissions", {
   id: serial("id").primaryKey(),
-  /** Chiave univoca: pattern "risorsa:azione" es. "posts:publish", "admin:access" */
   key: varchar("key", { length: 100 }).notNull().unique(),
-  label: varchar("label", { length: 150 }).notNull(),
+  label: varchar("label", { length: 200 }).notNull(),
   description: text("description"),
-  /** Gruppo per raggruppare nella UI: "Contenuti", "Utenti", "Admin"… */
   group: varchar("group", { length: 100 }).notNull().default("Generale"),
-  /** I permessi di sistema non possono essere eliminati dall'UI */
+  /** true = creato automaticamente dal sistema (non eliminabile dall'admin) */
   isSystem: boolean("is_system").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-/** Matrice ruolo → permessi */
 export const rolePermissions = pgTable(
   "role_permissions",
   {
@@ -104,7 +89,9 @@ export const userPermissions = pgTable(
     /** null = permanente */
     expiresAt: timestamp("expires_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
+  (t) => [uniqueIndex("uq_user_permissions_user_perm").on(t.userId, t.permissionId)],
 );
 
 // ---------------------------------------------------------------------------
@@ -119,29 +106,45 @@ export const activityLogs = pgTable("activity_logs", {
   ipAddress: varchar("ip_address", { length: 45 }),
 });
 
-export const ipBlacklist = pgTable("ip_blacklist", {
-  id: serial("id").primaryKey(),
-  ip: varchar("ip", { length: 45 }).notNull().unique(),
-  reason: text("reason"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
-
-export const loginAttempts = pgTable("login_attempts", {
-  id: serial("id").primaryKey(),
-  email: varchar("email", { length: 255 }).notNull(),
-  ip: varchar("ip", { length: 45 }).notNull(),
-  attemptedAt: timestamp("attempted_at").notNull().defaultNow(),
-  success: boolean("success").notNull().default(false),
-});
-
-export const emailVerifications = pgTable("email_verifications", {
+export const sessions = pgTable("sessions", {
   id: serial("id").primaryKey(),
   userId: integer("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
-  code: varchar("code", { length: 6 }).notNull(),
+  token: varchar("token", { length: 255 }).notNull().unique(),
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  ipAddress: varchar("ip_address", { length: 45 }),
+  userAgent: text("user_agent"),
+  lastActiveAt: timestamp("last_active_at").defaultNow(),
+});
+
+export const blockedIps = pgTable("blocked_ips", {
+  id: serial("id").primaryKey(),
+  ip: varchar("ip", { length: 45 }).notNull().unique(),
+  reason: text("reason"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  expiresAt: timestamp("expires_at"),
+});
+
+export const appSettings = pgTable("app_settings", {
+  key: varchar("key", { length: 100 }).primaryKey(),
+  value: text("value"),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const emailSettings = pgTable("email_settings", {
+  id: serial("id").primaryKey(),
+  provider: varchar("provider", { length: 50 }).notNull().default("resend"),
+  fromEmail: varchar("from_email", { length: 255 }).notNull(),
+  fromName: varchar("from_name", { length: 100 }).notNull(),
+  apiKey: text("api_key"),
+  smtpHost: varchar("smtp_host", { length: 255 }),
+  smtpPort: integer("smtp_port"),
+  smtpUser: varchar("smtp_user", { length: 255 }),
+  smtpPassword: text("smtp_password"),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const passwordResetTokens = pgTable("password_reset_tokens", {
@@ -151,90 +154,16 @@ export const passwordResetTokens = pgTable("password_reset_tokens", {
     .references(() => users.id, { onDelete: "cascade" }),
   token: varchar("token", { length: 64 }).notNull().unique(),
   expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-export const appSettings = pgTable("app_settings", {
-  key: varchar("key", { length: 100 }).primaryKey(),
-  value: text("value"),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-export const seoPages = pgTable("seo_pages", {
-  pathname: varchar("pathname", { length: 255 }).primaryKey(),
-  label: varchar("label", { length: 100 }).notNull(),
-  title: varchar("title", { length: 70 }),
-  description: varchar("description", { length: 160 }),
-  ogTitle: varchar("og_title", { length: 70 }),
-  ogDescription: varchar("og_description", { length: 200 }),
-  ogImage: text("og_image"),
-  robots: varchar("robots", { length: 50 }),
-  jsonLdEnabled: boolean("json_ld_enabled").notNull().default(false),
-  jsonLdType: varchar("json_ld_type", { length: 50 }),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
 // ---------------------------------------------------------------------------
-// Types
+// Tipi inferiti
 // ---------------------------------------------------------------------------
 
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Role = typeof roles.$inferSelect;
-export type NewRole = typeof roles.$inferInsert;
 export type Permission = typeof permissions.$inferSelect;
-export type NewPermission = typeof permissions.$inferInsert;
-export type RolePermission = typeof rolePermissions.$inferSelect;
 export type UserPermission = typeof userPermissions.$inferSelect;
-export type ActivityLog = typeof activityLogs.$inferSelect;
-export type NewActivityLog = typeof activityLogs.$inferInsert;
-export type EmailVerification = typeof emailVerifications.$inferSelect;
-export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
-export type SeoPage = typeof seoPages.$inferSelect;
-export type NewSeoPage = typeof seoPages.$inferInsert;
-
-export enum ActivityType {
-  SIGN_UP = "SIGN_UP",
-  SIGN_IN = "SIGN_IN",
-  SIGN_OUT = "SIGN_OUT",
-  UPDATE_PASSWORD = "UPDATE_PASSWORD",
-  DELETE_ACCOUNT = "DELETE_ACCOUNT",
-  UPDATE_ACCOUNT = "UPDATE_ACCOUNT",
-  EMAIL_VERIFIED = "EMAIL_VERIFIED",
-  EMAIL_CHANGED = "EMAIL_CHANGED",
-  PASSWORD_RESET_REQUESTED = "PASSWORD_RESET_REQUESTED",
-  PASSWORD_RESET_COMPLETED = "PASSWORD_RESET_COMPLETED",
-  SUBSCRIPTION_STARTED = "SUBSCRIPTION_STARTED",
-  SUBSCRIPTION_CANCELLED = "SUBSCRIPTION_CANCELLED",
-  SUBSCRIPTION_RENEWED = "SUBSCRIPTION_RENEWED",
-  SUBSCRIPTION_UPGRADED = "SUBSCRIPTION_UPGRADED",
-  SUBSCRIPTION_DOWNGRADED = "SUBSCRIPTION_DOWNGRADED",
-  PAYMENT_FAILED = "PAYMENT_FAILED",
-  ADMIN_BAN_USER = "ADMIN_BAN_USER",
-  ADMIN_UNBAN_USER = "ADMIN_UNBAN_USER",
-  ADMIN_CHANGE_ROLE = "ADMIN_CHANGE_ROLE",
-  ADMIN_DELETE_USER = "ADMIN_DELETE_USER",
-  AVATAR_UPDATED = "AVATAR_UPDATED",
-  BIO_UPDATED = "BIO_UPDATED",
-  PROFILE_VIEWED = "PROFILE_VIEWED",
-  POST_CREATED = "POST_CREATED",
-  POST_EDITED = "POST_EDITED",
-  POST_DELETED = "POST_DELETED",
-  COMMENT_CREATED = "COMMENT_CREATED",
-  COMMENT_DELETED = "COMMENT_DELETED",
-  LIKE_ADDED = "LIKE_ADDED",
-  LIKE_REMOVED = "LIKE_REMOVED",
-  FOLLOW_USER = "FOLLOW_USER",
-  UNFOLLOW_USER = "UNFOLLOW_USER",
-  BLOCK_USER = "BLOCK_USER",
-  UNBLOCK_USER = "UNBLOCK_USER",
-  NOTIFICATION_READ = "NOTIFICATION_READ",
-  MESSAGE_SENT = "MESSAGE_SENT",
-  CONTENT_REPORTED = "CONTENT_REPORTED",
-  CONTENT_REMOVED = "CONTENT_REMOVED",
-  // RBAC
-  PERMISSION_GRANTED = "PERMISSION_GRANTED",
-  PERMISSION_REVOKED = "PERMISSION_REVOKED",
-  ROLE_PERMISSION_ADDED = "ROLE_PERMISSION_ADDED",
-  ROLE_PERMISSION_REMOVED = "ROLE_PERMISSION_REMOVED",
-}
