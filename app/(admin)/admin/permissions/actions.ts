@@ -7,10 +7,29 @@ import {
 } from "@/lib/rbac/permissions-queries";
 import { requireAdmin } from "@/lib/rbac/guards";
 import { db } from "@/lib/db/drizzle";
-import { permissions, rolePermissions, userPermissions } from "@/lib/db/schema";
+import { activityLogs, ActivityType, permissions, rolePermissions, roles, userPermissions } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { headers } from "next/headers";
+
+/** Scrive un record su activity_logs con IP del richiedente. */
+async function logRbacAction(
+  adminId: number,
+  action: ActivityType,
+  detail: string,
+) {
+  const ip =
+    (await headers()).get("x-forwarded-for")?.split(",")[0].trim() ??
+    (await headers()).get("x-real-ip") ??
+    null;
+
+  await db.insert(activityLogs).values({
+    userId: adminId,
+    action: `${action} | ${detail}`,
+    ipAddress: ip,
+  });
+}
 
 // Toggle permesso su un ruolo (add / remove)
 export async function toggleRolePermission(
@@ -18,12 +37,32 @@ export async function toggleRolePermission(
   permissionId: number,
   granted: boolean,
 ) {
-  await requireAdmin();
+  const admin = await requireAdmin();
+
+  // Recupera label role e permesso per il log leggibile
+  const [role] = await db
+    .select({ name: roles.name })
+    .from(roles)
+    .where(eq(roles.id, roleId))
+    .limit(1);
+  const [perm] = await db
+    .select({ key: permissions.key })
+    .from(permissions)
+    .where(eq(permissions.id, permissionId))
+    .limit(1);
+
   if (granted) {
     await addPermissionToRole(roleId, permissionId);
   } else {
     await removePermissionFromRole(roleId, permissionId);
   }
+
+  await logRbacAction(
+    admin.id,
+    granted ? ActivityType.ROLE_PERMISSION_ADDED : ActivityType.ROLE_PERMISSION_REMOVED,
+    `role=${role?.name ?? roleId} perm=${perm?.key ?? permissionId}`,
+  );
+
   revalidatePath("/admin/permissions");
   revalidatePath("/admin/roles");
 }
@@ -42,7 +81,7 @@ const CreatePermissionSchema = z.object({
 });
 
 export async function createPermission(formData: FormData) {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   const parsed = CreatePermissionSchema.safeParse(
     Object.fromEntries(formData),
@@ -63,6 +102,13 @@ export async function createPermission(formData: FormData) {
   }
 
   await db.insert(permissions).values({ key, label, description, group });
+
+  await logRbacAction(
+    admin.id,
+    ActivityType.PERMISSION_GRANTED,
+    `create_permission key=${key} group=${group}`,
+  );
+
   revalidatePath("/admin/permissions");
   return { success: true };
 }
@@ -106,15 +152,15 @@ export async function getPermissionImpact(permissionId: number) {
  * rimuove prima tutte le assegnazioni su ruoli e override individuali.
  */
 export async function deletePermission(permissionId: number) {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
-  const perm = await db
-    .select({ isSystem: permissions.isSystem })
+  const [perm] = await db
+    .select({ isSystem: permissions.isSystem, key: permissions.key })
     .from(permissions)
     .where(eq(permissions.id, permissionId))
     .limit(1);
 
-  if (!perm[0] || perm[0].isSystem) {
+  if (!perm || perm.isSystem) {
     return { error: "I permessi di sistema non possono essere eliminati." };
   }
 
@@ -124,6 +170,12 @@ export async function deletePermission(permissionId: number) {
   await db.delete(userPermissions).where(eq(userPermissions.permissionId, permissionId));
   // Elimina il permesso
   await db.delete(permissions).where(eq(permissions.id, permissionId));
+
+  await logRbacAction(
+    admin.id,
+    ActivityType.PERMISSION_REVOKED,
+    `delete_permission key=${perm.key}`,
+  );
 
   revalidatePath("/admin/permissions");
   revalidatePath("/admin/users");

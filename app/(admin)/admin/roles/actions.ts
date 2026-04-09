@@ -3,11 +3,30 @@
 
 import { db } from "@/lib/db/drizzle";
 import { getAdminRoles } from "@/lib/db/roles-queries";
-import { roles, users } from "@/lib/db/schema";
+import { activityLogs, ActivityType, roles, users } from "@/lib/db/schema";
 import { requireAdmin } from "@/lib/rbac/guards";
 import { and, eq, ne } from "drizzle-orm";
+import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+
+/** Scrive un record su activity_logs con IP del richiedente. */
+async function logRbacAction(
+  adminId: number,
+  action: ActivityType,
+  detail: string,
+) {
+  const ip =
+    (await headers()).get("x-forwarded-for")?.split(",")[0].trim() ??
+    (await headers()).get("x-real-ip") ??
+    null;
+
+  await db.insert(activityLogs).values({
+    userId: adminId,
+    action: `${action} | ${detail}`,
+    ipAddress: ip,
+  });
+}
 
 const roleSchema = z.object({
   name: z
@@ -23,7 +42,7 @@ const roleSchema = z.object({
 });
 
 export async function createRole(formData: FormData) {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   const parsed = roleSchema.safeParse({
     name: formData.get("name"),
@@ -47,12 +66,18 @@ export async function createRole(formData: FormData) {
     sortOrder: maxOrder + 1,
   });
 
+  await logRbacAction(
+    admin.id,
+    ActivityType.ADMIN_CHANGE_ROLE,
+    `create_role name=${parsed.data.name} label="${parsed.data.label}" isAdmin=${parsed.data.isAdmin}`,
+  );
+
   revalidatePath("/admin/roles");
   return { success: "Ruolo creato" };
 }
 
 export async function updateRole(id: number, formData: FormData) {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   const [existing] = await db
     .select({ isSystem: roles.isSystem, name: roles.name })
@@ -88,13 +113,19 @@ export async function updateRole(id: number, formData: FormData) {
     })
     .where(eq(users.role, parsed.data.name));
 
+  await logRbacAction(
+    admin.id,
+    ActivityType.ADMIN_CHANGE_ROLE,
+    `update_role name=${existing.name} label="${parsed.data.label}" isAdmin=${parsed.data.isAdmin} isStaff=${parsed.data.isStaff}`,
+  );
+
   revalidatePath("/admin/roles");
   revalidatePath("/admin/users");
   return { success: "Ruolo aggiornato" };
 }
 
 export async function deleteRole(id: number) {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   const [existing] = await db
     .select({ isSystem: roles.isSystem, name: roles.name })
@@ -113,13 +144,19 @@ export async function deleteRole(id: number) {
 
   await db.delete(roles).where(eq(roles.id, id));
 
+  await logRbacAction(
+    admin.id,
+    ActivityType.ADMIN_CHANGE_ROLE,
+    `delete_role name=${existing.name}`,
+  );
+
   revalidatePath("/admin/roles");
   revalidatePath("/admin/users");
   return { success: "Ruolo eliminato" };
 }
 
 export async function setUserRole(userId: number, roleName: string) {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   const [role] = await db
     .select({ isAdmin: roles.isAdmin, isStaff: roles.isStaff })
@@ -128,6 +165,13 @@ export async function setUserRole(userId: number, roleName: string) {
     .limit(1);
 
   if (!role) return { error: "Ruolo non trovato" };
+
+  // Leggi il ruolo precedente per il log
+  const [target] = await db
+    .select({ role: users.role })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
 
   await db
     .update(users)
@@ -138,6 +182,12 @@ export async function setUserRole(userId: number, roleName: string) {
       updatedAt: new Date(),
     })
     .where(eq(users.id, userId));
+
+  await logRbacAction(
+    admin.id,
+    ActivityType.ADMIN_CHANGE_ROLE,
+    `set_user_role userId=${userId} from=${target?.role ?? "?"} to=${roleName}`,
+  );
 
   revalidatePath("/admin/users");
   revalidatePath(`/admin/users/${userId}`);
