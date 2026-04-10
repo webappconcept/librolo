@@ -114,12 +114,6 @@ export function RoleSelector({
                       Admin
                     </span>
                   )}
-                  {role.isStaff && !role.isAdmin && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded font-medium"
-                      style={{ background: "#eff6ff", color: "#2563eb" }}>
-                      Staff
-                    </span>
-                  )}
                 </div>
                 {role.description && (
                   <p className="text-[11px] mt-0.5 truncate" style={{ color: "var(--admin-text-faint)" }}>
