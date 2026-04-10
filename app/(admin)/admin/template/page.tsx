@@ -1,8 +1,9 @@
 import { getAllTemplates } from "@/lib/db/template-queries";
 import { LAYOUT_BASES } from "@/app/(frontend)/_templates/registry";
 import Link from "next/link";
-import { PanelTop, Plus, Copy, Trash2 } from "lucide-react";
-import { deleteTemplateAction, duplicateTemplateAction } from "./actions";
+import { PanelTop, Plus, Copy } from "lucide-react";
+import { duplicateTemplateAction } from "./actions";
+import DeleteTemplateButton from "./_components/delete-template-button";
 
 export const metadata = { title: "Template pagine" };
 export const dynamic = "force-dynamic";
@@ -12,7 +13,6 @@ export default async function TemplatePage() {
 
   return (
     <div className="p-6 max-w-5xl">
-      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-bold" style={{ color: "var(--admin-text)" }}>
@@ -132,20 +132,7 @@ export default async function TemplatePage() {
                     </form>
 
                     {!tpl.isSystem && (
-                      <form action={deleteTemplateAction}>
-                        <input type="hidden" name="id" value={tpl.id} />
-                        <button
-                          type="submit"
-                          title="Elimina template"
-                          className="p-1.5 rounded-lg transition-colors"
-                          style={{ color: "var(--admin-error, #dc2626)", border: "1px solid var(--admin-border)" }}
-                          onClick={(e) => {
-                            if (!confirm(`Eliminare il template "${tpl.name}"?`)) e.preventDefault();
-                          }}
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </form>
+                      <DeleteTemplateButton id={tpl.id} name={tpl.name} />
                     )}
                   </div>
                 </div>
