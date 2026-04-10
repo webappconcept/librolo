@@ -2,6 +2,7 @@
 
 import { useRef, useState, useCallback } from "react";
 import { GripVertical, Loader2, Plus, Trash2 } from "lucide-react";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
 import type { TemplateField } from "@/lib/db/schema";
 import { AdminToast, type ToastType } from "../../_components/toast";
 
@@ -134,8 +135,12 @@ export default function TemplateFormClient({
         }))
       ));
       await saveAction(fd);
+      // Se saveAction non fa redirect, mostra successo
       setToast({ message: "Template salvato con successo", type: "success" });
     } catch (err) {
+      // redirect() di Next.js lancia internamente un'eccezione:
+      // la lasciamo propagare normalmente senza mostrare errore
+      if (isRedirectError(err)) throw err;
       console.error(err);
       setToast({ message: "Errore durante il salvataggio", type: "error" });
     } finally {
@@ -149,7 +154,6 @@ export default function TemplateFormClient({
     border: "1px solid var(--admin-border)",
     color: "var(--admin-text)",
   };
-  // Stile per gli input dentro i campi custom (sfondo leggermente diverso per contrasto)
   const fieldInputStyle: React.CSSProperties = {
     background: "var(--admin-card-bg)",
     border: "1px solid var(--admin-border)",
