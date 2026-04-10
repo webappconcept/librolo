@@ -11,7 +11,6 @@ export type RoleRow = {
   color: string;
   description: string | null;
   isAdmin: boolean;
-  isStaff: boolean;
   isSystem: boolean;
   sortOrder: number;
 };
@@ -25,7 +24,6 @@ export async function getAdminRoles(): Promise<RoleRow[]> {
       color: roles.color,
       description: roles.description,
       isAdmin: roles.isAdmin,
-      isStaff: roles.isStaff,
       isSystem: roles.isSystem,
       sortOrder: roles.sortOrder,
     })
