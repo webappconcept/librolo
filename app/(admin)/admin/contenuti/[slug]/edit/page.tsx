@@ -1,50 +1,40 @@
-import { getPageBySlug } from "@/lib/db/pages-queries";
-import { getSeoPage } from "@/lib/db/seo-queries";
+import { getPageBySlug, getAllPages } from "@/lib/db/pages-queries";
+import { getAllTemplates } from "@/lib/db/template-queries";
+import { getSeoPageByPathname } from "@/lib/db/seo-queries";
 import { getAppSettings } from "@/lib/db/settings-queries";
 import { notFound } from "next/navigation";
 import PageEditor from "../../_components/page-editor";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Modifica pagina" };
 
-interface Props {
+export default async function EditPagePage({
+  params,
+}: {
   params: Promise<{ slug: string }>;
-}
-
-export default async function EditPagePage({ params }: Props) {
+}) {
   const { slug } = await params;
-  const [page, seo, settings] = await Promise.all([
+  const [page, pages, templates, settings] = await Promise.all([
     getPageBySlug(slug),
-    getSeoPage(`/${slug}`),
+    getAllPages(),
+    getAllTemplates(),
     getAppSettings(),
   ]);
+
   if (!page) notFound();
 
-  let domain = settings.app_domain?.trim() ?? "";
-  if (domain && !/^https?:\/\//i.test(domain)) domain = `https://${domain}`;
-  domain = domain.replace(/\/$/, "");
-
-  const appName = settings.app_name?.trim() ?? "";
+  const seo = await getSeoPageByPathname(`/${slug}`);
 
   return (
-    <div className="space-y-5">
-      <div>
-        <h2 className="text-xl font-bold" style={{ color: "var(--admin-text)" }}>
-          Modifica pagina
-        </h2>
-        <p className="text-sm mt-0.5" style={{ color: "var(--admin-text-muted)" }}>
-          Stai modificando:{" "}
-          <strong style={{ color: "var(--admin-text)" }}>/{page.slug}</strong>
-        </p>
-      </div>
-      <div
-        className="rounded-xl shadow-sm p-5"
-        style={{
-          background: "var(--admin-card-bg)",
-          border: "1px solid var(--admin-card-border)",
-        }}
-      >
-        <PageEditor page={page} seo={seo} domain={domain} appName={appName} />
-      </div>
+    <div className="p-6 max-w-4xl">
+      <PageEditor
+        page={page}
+        seo={seo}
+        pages={pages.filter((p) => p.id !== page.id)}
+        templates={templates}
+        domain={settings?.domain ?? ""}
+        appName={settings?.appName ?? ""}
+      />
     </div>
   );
 }

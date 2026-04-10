@@ -1,6 +1,6 @@
 "use client";
 
-import type { Page, SeoPage } from "@/lib/db/schema";
+import type { Page, SeoPage, PageTemplate, TemplateField } from "@/lib/db/schema";
 import { SeoForm } from "@/app/(admin)/admin/seo/_components/seo-form";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -8,28 +8,10 @@ import Link from "@tiptap/extension-link";
 import Underline from "@tiptap/extension-underline";
 import TextAlign from "@tiptap/extension-text-align";
 import {
-  AlignCenter,
-  AlignLeft,
-  AlignRight,
-  ArrowLeft,
-  Bold,
-  Calendar,
-  Check,
-  Code,
-  Eye,
-  EyeOff,
-  Heading2,
-  Heading3,
-  Italic,
-  Link2,
-  List,
-  ListOrdered,
-  Minus,
-  Pencil,
-  RotateCcw,
-  RotateCw,
-  Search,
-  UnderlineIcon,
+  AlignCenter, AlignLeft, AlignRight, ArrowLeft, Bold, Calendar,
+  Check, Code, Eye, EyeOff, Heading2, Heading3, Italic, Link2,
+  List, ListOrdered, Minus, Pencil, PanelTop, RotateCcw, RotateCw,
+  Search, UnderlineIcon, GitBranch,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef, useState } from "react";
@@ -37,67 +19,40 @@ import { createPortal } from "react-dom";
 import { upsertPageAction } from "../actions";
 import PlaceholderHint from "./placeholder-hint";
 
+type TemplateWithFields = PageTemplate & { fields: TemplateField[] };
+
 function slugify(value: string): string {
-  return value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9\s-]/g, "")
-    .trim()
-    .replace(/[\s_]+/g, "-")
-    .replace(/-+/g, "-");
+  return value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s-]/g, "").trim().replace(/[\s_]+/g, "-").replace(/-+/g, "-");
 }
 
 const inputStyle: React.CSSProperties = {
-  background: "var(--admin-page-bg)",
-  border: "1px solid var(--admin-input-border)",
-  color: "var(--admin-text)",
-  borderRadius: "0.5rem",
-  padding: "0.5rem 0.75rem",
-  fontSize: "0.875rem",
-  width: "100%",
-  outline: "none",
+  background: "var(--admin-page-bg)", border: "1px solid var(--admin-input-border)",
+  color: "var(--admin-text)", borderRadius: "0.5rem",
+  padding: "0.5rem 0.75rem", fontSize: "0.875rem", width: "100%", outline: "none",
 };
-
 const labelStyle: React.CSSProperties = {
-  fontSize: "0.65rem",
-  fontWeight: 600,
-  textTransform: "uppercase",
-  letterSpacing: "0.06em",
-  color: "var(--admin-text-muted)",
-  display: "block",
-  marginBottom: "0.375rem",
+  fontSize: "0.65rem", fontWeight: 600, textTransform: "uppercase",
+  letterSpacing: "0.06em", color: "var(--admin-text-muted)", display: "block", marginBottom: "0.375rem",
 };
+const hintStyle: React.CSSProperties = { fontSize: "0.75rem", color: "var(--admin-text-faint)", marginTop: "0.25rem" };
 
-const hintStyle: React.CSSProperties = {
-  fontSize: "0.75rem",
-  color: "var(--admin-text-faint)",
-  marginTop: "0.25rem",
-};
-
-function TBtn({
-  onClick, active, title, children, disabled,
-}: {
-  onClick: () => void; active?: boolean; title?: string;
-  children: React.ReactNode; disabled?: boolean;
+function TBtn({ onClick, active, title, children, disabled }: {
+  onClick: () => void; active?: boolean; title?: string; children: React.ReactNode; disabled?: boolean;
 }) {
   return (
     <button type="button" title={title} disabled={disabled} onClick={onClick}
       className="p-1.5 rounded transition-colors disabled:opacity-30"
-      style={{
-        color: active ? "var(--admin-accent)" : "var(--admin-text-muted)",
-        background: active ? "color-mix(in srgb, var(--admin-accent) 12%, var(--admin-card-bg))" : "transparent",
-      }}
+      style={{ color: active ? "var(--admin-accent)" : "var(--admin-text-muted)",
+        background: active ? "color-mix(in srgb, var(--admin-accent) 12%, var(--admin-card-bg))" : "transparent" }}
       onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = "var(--admin-hover-bg)"; }}
       onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = "transparent"; }}
     >{children}</button>
   );
 }
-
 function TDivider() {
   return <div className="w-px h-5 mx-0.5 shrink-0" style={{ background: "var(--admin-divider)" }} />;
 }
-
 function TabBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button type="button" onClick={onClick}
@@ -105,66 +60,38 @@ function TabBtn({ active, onClick, children }: { active: boolean; onClick: () =>
       style={{ color: active ? "var(--admin-accent)" : "var(--admin-text-muted)" }}
     >
       {children}
-      {active && (
-        <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full"
-          style={{ background: "var(--admin-accent)" }} />
-      )}
+      {active && <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full" style={{ background: "var(--admin-accent)" }} />}
     </button>
   );
 }
 
-// ─── SEO Tab — ora editabile ───────────────────────────────────────────────────
-function SeoTab({
-  seo,
-  slug,
-  domain,
-  appName,
-  pageTitle,
-}: {
-  seo?: SeoPage | null;
-  slug: string;
-  domain: string;
-  appName: string;
-  pageTitle: string;
+// ─── SEO Tab ──────────────────────────────────────────────────────────────────
+function SeoTab({ seo, slug, domain, appName, pageTitle }: {
+  seo?: SeoPage | null; slug: string; domain: string; appName: string; pageTitle: string;
 }) {
   const [showModal, setShowModal] = useState(false);
-
-  const rows: { label: string; value?: string | null; hint?: string }[] = seo
-    ? [
-        { label: "Meta Title", value: seo.title, hint: "Max 60 caratteri" },
-        { label: "Meta Description", value: seo.description, hint: "Max 155 caratteri" },
-        { label: "OG Title", value: seo.ogTitle },
-        { label: "OG Description", value: seo.ogDescription },
-        { label: "OG Image", value: seo.ogImage },
-        { label: "Robots", value: seo.robots },
-        {
-          label: "JSON-LD",
-          value: seo.jsonLdEnabled
-            ? `Abilitato (${seo.jsonLdType ?? "WebPage"})`
-            : "Disabilitato",
-        },
-      ]
-    : [];
+  const rows = seo ? [
+    { label: "Meta Title", value: seo.title, hint: "Max 60 caratteri" },
+    { label: "Meta Description", value: seo.description, hint: "Max 155 caratteri" },
+    { label: "OG Title", value: seo.ogTitle },
+    { label: "OG Description", value: seo.ogDescription },
+    { label: "OG Image", value: seo.ogImage },
+    { label: "Robots", value: seo.robots },
+    { label: "JSON-LD", value: seo.jsonLdEnabled ? `Abilitato (${seo.jsonLdType ?? "WebPage"})` : "Disabilitato" },
+  ] : [];
 
   return (
     <>
-      {/* Header della tab con pulsante modifica */}
       <div className="flex items-center justify-between mb-4">
         <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--admin-text-faint)" }}>
           {seo ? "Meta SEO configurati" : "Nessun meta SEO"}
         </p>
-        <button
-          type="button"
-          onClick={() => setShowModal(true)}
+        <button type="button" onClick={() => setShowModal(true)}
           className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors"
           style={{
-            background: seo
-              ? "color-mix(in srgb, var(--admin-accent) 10%, var(--admin-card-bg))"
-              : "var(--admin-accent)",
+            background: seo ? "color-mix(in srgb, var(--admin-accent) 10%, var(--admin-card-bg))" : "var(--admin-accent)",
             color: seo ? "var(--admin-accent)" : "#fff",
-            border: seo
-              ? "1px solid color-mix(in srgb, var(--admin-accent) 25%, transparent)"
-              : "none",
+            border: seo ? "1px solid color-mix(in srgb, var(--admin-accent) 25%, transparent)" : "none",
           }}
           onMouseEnter={(e) => (e.currentTarget.style.filter = "brightness(0.9)")}
           onMouseLeave={(e) => (e.currentTarget.style.filter = "none")}
@@ -173,54 +100,33 @@ function SeoTab({
           {seo ? "Modifica SEO" : "Configura SEO"}
         </button>
       </div>
-
       {!seo ? (
         <div className="flex flex-col items-center justify-center py-10 text-center gap-3">
           <Search size={28} style={{ color: "var(--admin-text-faint)" }} />
           <div>
-            <p className="text-sm font-medium" style={{ color: "var(--admin-text-muted)" }}>
-              Nessun meta SEO configurato per questa pagina.
-            </p>
-            <p className="text-xs mt-1" style={{ color: "var(--admin-text-faint)" }}>
-              Clicca <strong>Configura SEO</strong> per aggiungere titolo, descrizione e Open Graph.
-            </p>
+            <p className="text-sm font-medium" style={{ color: "var(--admin-text-muted)" }}>Nessun meta SEO configurato.</p>
+            <p className="text-xs mt-1" style={{ color: "var(--admin-text-faint)" }}>Clicca <strong>Configura SEO</strong> per aggiungere titolo, descrizione e Open Graph.</p>
           </div>
         </div>
       ) : (
         <div className="space-y-2">
           {rows.map((row) => (
-            <div
-              key={row.label}
-              className="rounded-lg px-4 py-3"
+            <div key={row.label} className="rounded-lg px-4 py-3"
               style={{ background: "var(--admin-page-bg)", border: "1px solid var(--admin-input-border)" }}
             >
               <p style={{ ...labelStyle, marginBottom: "0.25rem" }}>{row.label}</p>
-              {row.value ? (
-                <p className="text-sm break-all" style={{ color: "var(--admin-text)" }}>
-                  {row.value}
-                </p>
-              ) : (
-                <p className="text-sm italic" style={{ color: "var(--admin-text-faint)" }}>
-                  Non impostato
-                </p>
-              )}
+              {row.value
+                ? <p className="text-sm break-all" style={{ color: "var(--admin-text)" }}>{row.value}</p>
+                : <p className="text-sm italic" style={{ color: "var(--admin-text-faint)" }}>Non impostato</p>}
               {row.hint && <p style={hintStyle}>{row.hint}</p>}
             </div>
           ))}
         </div>
       )}
-
-      {/* Modale SEO — renderizzata via portal su document.body per evitare
-          il nesting di <form> dentro il <form> del PageEditor */}
       {showModal && createPortal(
-        <SeoForm
-          page={seo ?? null}
-          domain={domain}
-          appName={appName}
-          unconfiguredRoutes={[]}
-          lockedPathname={`/${slug}`}
-          lockedLabel={pageTitle || slug}
-          hidePathnameField={false}
+        <SeoForm page={seo ?? null} domain={domain} appName={appName}
+          unconfiguredRoutes={[]} lockedPathname={`/${slug}`}
+          lockedLabel={pageTitle || slug} hidePathnameField={false}
           onClose={() => setShowModal(false)}
         />,
         document.body
@@ -229,19 +135,11 @@ function SeoTab({
   );
 }
 
-function PubTab({
-  status, setStatus,
-  publishedAt, setPublishedAt,
-  expiresAt, setExpiresAt,
-  slug,
-}: {
-  status: "draft" | "published";
-  setStatus: (v: "draft" | "published") => void;
-  publishedAt: string;
-  setPublishedAt: (v: string) => void;
-  expiresAt: string;
-  setExpiresAt: (v: string) => void;
-  slug: string;
+// ─── Pub Tab ──────────────────────────────────────────────────────────────────
+function PubTab({ status, setStatus, publishedAt, setPublishedAt, expiresAt, setExpiresAt, slug }: {
+  status: "draft" | "published"; setStatus: (v: "draft" | "published") => void;
+  publishedAt: string; setPublishedAt: (v: string) => void;
+  expiresAt: string; setExpiresAt: (v: string) => void; slug: string;
 }) {
   return (
     <div className="space-y-5">
@@ -254,19 +152,9 @@ function PubTab({
             <button key={s} type="button" onClick={() => setStatus(s)}
               className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors"
               style={{
-                background: status === s
-                  ? s === "published"
-                    ? "color-mix(in srgb, #22c55e 15%, var(--admin-card-bg))"
-                    : "color-mix(in srgb, var(--admin-accent) 12%, var(--admin-card-bg))"
-                  : "var(--admin-card-bg)",
-                color: status === s
-                  ? s === "published" ? "#22c55e" : "var(--admin-accent)"
-                  : "var(--admin-text-muted)",
-                border: status === s
-                  ? s === "published"
-                    ? "1px solid color-mix(in srgb, #22c55e 30%, transparent)"
-                    : "1px solid color-mix(in srgb, var(--admin-accent) 30%, transparent)"
-                  : "1px solid var(--admin-card-border)",
+                background: status === s ? (s === "published" ? "color-mix(in srgb, #22c55e 15%, var(--admin-card-bg))" : "color-mix(in srgb, var(--admin-accent) 12%, var(--admin-card-bg))") : "var(--admin-card-bg)",
+                color: status === s ? (s === "published" ? "#22c55e" : "var(--admin-accent)") : "var(--admin-text-muted)",
+                border: status === s ? (s === "published" ? "1px solid color-mix(in srgb, #22c55e 30%, transparent)" : "1px solid color-mix(in srgb, var(--admin-accent) 30%, transparent)") : "1px solid var(--admin-card-border)",
               }}
             >
               {s === "published" ? <Eye size={15} /> : <EyeOff size={15} />}
@@ -274,38 +162,25 @@ function PubTab({
             </button>
           ))}
         </div>
-        <p style={hintStyle}>
-          {status === "published"
-            ? `La pagina è visibile pubblicamente su /${slug}`
-            : "La pagina non è visibile al pubblico"}
-        </p>
+        <p style={hintStyle}>{status === "published" ? `La pagina è visibile pubblicamente su /${slug}` : "La pagina non è visibile al pubblico"}</p>
       </div>
-
       <div className="space-y-1.5">
         <label style={labelStyle}>Data di pubblicazione</label>
-        <input type="datetime-local" value={publishedAt}
-          onChange={(e) => setPublishedAt(e.target.value)} style={inputStyle} />
+        <input type="datetime-local" value={publishedAt} onChange={(e) => setPublishedAt(e.target.value)} style={inputStyle} />
         <p style={hintStyle}>Se vuota e lo stato è "Pubblicata", verrà usata la data e ora attuale.</p>
       </div>
-
       <div className="space-y-1.5">
         <label style={labelStyle}>Data di scadenza (opzionale)</label>
-        <input type="datetime-local" value={expiresAt}
-          onChange={(e) => setExpiresAt(e.target.value)} style={inputStyle} />
-        <p style={hintStyle}>Dopo questa data la pagina tornerà automaticamente in bozza. Lascia vuoto per nessuna scadenza.</p>
+        <input type="datetime-local" value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)} style={inputStyle} />
+        <p style={hintStyle}>Dopo questa data la pagina tornerà automaticamente in bozza.</p>
       </div>
-
       {expiresAt && (
         <div className="flex items-start gap-2 rounded-lg px-3 py-2.5"
-          style={{
-            background: "color-mix(in srgb, #f59e0b 8%, var(--admin-card-bg))",
-            border: "1px solid color-mix(in srgb, #f59e0b 25%, transparent)",
-          }}
+          style={{ background: "color-mix(in srgb, #f59e0b 8%, var(--admin-card-bg))", border: "1px solid color-mix(in srgb, #f59e0b 25%, transparent)" }}
         >
           <Calendar size={13} className="mt-0.5 shrink-0" style={{ color: "#f59e0b" }} />
           <p className="text-xs leading-relaxed" style={{ color: "var(--admin-text-muted)" }}>
-            Contenuto temporaneo: scade il{" "}
-            <strong>{new Date(expiresAt).toLocaleString("it-IT")}</strong>.
+            Contenuto temporaneo: scade il <strong>{new Date(expiresAt).toLocaleString("it-IT")}</strong>.
           </p>
         </div>
       )}
@@ -313,34 +188,182 @@ function PubTab({
   );
 }
 
+// ─── Struttura Tab ────────────────────────────────────────────────────────────
+function StrutturaTab({ pages, templates, parentId, setParentId, templateId, setTemplateId, customFields, setCustomFields, pageType, setPageType, currentPageId }: {
+  pages: Page[];
+  templates: TemplateWithFields[];
+  parentId: number | null;
+  setParentId: (v: number | null) => void;
+  templateId: number | null;
+  setTemplateId: (v: number | null) => void;
+  customFields: Record<string, string>;
+  setCustomFields: (v: Record<string, string>) => void;
+  pageType: string;
+  setPageType: (v: string) => void;
+  currentPageId?: number;
+}) {
+  const selectedTemplate = templates.find((t) => t.id === templateId) ?? null;
+
+  function handleCustomField(key: string, value: string) {
+    setCustomFields({ ...customFields, [key]: value });
+  }
+
+  return (
+    <div className="space-y-5">
+      {/* Tipo pagina */}
+      <div className="space-y-1.5">
+        <label style={labelStyle}>Tipo pagina</label>
+        <select value={pageType} onChange={(e) => setPageType(e.target.value)} style={inputStyle}>
+          <option value="page">Pagina generica</option>
+          <option value="article">Articolo</option>
+          <option value="service">Servizio</option>
+          <option value="landing">Landing page</option>
+          <option value="faq">FAQ</option>
+        </select>
+        <p style={hintStyle}>Classifica la pagina per uso futuro nelle query e nei sitemap.</p>
+      </div>
+
+      {/* Pagina parent */}
+      <div className="space-y-1.5">
+        <label style={labelStyle}>Pagina padre (opzionale)</label>
+        <select
+          value={parentId ?? ""}
+          onChange={(e) => setParentId(e.target.value ? Number(e.target.value) : null)}
+          style={inputStyle}
+        >
+          <option value="">— Nessuna (pagina radice) —</option>
+          {pages
+            .filter((p) => !currentPageId || p.id !== currentPageId)
+            .map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.title} (/{p.slug})
+              </option>
+            ))}
+        </select>
+        <p style={hintStyle}>Assegnare una pagina padre costruisce la gerarchia del sito (es. /servizi/consulenza).</p>
+      </div>
+
+      {/* Template grafico */}
+      <div className="space-y-1.5">
+        <label style={labelStyle}>Template grafico (opzionale)</label>
+        {templates.length === 0 ? (
+          <div className="rounded-lg px-4 py-3 text-sm"
+            style={{ background: "var(--admin-page-bg)", border: "1px solid var(--admin-input-border)", color: "var(--admin-text-faint)" }}
+          >
+            Nessun template creato. <a href="/admin/template" className="underline" style={{ color: "var(--admin-accent)" }}>Crea un template</a> per personalizzare il layout.
+          </div>
+        ) : (
+          <>
+            <select
+              value={templateId ?? ""}
+              onChange={(e) => {
+                const newId = e.target.value ? Number(e.target.value) : null;
+                setTemplateId(newId);
+                // Reset custom fields quando cambia template
+                setCustomFields({});
+              }}
+              style={inputStyle}
+            >
+              <option value="">— Nessun template (layout default) —</option>
+              {templates.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name} ({t.layoutBase})
+                </option>
+              ))}
+            </select>
+            {selectedTemplate && (
+              <p style={hintStyle}>
+                Layout: <strong>{selectedTemplate.layoutBase}</strong> — {selectedTemplate.description ?? ""}
+              </p>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Campi custom del template selezionato */}
+      {selectedTemplate && selectedTemplate.fields.length > 0 && (
+        <div className="rounded-xl p-4 space-y-4"
+          style={{ background: "var(--admin-page-bg)", border: "1px solid var(--admin-input-border)" }}
+        >
+          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--admin-text-faint)" }}>
+            Campi del template — {selectedTemplate.name}
+          </p>
+          {[...selectedTemplate.fields]
+            .sort((a, b) => a.sortOrder - b.sortOrder)
+            .map((field) => (
+              <div key={field.id} className="space-y-1.5">
+                <label style={labelStyle}>
+                  {field.label}
+                  {field.required && <span style={{ color: "#ef4444" }}> *</span>}
+                </label>
+                {field.fieldType === "textarea" ? (
+                  <textarea
+                    value={customFields[field.fieldKey] ?? field.defaultValue ?? ""}
+                    onChange={(e) => handleCustomField(field.fieldKey, e.target.value)}
+                    placeholder={field.placeholder ?? ""}
+                    rows={3}
+                    style={{ ...inputStyle, resize: "vertical" }}
+                  />
+                ) : field.fieldType === "toggle" ? (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id={`cf-${field.fieldKey}`}
+                      checked={(customFields[field.fieldKey] ?? field.defaultValue) === "true"}
+                      onChange={(e) => handleCustomField(field.fieldKey, e.target.checked ? "true" : "false")}
+                      className="w-4 h-4 rounded"
+                    />
+                    <label htmlFor={`cf-${field.fieldKey}`} className="text-sm" style={{ color: "var(--admin-text)" }}>
+                      {field.label}
+                    </label>
+                  </div>
+                ) : (
+                  <input
+                    type={field.fieldType === "date" ? "date" : field.fieldType === "number" ? "number" : "text"}
+                    value={customFields[field.fieldKey] ?? field.defaultValue ?? ""}
+                    onChange={(e) => handleCustomField(field.fieldKey, e.target.value)}
+                    placeholder={field.placeholder ?? ""}
+                    style={inputStyle}
+                  />
+                )}
+              </div>
+            ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Main PageEditor ──────────────────────────────────────────────────────────
 export default function PageEditor({
-  page,
-  seo,
-  domain = "",
-  appName = "",
+  page, seo, pages = [], templates = [], domain = "", appName = "",
 }: {
   page?: Page | null;
   seo?: SeoPage | null;
+  pages?: Page[];
+  templates?: TemplateWithFields[];
   domain?: string;
   appName?: string;
 }) {
   const router = useRouter();
   const isEdit = !!page;
-  const [activeTab, setActiveTab] = useState<"content" | "seo" | "pub">("content");
+  const [activeTab, setActiveTab] = useState<"content" | "seo" | "pub" | "struttura">("content");
 
   const [state, action, isPending] = useActionState(upsertPageAction, {});
   const [title, setTitle] = useState(page?.title ?? "");
   const [slug, setSlug] = useState(page?.slug ?? "");
   const [slugManual, setSlugManual] = useState(isEdit);
-  const [status, setStatus] = useState<"draft" | "published">(
-    (page?.status as "draft" | "published") ?? "draft",
-  );
-  const [publishedAt, setPublishedAt] = useState(
-    page?.publishedAt ? toDatetimeLocal(page.publishedAt) : "",
-  );
-  const [expiresAt, setExpiresAt] = useState(
-    page?.expiresAt ? toDatetimeLocal(page.expiresAt) : "",
-  );
+  const [status, setStatus] = useState<"draft" | "published">((page?.status as "draft" | "published") ?? "draft");
+  const [publishedAt, setPublishedAt] = useState(page?.publishedAt ? toDatetimeLocal(page.publishedAt) : "");
+  const [expiresAt, setExpiresAt] = useState(page?.expiresAt ? toDatetimeLocal(page.expiresAt) : "");
+
+  // Struttura
+  const [parentId, setParentId] = useState<number | null>(page?.parentId ?? null);
+  const [templateId, setTemplateId] = useState<number | null>(page?.templateId ?? null);
+  const [pageType, setPageType] = useState(page?.pageType ?? "page");
+  const [customFields, setCustomFields] = useState<Record<string, string>>(() => {
+    try { return JSON.parse(page?.customFields ?? "{}"); } catch { return {}; }
+  });
 
   const [savedAt, setSavedAt] = useState<string | null>(null);
   useEffect(() => {
@@ -352,7 +375,6 @@ export default function PageEditor({
   }, [state?.savedAt]);
 
   const contentRef = useRef<HTMLInputElement>(null);
-
   const editor = useEditor({
     extensions: [
       StarterKit.configure({ heading: { levels: [2, 3, 4] } }),
@@ -366,7 +388,6 @@ export default function PageEditor({
       if (contentRef.current) contentRef.current.value = editor.getHTML();
     },
   });
-
   useEffect(() => {
     if (editor && contentRef.current) contentRef.current.value = editor.getHTML();
   }, [editor]);
@@ -375,14 +396,12 @@ export default function PageEditor({
     setTitle(val);
     if (!slugManual) setSlug(slugify(val));
   }
-
   function handleLinkInsert() {
     const url = window.prompt("URL del link:");
     if (url === null) return;
     if (url === "") editor?.chain().focus().unsetLink().run();
     else editor?.chain().focus().setLink({ href: url }).run();
   }
-
   function handleInsertPlaceholder(token: string) {
     editor?.chain().focus().insertContent(token).run();
   }
@@ -416,6 +435,10 @@ export default function PageEditor({
         <input type="hidden" name="status" value={status} />
         <input type="hidden" name="publishedAt" value={publishedAt} />
         <input type="hidden" name="expiresAt" value={expiresAt} />
+        <input type="hidden" name="parentId" value={parentId ?? ""} />
+        <input type="hidden" name="templateId" value={templateId ?? ""} />
+        <input type="hidden" name="customFields" value={JSON.stringify(customFields)} />
+        <input type="hidden" name="pageType" value={pageType} />
 
         {/* Header */}
         <div className="flex items-center justify-between gap-4 mb-5">
@@ -425,18 +448,12 @@ export default function PageEditor({
             onMouseEnter={(e) => (e.currentTarget.style.color = "var(--admin-text)")}
             onMouseLeave={(e) => (e.currentTarget.style.color = "var(--admin-text-muted)")}
           >
-            <ArrowLeft size={15} />
-            Contenuti
+            <ArrowLeft size={15} /> Contenuti
           </button>
-
           <div className="flex items-center gap-2">
             {savedAt && (
               <span className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg"
-                style={{
-                  color: "#22c55e",
-                  background: "color-mix(in srgb, #22c55e 12%, var(--admin-card-bg))",
-                  border: "1px solid color-mix(in srgb, #22c55e 25%, transparent)",
-                }}
+                style={{ color: "#22c55e", background: "color-mix(in srgb, #22c55e 12%, var(--admin-card-bg))", border: "1px solid color-mix(in srgb, #22c55e 25%, transparent)" }}
               >
                 <Check size={12} /> Salvato alle {savedAt}
               </span>
@@ -469,9 +486,7 @@ export default function PageEditor({
                 {!isEdit && (
                   <button type="button" onClick={() => setSlugManual((v) => !v)}
                     className="text-xs" style={{ color: "var(--admin-accent)" }}
-                  >
-                    {slugManual ? "Auto" : "Modifica"}
-                  </button>
+                  >{slugManual ? "Auto" : "Modifica"}</button>
                 )}
               </div>
               <div className="flex">
@@ -510,12 +525,17 @@ export default function PageEditor({
               </svg>
               Contenuto
             </TabBtn>
+            <TabBtn active={activeTab === "struttura"} onClick={() => setActiveTab("struttura")}>
+              <GitBranch size={14} />
+              Struttura
+              {(parentId || templateId) && (
+                <span className="w-1.5 h-1.5 rounded-full ml-0.5" style={{ background: "var(--admin-accent)" }} />
+              )}
+            </TabBtn>
             <TabBtn active={activeTab === "seo"} onClick={() => setActiveTab("seo")}>
               <Search size={14} />
               SEO
-              {!seo && (
-                <span className="w-1.5 h-1.5 rounded-full ml-0.5" style={{ background: "#f59e0b" }} />
-              )}
+              {!seo && <span className="w-1.5 h-1.5 rounded-full ml-0.5" style={{ background: "#f59e0b" }} />}
             </TabBtn>
             <TabBtn active={activeTab === "pub"} onClick={() => setActiveTab("pub")}>
               <Calendar size={14} />
@@ -523,7 +543,6 @@ export default function PageEditor({
             </TabBtn>
           </div>
 
-          {/* Tab: Contenuto */}
           {activeTab === "content" && (
             <>
               <div className="flex flex-wrap items-center gap-0.5 px-3 py-2"
@@ -550,31 +569,40 @@ export default function PageEditor({
                 <TBtn onClick={handleLinkInsert} active={editor?.isActive("link")} title="Link"><Link2 size={15} /></TBtn>
                 <TBtn onClick={() => editor?.chain().focus().setHorizontalRule().run()} title="Separatore"><Minus size={15} /></TBtn>
               </div>
-
               <div className="px-3 pt-2">
                 <PlaceholderHint onInsert={handleInsertPlaceholder} />
               </div>
-
               <EditorContent editor={editor} />
             </>
           )}
 
+          {activeTab === "struttura" && (
+            <div className="p-5">
+              <StrutturaTab
+                pages={pages}
+                templates={templates}
+                parentId={parentId}
+                setParentId={setParentId}
+                templateId={templateId}
+                setTemplateId={setTemplateId}
+                customFields={customFields}
+                setCustomFields={setCustomFields}
+                pageType={pageType}
+                setPageType={setPageType}
+                currentPageId={page?.id}
+              />
+            </div>
+          )}
+
           {activeTab === "seo" && (
             <div className="p-5">
-              <SeoTab
-                seo={seo}
-                slug={slug}
-                domain={domain}
-                appName={appName}
-                pageTitle={title}
-              />
+              <SeoTab seo={seo} slug={slug} domain={domain} appName={appName} pageTitle={title} />
             </div>
           )}
 
           {activeTab === "pub" && (
             <div className="p-5">
-              <PubTab
-                status={status} setStatus={setStatus}
+              <PubTab status={status} setStatus={setStatus}
                 publishedAt={publishedAt} setPublishedAt={setPublishedAt}
                 expiresAt={expiresAt} setExpiresAt={setExpiresAt}
                 slug={slug}
