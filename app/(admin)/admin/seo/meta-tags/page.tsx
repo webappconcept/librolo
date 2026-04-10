@@ -10,6 +10,9 @@ import {
 import { Suspense } from "react";
 import SeoManager from "../_components/seo-manager";
 
+// Pagina admin con query DB — disabilita il prerender statico
+export const dynamic = "force-dynamic";
+
 function getStaticAppRoutes(): string[] {
   const paths = new Set<string>([
     ...PUBLIC_ROUTES,
@@ -25,7 +28,6 @@ function getStaticAppRoutes(): string[] {
 async function SeoContent() {
   const [seoPagesList, cmsPages, settings] = await Promise.all([
     getAllSeoPages(),
-    // Solo le pagine CMS pubblicate appaiono come percorsi SEO configurabili
     getAllPages(),
     getAppSettings(),
   ]);
@@ -36,14 +38,11 @@ async function SeoContent() {
 
   const appName = settings.app_name?.trim() ?? "";
 
-  // Percorsi statici da routes.ts
   const staticRoutes = getStaticAppRoutes();
 
-  // Percorsi dinamici dalle pagine CMS (tutte, anche bozze, così l'admin
-  // può pre-configurare i meta prima della pubblicazione)
+  // Percorsi CMS (tutte le pagine, anche bozze — per pre-configurare SEO prima della pubblicazione)
   const cmsRoutes = cmsPages.map((p) => `/${p.slug}`);
 
-  // Unione senza duplicati, ordinata
   const allRoutes = [...new Set([...staticRoutes, ...cmsRoutes])].sort();
 
   const configuredPaths = new Set(seoPagesList.map((p) => p.pathname));

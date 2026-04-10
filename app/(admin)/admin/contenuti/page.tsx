@@ -2,6 +2,9 @@ import { getAllPages } from "@/lib/db/pages-queries";
 import { Suspense } from "react";
 import PageManager from "./_components/page-manager";
 
+// Pagina admin con query DB — disabilita il prerender statico
+export const dynamic = "force-dynamic";
+
 async function ContenutiContent() {
   const pages = await getAllPages();
   return <PageManager initialPages={pages} />;
