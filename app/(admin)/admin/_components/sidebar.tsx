@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   Layers,
   Map,
+  PanelTop,
   Search,
   Settings,
   ShieldAlert,
@@ -24,8 +25,6 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { ADMIN_NAV, type NavItem, type NavChild } from "@/lib/admin-nav";
 
-// Mappa nome icona → componente Lucide
-// Aggiungere qui quando si aggiungono nuove icone al registro
 const ICON_MAP: Record<string, React.ElementType> = {
   LayoutDashboard,
   Users,
@@ -33,6 +32,7 @@ const ICON_MAP: Record<string, React.ElementType> = {
   ShieldCheck,
   KeyRound,
   Layers,
+  PanelTop,
   BarChart2,
   ShieldAlert,
   Search,
@@ -60,23 +60,19 @@ export default function AdminSidebar({
 }: AdminSidebarProps) {
   const pathname = usePathname();
 
-  /** true se l'utente ha il permesso (super admin bypassa sempre) */
   function hasPerm(permission: string): boolean {
     if (isSuperAdmin) return true;
     return userPermissions.has(permission);
   }
 
-  /** Filtra le voci top-level visibili */
   const visibleNav: NavItem[] = ADMIN_NAV.filter((item) => {
     if (!hasPerm(item.permission)) return false;
-    // Se ha children, mostra il gruppo solo se almeno una sottosezione è visibile
     if (item.children) {
       return item.children.some((c) => hasPerm(c.permission));
     }
     return true;
   });
 
-  // Stato espansione per i gruppi — inizializzato in base al pathname corrente
   const initialOpen: Record<string, boolean> = {};
   for (const item of visibleNav) {
     if (item.children) {
@@ -232,7 +228,6 @@ export default function AdminSidebar({
       className="w-[var(--admin-sidebar-width)] h-full flex flex-col"
       style={{ background: "var(--admin-sidebar-bg)", color: "var(--admin-sidebar-text-active)" }}
     >
-      {/* Logo */}
       <div
         className="flex items-center justify-between px-6 py-5"
         style={{ borderBottom: "1px solid var(--admin-sidebar-border)" }}
@@ -269,7 +264,6 @@ export default function AdminSidebar({
         )}
       </div>
 
-      {/* Nav — filtrata per permessi */}
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
         {visibleNav.map((item) =>
           item.children ? (
@@ -286,7 +280,6 @@ export default function AdminSidebar({
         )}
       </nav>
 
-      {/* Footer */}
       <div className="px-5 py-4" style={{ borderTop: "1px solid var(--admin-sidebar-border)" }}>
         <Link
           href="/"

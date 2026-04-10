@@ -71,6 +71,13 @@ export const ADMIN_NAV: NavItem[] = [
     permission: "admin:content",
   },
   {
+    key: "templates",
+    href: "/admin/template",
+    label: "Template pagine",
+    icon: "PanelTop",
+    permission: "admin:content",
+  },
+  {
     key: "analytics",
     href: "/admin/analytics",
     label: "Analytics",
@@ -85,9 +92,6 @@ export const ADMIN_NAV: NavItem[] = [
     permission: "admin:moderation",
   },
   {
-    // [FUTURE] Sezione Billing non ancora implementata.
-    // Rimuovere comingSoon e creare app/(admin)/admin/billing/layout.tsx
-    // quando la sezione sarà pronta.
     key: "billing",
     label: "Billing & Pagamenti",
     icon: "CreditCard",
