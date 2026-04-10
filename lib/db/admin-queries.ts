@@ -1,9 +1,41 @@
 // lib/db/admin-queries.ts
 import { db } from "@/lib/db/drizzle";
-import { activityLogs, roles, users } from "@/lib/db/schema";
-import { and, count, desc, eq, isNotNull, isNull, sql } from "drizzle-orm";
+import { activityLogs, permissions, rolePermissions, roles, users } from "@/lib/db/schema";
+import { and, count, desc, eq, exists, isNotNull, isNull, sql } from "drizzle-orm";
 import { unstable_noStore as noStore } from "next/cache";
 import "server-only";
+
+// ---------------------------------------------------------------------------
+// Subquery riutilizzabile: "il ruolo dell'utente ha almeno un permesso admin:*"
+// Un utente è considerato staff/admin se:
+//   1. ha users.isAdmin = true (super-admin legacy, fallback di emergenza), OPPURE
+//   2. il suo ruolo ha almeno un permesso con key che inizia per 'admin:'
+// ---------------------------------------------------------------------------
+const hasAdminPermission = (userAlias: typeof users) =>
+  sql<boolean>`(
+    ${userAlias.isAdmin} = true
+    OR EXISTS (
+      SELECT 1
+      FROM ${rolePermissions}
+      INNER JOIN ${permissions} ON ${permissions.id} = ${rolePermissions.permissionId}
+      INNER JOIN ${roles} ON ${roles.name} = ${userAlias.role}
+      WHERE ${rolePermissions.roleId} = ${roles.id}
+        AND ${permissions.key} LIKE 'admin:%'
+    )
+  )`;
+
+const lacksAdminPermission = (userAlias: typeof users) =>
+  sql<boolean>`(
+    ${userAlias.isAdmin} = false
+    AND NOT EXISTS (
+      SELECT 1
+      FROM ${rolePermissions}
+      INNER JOIN ${permissions} ON ${permissions.id} = ${rolePermissions.permissionId}
+      INNER JOIN ${roles} ON ${roles.name} = ${userAlias.role}
+      WHERE ${rolePermissions.roleId} = ${roles.id}
+        AND ${permissions.key} LIKE 'admin:%'
+    )
+  )`;
 
 export async function getDashboardStats() {
   const [
@@ -13,23 +45,23 @@ export async function getDashboardStats() {
     premiumUsers,
     verifiedUsers,
   ] = await Promise.all([
-    db.select({ count: count() }).from(users).where(and(isNull(users.deletedAt), sql`${users.isAdmin} = false`)),
+    db.select({ count: count() }).from(users).where(and(isNull(users.deletedAt), lacksAdminPermission(users))),
     db.select({ count: count() }).from(users).where(
-      and(isNull(users.deletedAt), sql`${users.isAdmin} = false`, sql`${users.createdAt} >= NOW() - INTERVAL '30 days'`),
+      and(isNull(users.deletedAt), lacksAdminPermission(users), sql`${users.createdAt} >= NOW() - INTERVAL '30 days'`),
     ),
     db.select({ count: count() }).from(users).where(
       and(
         isNull(users.deletedAt),
-        sql`${users.isAdmin} = false`,
+        lacksAdminPermission(users),
         sql`${users.createdAt} >= NOW() - INTERVAL '60 days'`,
         sql`${users.createdAt} < NOW() - INTERVAL '30 days'`,
       ),
     ),
     db.select({ count: count() }).from(users).where(
-      and(isNull(users.deletedAt), sql`${users.isAdmin} = false`, isNotNull(users.stripeSubscriptionId), sql`${users.subscriptionStatus} = 'active'`),
+      and(isNull(users.deletedAt), lacksAdminPermission(users), isNotNull(users.stripeSubscriptionId), sql`${users.subscriptionStatus} = 'active'`),
     ),
     db.select({ count: count() }).from(users).where(
-      and(isNull(users.deletedAt), sql`${users.isAdmin} = false`, sql`${users.emailVerified} = true`),
+      and(isNull(users.deletedAt), lacksAdminPermission(users), sql`${users.emailVerified} = true`),
     ),
   ]);
 
@@ -49,7 +81,15 @@ export async function getUserGrowthChart() {
   const rows = await db.execute(sql`
     SELECT TO_CHAR(DATE_TRUNC('month', created_at), 'Mon') AS month, COUNT(*) AS total
     FROM users
-    WHERE deleted_at IS NULL AND is_admin = false
+    WHERE deleted_at IS NULL
+      AND is_admin = false
+      AND NOT EXISTS (
+        SELECT 1
+        FROM role_permissions rp
+        INNER JOIN permissions p ON p.id = rp.permission_id
+        INNER JOIN roles r ON r.name = users.role
+        WHERE rp.role_id = r.id AND p.key LIKE 'admin:%'
+      )
       AND created_at >= NOW() - INTERVAL '7 months'
     GROUP BY DATE_TRUNC('month', created_at)
     ORDER BY DATE_TRUNC('month', created_at) ASC
@@ -75,6 +115,9 @@ export type AdminUser = {
   bannedReason: string | null;
 };
 
+// ---------------------------------------------------------------------------
+// getAdminUsers — utenti regolari (nessun permesso admin:* nel ruolo)
+// ---------------------------------------------------------------------------
 export async function getAdminUsers({
   search = "",
   role = "",
@@ -107,7 +150,7 @@ export async function getAdminUsers({
 
   const baseWhere = and(
     isNull(users.deletedAt),
-    sql`${users.isAdmin} = false`,
+    lacksAdminPermission(users),
     search
       ? sql`(
           ${users.email} ILIKE ${"%" + search + "%"} OR
@@ -169,6 +212,9 @@ export async function getAdminUsers({
   };
 }
 
+// ---------------------------------------------------------------------------
+// getStaffUsers — utenti il cui ruolo ha almeno un permesso admin:*
+// ---------------------------------------------------------------------------
 export async function getStaffUsers({
   search = "",
   role = "",
@@ -186,7 +232,7 @@ export async function getStaffUsers({
 
   const baseWhere = and(
     isNull(users.deletedAt),
-    sql`${users.isAdmin} = true`,
+    hasAdminPermission(users),
     search
       ? sql`(
           ${users.email} ILIKE ${"%" + search + "%"} OR
