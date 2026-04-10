@@ -8,14 +8,21 @@ type AdminShellClientProps = {
   children: React.ReactNode;
   header: React.ReactNode;
   appName: string;
+  /** Array serializzato dei permessi attivi — generato dal layout server */
+  userPermissions: string[];
+  /** true se l'utente è super admin (isAdmin flag) — bypassa tutti i filtri */
+  isSuperAdmin: boolean;
 };
 
 export default function AdminShellClient({
   children,
   header,
   appName,
+  userPermissions,
+  isSuperAdmin,
 }: AdminShellClientProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const permissionsSet = new Set(userPermissions);
 
   return (
     <div
@@ -25,6 +32,8 @@ export default function AdminShellClient({
         appName={appName}
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
+        userPermissions={permissionsSet}
+        isSuperAdmin={isSuperAdmin}
       />
 
       <div className="flex flex-col flex-1 overflow-hidden min-w-0">

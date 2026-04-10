@@ -22,49 +22,74 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { ADMIN_NAV, type NavItem, type NavChild } from "@/lib/admin-nav";
 
-const NAV_TOP = [
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
-];
-
-const USERS_SUB = [
-  { href: "/admin/users",       label: "Gestione Utenti", icon: Users },
-  { href: "/admin/staff",       label: "Gestione Staff",  icon: UserCog },
-  { href: "/admin/roles",       label: "Gestione Ruoli",  icon: ShieldCheck },
-  { href: "/admin/permissions", label: "Permessi",        icon: KeyRound },
-];
-
-const SEO_SUB = [
-  { href: "/admin/seo/meta-tags", label: "Meta Tags", icon: FileText },
-  { href: "/admin/seo/robots",    label: "Robots",    icon: Globe },
-  { href: "/admin/seo/sitemap",   label: "Sitemap",   icon: Map },
-];
-
-const NAV_BOTTOM = [
-  { href: "/admin/moderation", label: "Moderazione",   icon: ShieldAlert },
-  { href: "/admin/analytics",  label: "Analytics",     icon: BarChart2 },
-  { href: "/admin/settings",   label: "Impostazioni",  icon: Settings },
-  { href: "/admin/logs",       label: "Log attività",  icon: ClipboardList },
-];
+// Mappa nome icona → componente Lucide
+// Aggiungere qui quando si aggiungono nuove icone al registro
+const ICON_MAP: Record<string, React.ElementType> = {
+  LayoutDashboard,
+  Users,
+  UserCog,
+  ShieldCheck,
+  KeyRound,
+  Layers,
+  BarChart2,
+  ShieldAlert,
+  Search,
+  FileText,
+  Globe,
+  Map,
+  Settings,
+  ClipboardList,
+};
 
 interface AdminSidebarProps {
   appName: string;
   open?: boolean;
   onClose?: () => void;
+  userPermissions: Set<string>;
+  isSuperAdmin: boolean;
 }
 
-export default function AdminSidebar({ appName, open, onClose }: AdminSidebarProps) {
+export default function AdminSidebar({
+  appName,
+  open,
+  onClose,
+  userPermissions,
+  isSuperAdmin,
+}: AdminSidebarProps) {
   const pathname = usePathname();
 
-  const usersGroupActive =
-    pathname.startsWith("/admin/users") ||
-    pathname.startsWith("/admin/staff") ||
-    pathname.startsWith("/admin/roles") ||
-    pathname.startsWith("/admin/permissions");
-  const [usersOpen, setUsersOpen] = useState(usersGroupActive);
+  /** true se l'utente ha il permesso (super admin bypassa sempre) */
+  function hasPerm(permission: string): boolean {
+    if (isSuperAdmin) return true;
+    return userPermissions.has(permission);
+  }
 
-  const seoGroupActive = pathname.startsWith("/admin/seo");
-  const [seoOpen, setSeoOpen] = useState(seoGroupActive);
+  /** Filtra le voci top-level visibili */
+  const visibleNav: NavItem[] = ADMIN_NAV.filter((item) => {
+    if (!hasPerm(item.permission)) return false;
+    // Se ha children, mostra il gruppo solo se almeno una sottosezione è visibile
+    if (item.children) {
+      return item.children.some((c) => hasPerm(c.permission));
+    }
+    return true;
+  });
+
+  // Stato espansione per i gruppi — inizializzato in base al pathname corrente
+  const initialOpen: Record<string, boolean> = {};
+  for (const item of visibleNav) {
+    if (item.children) {
+      initialOpen[item.key] = item.children.some((c) =>
+        pathname.startsWith(c.href),
+      );
+    }
+  }
+  const [groupOpen, setGroupOpen] = useState<Record<string, boolean>>(initialOpen);
+
+  function toggleGroup(key: string) {
+    setGroupOpen((prev) => ({ ...prev, [key]: !prev[key] }));
+  }
 
   function isActive(href: string, exact?: boolean) {
     if (exact) return pathname === href;
@@ -74,16 +99,17 @@ export default function AdminSidebar({ appName, open, onClose }: AdminSidebarPro
   function NavLink({
     href,
     label,
-    icon: Icon,
+    icon: iconName,
     exact,
     sub,
   }: {
     href: string;
     label: string;
-    icon: React.ElementType;
+    icon: string;
     exact?: boolean;
     sub?: boolean;
   }) {
+    const Icon = ICON_MAP[iconName] ?? Settings;
     const active = isActive(href, exact);
     return (
       <Link
@@ -126,27 +152,16 @@ export default function AdminSidebar({ appName, open, onClose }: AdminSidebarPro
     );
   }
 
-  function ExpandableGroup({
-    label,
-    icon: Icon,
-    isGroupActive,
-    isOpen,
-    onToggle,
-    children,
-    maxHeight = "180px",
-  }: {
-    label: string;
-    icon: React.ElementType;
-    isGroupActive: boolean;
-    isOpen: boolean;
-    onToggle: () => void;
-    children: React.ReactNode;
-    maxHeight?: string;
-  }) {
+  function ExpandableGroup({ item }: { item: NavItem }) {
+    const Icon = ICON_MAP[item.icon] ?? Settings;
+    const visibleChildren = (item.children ?? []).filter((c) => hasPerm(c.permission));
+    const isGroupActive = visibleChildren.some((c) => pathname.startsWith(c.href));
+    const isOpen = groupOpen[item.key] ?? false;
+
     return (
       <div>
         <button
-          onClick={onToggle}
+          onClick={() => toggleGroup(item.key)}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors"
           style={{
             background:
@@ -179,7 +194,7 @@ export default function AdminSidebar({ appName, open, onClose }: AdminSidebarPro
                 : "var(--admin-sidebar-icon-inactive)",
             }}
           />
-          <span className="flex-1 text-left">{label}</span>
+          <span className="flex-1 text-left">{item.label}</span>
           <ChevronDown
             size={15}
             className="transition-transform duration-200"
@@ -191,9 +206,22 @@ export default function AdminSidebar({ appName, open, onClose }: AdminSidebarPro
         </button>
         <div
           className="overflow-hidden transition-all duration-200"
-          style={{ maxHeight: isOpen ? maxHeight : "0px", opacity: isOpen ? 1 : 0 }}
+          style={{
+            maxHeight: isOpen ? (item.childrenMaxHeight ?? "200px") : "0px",
+            opacity: isOpen ? 1 : 0,
+          }}
         >
-          <div className="mt-0.5 space-y-0.5 pb-0.5">{children}</div>
+          <div className="mt-0.5 space-y-0.5 pb-0.5">
+            {visibleChildren.map((child: NavChild) => (
+              <NavLink
+                key={child.href}
+                href={child.href}
+                label={child.label}
+                icon={child.icon}
+                sub
+              />
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -241,54 +269,21 @@ export default function AdminSidebar({ appName, open, onClose }: AdminSidebarPro
         )}
       </div>
 
-      {/* Nav */}
+      {/* Nav — filtrata per permessi */}
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-        {NAV_TOP.map(({ href, label, icon, exact }) => (
-          <NavLink key={href} href={href} label={label} icon={icon} exact={exact} />
-        ))}
-
-        {/* Gruppo espandibile Utenti */}
-        <ExpandableGroup
-          label="Utenti"
-          icon={Users}
-          isGroupActive={usersGroupActive}
-          isOpen={usersOpen}
-          onToggle={() => setUsersOpen((v) => !v)}
-          maxHeight="240px"
-        >
-          {USERS_SUB.map(({ href, label, icon }) => (
-            <NavLink key={href} href={href} label={label} icon={icon} sub />
-          ))}
-        </ExpandableGroup>
-
-        {/* Contenuti CMS */}
-        <NavLink
-          href="/admin/contenuti"
-          label="Contenuti"
-          icon={Layers}
-        />
-
-        {NAV_BOTTOM.slice(0, 2).map(({ href, label, icon }) => (
-          <NavLink key={href} href={href} label={label} icon={icon} />
-        ))}
-
-        {/* Gruppo espandibile SEO */}
-        <ExpandableGroup
-          label="SEO"
-          icon={Search}
-          isGroupActive={seoGroupActive}
-          isOpen={seoOpen}
-          onToggle={() => setSeoOpen((v) => !v)}
-          maxHeight="150px"
-        >
-          {SEO_SUB.map(({ href, label, icon }) => (
-            <NavLink key={href} href={href} label={label} icon={icon} sub />
-          ))}
-        </ExpandableGroup>
-
-        {NAV_BOTTOM.slice(2).map(({ href, label, icon }) => (
-          <NavLink key={href} href={href} label={label} icon={icon} />
-        ))}
+        {visibleNav.map((item) =>
+          item.children ? (
+            <ExpandableGroup key={item.key} item={item} />
+          ) : (
+            <NavLink
+              key={item.key}
+              href={item.href!}
+              label={item.label}
+              icon={item.icon}
+              exact={item.exact}
+            />
+          ),
+        )}
       </nav>
 
       {/* Footer */}

@@ -9,19 +9,38 @@
  *
  * Tutti gli altri ruoli (es. editor, supporto, moderatore)
  * si creano dall'UI /admin/roles assegnando i permessi granulari RBAC.
+ *
+ * ── Permessi sezioni admin (admin:*) ─────────────────────────────────────
+ * Ogni sezione del pannello admin ha un permesso dedicato.
+ * Questo permette di creare ruoli che accedono all'admin ma vedono
+ * solo le sezioni per cui hanno il permesso.
+ *
+ * Flusso per un ruolo "Editor di Contenuti":
+ *  1. Crea ruolo dall'UI /admin/roles
+ *  2. Assegna: admin:access, admin:contenuti
+ *  3. Assegna: content:create, content:edit_any, content:publish
+ *  4. L'utente entra nell'admin e vede solo la sezione Contenuti
  */
 import { db } from "./drizzle";
 import { permissions, roles, rolePermissions } from "./schema";
 import { eq } from "drizzle-orm";
 
 const PERMISSIONS_SEED = [
-  // ── Admin ────────────────────────────────────────────────────────
-  { key: "admin:access",    label: "Accedere al pannello admin",      group: "Admin",      isSystem: true },
-  { key: "admin:settings",  label: "Modificare impostazioni app",     group: "Admin",      isSystem: true },
-  { key: "admin:analytics", label: "Visualizzare analytics",          group: "Admin",      isSystem: true },
-  { key: "admin:seo",       label: "Gestire SEO",                     group: "Admin",      isSystem: true },
+  // ── Admin — accesso base ─────────────────────────────────────────────────
+  { key: "admin:access",      label: "Accedere al pannello admin",         group: "Admin", isSystem: true },
+  { key: "admin:settings",    label: "Modificare impostazioni app",        group: "Admin", isSystem: true },
+  { key: "admin:analytics",   label: "Visualizzare analytics",             group: "Admin", isSystem: true },
 
-  // ── Utenti ─────────────────────────────────────────────────────
+  // ── Admin — sezioni specifiche (usate dal Nav Registry) ─────────────────
+  { key: "admin:contenuti",   label: "Accedere alla sezione Contenuti",    group: "Admin", isSystem: true },
+  { key: "admin:seo",         label: "Accedere alla sezione SEO",          group: "Admin", isSystem: true },
+  { key: "admin:users",       label: "Accedere alla sezione Utenti",       group: "Admin", isSystem: true },
+  { key: "admin:staff",       label: "Accedere alla sezione Staff",        group: "Admin", isSystem: true },
+  { key: "admin:roles",       label: "Accedere a Ruoli & Permessi",        group: "Admin", isSystem: true },
+  { key: "admin:logs",        label: "Accedere ai Log attività",           group: "Admin", isSystem: true },
+  { key: "admin:moderation",  label: "Accedere alla sezione Moderazione",  group: "Admin", isSystem: true },
+
+  // ── Utenti ────────────────────────────────────────────────────────────────
   { key: "users:read",              label: "Visualizzare lista utenti",         group: "Utenti", isSystem: true },
   { key: "users:edit",              label: "Modificare profili altrui",         group: "Utenti", isSystem: true },
   { key: "users:delete",            label: "Eliminare account altrui",          group: "Utenti", isSystem: true },
@@ -29,11 +48,11 @@ const PERMISSIONS_SEED = [
   { key: "users:role_assign",       label: "Assegnare ruoli",                   group: "Utenti", isSystem: true },
   { key: "users:permission_assign", label: "Assegnare permessi individuali",    group: "Utenti", isSystem: true },
 
-  // ── Moderazione ──────────────────────────────────────────────
+  // ── Moderazione ───────────────────────────────────────────────────────────
   { key: "moderation:read", label: "Visualizzare segnalazioni", group: "Moderazione", isSystem: true },
   { key: "moderation:act",  label: "Gestire segnalazioni",      group: "Moderazione", isSystem: true },
 
-  // ── Contenuti (generici — personalizzare per l'app) ───────────────────
+  // ── Contenuti ─────────────────────────────────────────────────────────────
   { key: "content:read",       label: "Leggere contenuti",                  group: "Contenuti", isSystem: false },
   { key: "content:create",     label: "Creare contenuti",                   group: "Contenuti", isSystem: false },
   { key: "content:edit_own",   label: "Modificare propri contenuti",        group: "Contenuti", isSystem: false },
@@ -42,7 +61,7 @@ const PERMISSIONS_SEED = [
   { key: "content:delete_any", label: "Eliminare qualsiasi contenuto",      group: "Contenuti", isSystem: false },
   { key: "content:publish",    label: "Pubblicare senza approvazione",      group: "Contenuti", isSystem: false },
 
-  // ── Profilo ──────────────────────────────────────────────────────
+  // ── Profilo ───────────────────────────────────────────────────────────────
   { key: "profile:read",   label: "Visualizzare il proprio profilo", group: "Profilo", isSystem: false },
   { key: "profile:edit",   label: "Modificare il proprio profilo",   group: "Profilo", isSystem: false },
   { key: "profile:export", label: "Esportare i propri dati",         group: "Profilo", isSystem: false },
@@ -54,12 +73,19 @@ const PERMISSIONS_SEED = [
  */
 const ROLE_PERMISSION_MAP: Record<string, string[]> = {
   admin: [
-    "admin:access", "admin:settings", "admin:analytics", "admin:seo",
+    // accesso admin completo
+    "admin:access", "admin:settings", "admin:analytics",
+    "admin:contenuti", "admin:seo", "admin:users", "admin:staff",
+    "admin:roles", "admin:logs", "admin:moderation",
+    // gestione utenti
     "users:read", "users:edit", "users:delete", "users:ban",
     "users:role_assign", "users:permission_assign",
+    // moderazione
     "moderation:read", "moderation:act",
+    // contenuti
     "content:read", "content:create", "content:edit_own", "content:edit_any",
     "content:delete_own", "content:delete_any", "content:publish",
+    // profilo
     "profile:read", "profile:edit", "profile:export",
   ],
   member: [
@@ -72,7 +98,6 @@ const ROLE_PERMISSION_MAP: Record<string, string[]> = {
 async function seed() {
   console.log("🌱 Seed permessi RBAC...");
 
-  // 1. Inserisce/aggiorna tutti i permessi
   for (const p of PERMISSIONS_SEED) {
     await db
       .insert(permissions)
@@ -84,7 +109,6 @@ async function seed() {
   }
   console.log(`  ✓ ${PERMISSIONS_SEED.length} permessi inseriti/aggiornati`);
 
-  // 2. Per ogni ruolo nel map, assegna i permessi
   for (const [roleName, permKeys] of Object.entries(ROLE_PERMISSION_MAP)) {
     const role = await db.query.roles.findFirst({ where: eq(roles.name, roleName) });
     if (!role) {

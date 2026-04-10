@@ -5,6 +5,7 @@
 import "@/app/(admin)/admin.css";
 import { requireAdminPage } from "@/lib/rbac/guards";
 import { getAppSettings } from "@/lib/db/settings-queries";
+import { getUserPermissions } from "@/lib/rbac/can";
 import { headers } from "next/headers";
 import { Suspense } from "react";
 import AdminShellClient from "./_components/admin-shell-client";
@@ -26,9 +27,18 @@ async function AdminShell({ children }: { children: React.ReactNode }) {
 
   const appName = settings.app_name?.trim() || "App";
 
+  // Carica i permessi in batch (una sola query) per passarli alla sidebar
+  // I super admin (isAdmin=true) ricevono un Set vuoto — la sidebar
+  // li tratta come "ha tutto" tramite il flag separato
+  const userPermissions = user.isAdmin
+    ? new Set<string>(["__superadmin__"])
+    : await getUserPermissions(user);
+
   return (
     <AdminShellClient
       appName={appName}
+      userPermissions={[...userPermissions]}
+      isSuperAdmin={user.isAdmin === true}
       header={<AdminHeaderRight user={user} />}>
       <Suspense
         fallback={
