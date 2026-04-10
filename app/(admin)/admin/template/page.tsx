@@ -5,6 +5,7 @@ import { PanelTop, Plus, Copy, Trash2 } from "lucide-react";
 import { deleteTemplateAction, duplicateTemplateAction } from "./actions";
 
 export const metadata = { title: "Template pagine" };
+export const dynamic = "force-dynamic";
 
 export default async function TemplatePage() {
   const templates = await getAllTemplates();

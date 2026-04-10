@@ -5,6 +5,7 @@ import { saveTemplateAction } from "../actions";
 import TemplateFormClient from "../_components/template-form-client";
 
 export const metadata = { title: "Modifica template" };
+export const dynamic = "force-dynamic";
 
 export default async function EditTemplatePage({
   params,

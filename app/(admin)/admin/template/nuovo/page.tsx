@@ -3,6 +3,7 @@ import { saveTemplateAction } from "../actions";
 import TemplateFormClient from "../_components/template-form-client";
 
 export const metadata = { title: "Nuovo template" };
+export const dynamic = "force-dynamic";
 
 export default function NuovoTemplatePage() {
   return (
