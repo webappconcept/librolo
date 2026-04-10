@@ -1,6 +1,7 @@
 "use client";
 
 import type { Page, SeoPage } from "@/lib/db/schema";
+import { SeoForm } from "@/app/(admin)/admin/seo/_components/seo-form";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
@@ -19,12 +20,12 @@ import {
   EyeOff,
   Heading2,
   Heading3,
-  Info,
   Italic,
   Link2,
   List,
   ListOrdered,
   Minus,
+  Pencil,
   RotateCcw,
   RotateCw,
   Search,
@@ -111,61 +112,117 @@ function TabBtn({ active, onClick, children }: { active: boolean; onClick: () =>
   );
 }
 
-function SeoTab({ seo, slug }: { seo?: SeoPage | null; slug: string }) {
-  if (!seo) {
-    return (
-      <div className="flex flex-col items-center justify-center py-16 text-center gap-3">
-        <Search size={32} style={{ color: "var(--admin-text-faint)" }} />
-        <div>
-          <p className="text-sm font-medium" style={{ color: "var(--admin-text-muted)" }}>
-            Nessun meta SEO configurato per questa pagina
-          </p>
-          <p className="text-xs mt-1" style={{ color: "var(--admin-text-faint)" }}>
-            Vai in <strong>SEO → Meta Tags</strong> e cerca <code>/{slug}</code> per configurarli.
-          </p>
-        </div>
-      </div>
-    );
-  }
+// ─── SEO Tab — ora editabile ───────────────────────────────────────────────────
+function SeoTab({
+  seo,
+  slug,
+  domain,
+  appName,
+  pageTitle,
+}: {
+  seo?: SeoPage | null;
+  slug: string;
+  domain: string;
+  appName: string;
+  pageTitle: string;
+}) {
+  const [showModal, setShowModal] = useState(false);
 
-  const rows: { label: string; value?: string | null; hint?: string }[] = [
-    { label: "Meta Title", value: seo.title, hint: "Max 70 caratteri" },
-    { label: "Meta Description", value: seo.description, hint: "Max 160 caratteri" },
-    { label: "OG Title", value: seo.ogTitle },
-    { label: "OG Description", value: seo.ogDescription },
-    { label: "OG Image", value: seo.ogImage },
-    { label: "Robots", value: seo.robots },
-    { label: "JSON-LD", value: seo.jsonLdEnabled ? `Abilitato (${seo.jsonLdType ?? "WebPage"})` : "Disabilitato" },
-  ];
+  const rows: { label: string; value?: string | null; hint?: string }[] = seo
+    ? [
+        { label: "Meta Title", value: seo.title, hint: "Max 60 caratteri" },
+        { label: "Meta Description", value: seo.description, hint: "Max 155 caratteri" },
+        { label: "OG Title", value: seo.ogTitle },
+        { label: "OG Description", value: seo.ogDescription },
+        { label: "OG Image", value: seo.ogImage },
+        { label: "Robots", value: seo.robots },
+        {
+          label: "JSON-LD",
+          value: seo.jsonLdEnabled
+            ? `Abilitato (${seo.jsonLdType ?? "WebPage"})`
+            : "Disabilitato",
+        },
+      ]
+    : [];
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-start gap-2 rounded-lg px-3 py-2.5 mb-2"
-        style={{
-          background: "color-mix(in srgb, var(--admin-accent) 8%, var(--admin-card-bg))",
-          border: "1px solid color-mix(in srgb, var(--admin-accent) 20%, transparent)",
-        }}
-      >
-        <Info size={13} className="mt-0.5 shrink-0" style={{ color: "var(--admin-accent)" }} />
-        <p className="text-xs leading-relaxed" style={{ color: "var(--admin-text-muted)" }}>
-          Questi dati sono in sola lettura. Per modificarli vai in{" "}
-          <strong>SEO → Meta Tags → /{slug}</strong>.
+    <>
+      {/* Header della tab con pulsante modifica */}
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--admin-text-faint)" }}>
+          {seo ? "Meta SEO configurati" : "Nessun meta SEO"}
         </p>
-      </div>
-      {rows.map((row) => (
-        <div key={row.label} className="rounded-lg px-4 py-3"
-          style={{ background: "var(--admin-page-bg)", border: "1px solid var(--admin-input-border)" }}
+        <button
+          type="button"
+          onClick={() => setShowModal(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors"
+          style={{
+            background: seo
+              ? "color-mix(in srgb, var(--admin-accent) 10%, var(--admin-card-bg))"
+              : "var(--admin-accent)",
+            color: seo ? "var(--admin-accent)" : "#fff",
+            border: seo
+              ? "1px solid color-mix(in srgb, var(--admin-accent) 25%, transparent)"
+              : "none",
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.filter = "brightness(0.9)")}
+          onMouseLeave={(e) => (e.currentTarget.style.filter = "none")}
         >
-          <p style={{ ...labelStyle, marginBottom: "0.25rem" }}>{row.label}</p>
-          {row.value ? (
-            <p className="text-sm break-all" style={{ color: "var(--admin-text)" }}>{row.value}</p>
-          ) : (
-            <p className="text-sm italic" style={{ color: "var(--admin-text-faint)" }}>Non impostato</p>
-          )}
-          {row.hint && <p style={hintStyle}>{row.hint}</p>}
+          {seo ? <Pencil size={12} /> : <Search size={12} />}
+          {seo ? "Modifica SEO" : "Configura SEO"}
+        </button>
+      </div>
+
+      {!seo ? (
+        <div className="flex flex-col items-center justify-center py-10 text-center gap-3">
+          <Search size={28} style={{ color: "var(--admin-text-faint)" }} />
+          <div>
+            <p className="text-sm font-medium" style={{ color: "var(--admin-text-muted)" }}>
+              Nessun meta SEO configurato per questa pagina.
+            </p>
+            <p className="text-xs mt-1" style={{ color: "var(--admin-text-faint)" }}>
+              Clicca <strong>Configura SEO</strong> per aggiungere titolo, descrizione e Open Graph.
+            </p>
+          </div>
         </div>
-      ))}
-    </div>
+      ) : (
+        <div className="space-y-2">
+          {rows.map((row) => (
+            <div
+              key={row.label}
+              className="rounded-lg px-4 py-3"
+              style={{ background: "var(--admin-page-bg)", border: "1px solid var(--admin-input-border)" }}
+            >
+              <p style={{ ...labelStyle, marginBottom: "0.25rem" }}>{row.label}</p>
+              {row.value ? (
+                <p className="text-sm break-all" style={{ color: "var(--admin-text)" }}>
+                  {row.value}
+                </p>
+              ) : (
+                <p className="text-sm italic" style={{ color: "var(--admin-text-faint)" }}>
+                  Non impostato
+                </p>
+              )}
+              {row.hint && <p style={hintStyle}>{row.hint}</p>}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Modale SEO riutilizzata da seo-form.tsx */}
+      {showModal && (
+        <SeoForm
+          page={seo ?? null}
+          domain={domain}
+          appName={appName}
+          unconfiguredRoutes={[]}
+          lockedPathname={`/${slug}`}
+          lockedLabel={pageTitle || slug}
+          hidePathnameField={false}
+          onClose={() => setShowModal(false)}
+        />
+      )}
+    </>
   );
 }
 
@@ -256,9 +313,13 @@ function PubTab({
 export default function PageEditor({
   page,
   seo,
+  domain = "",
+  appName = "",
 }: {
   page?: Page | null;
   seo?: SeoPage | null;
+  domain?: string;
+  appName?: string;
 }) {
   const router = useRouter();
   const isEdit = !!page;
@@ -319,7 +380,6 @@ export default function PageEditor({
     else editor?.chain().focus().setLink({ href: url }).run();
   }
 
-  /** Inserisce il token come testo nel punto corrente del cursore */
   function handleInsertPlaceholder(token: string) {
     editor?.chain().focus().insertContent(token).run();
   }
@@ -463,7 +523,6 @@ export default function PageEditor({
           {/* Tab: Contenuto */}
           {activeTab === "content" && (
             <>
-              {/* Toolbar */}
               <div className="flex flex-wrap items-center gap-0.5 px-3 py-2"
                 style={{ borderBottom: "1px solid var(--admin-divider)", background: "var(--admin-page-bg)" }}
               >
@@ -489,7 +548,6 @@ export default function PageEditor({
                 <TBtn onClick={() => editor?.chain().focus().setHorizontalRule().run()} title="Separatore"><Minus size={15} /></TBtn>
               </div>
 
-              {/* Placeholder hint — sotto la toolbar, sopra l'area di testo */}
               <div className="px-3 pt-2">
                 <PlaceholderHint onInsert={handleInsertPlaceholder} />
               </div>
@@ -499,7 +557,15 @@ export default function PageEditor({
           )}
 
           {activeTab === "seo" && (
-            <div className="p-5"><SeoTab seo={seo} slug={slug} /></div>
+            <div className="p-5">
+              <SeoTab
+                seo={seo}
+                slug={slug}
+                domain={domain}
+                appName={appName}
+                pageTitle={title}
+              />
+            </div>
           )}
 
           {activeTab === "pub" && (
