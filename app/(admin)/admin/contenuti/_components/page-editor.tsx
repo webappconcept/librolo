@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { upsertPageAction } from "../actions";
 import PlaceholderHint from "./placeholder-hint";
 
@@ -209,8 +210,9 @@ function SeoTab({
         </div>
       )}
 
-      {/* Modale SEO riutilizzata da seo-form.tsx */}
-      {showModal && (
+      {/* Modale SEO — renderizzata via portal su document.body per evitare
+          il nesting di <form> dentro il <form> del PageEditor */}
+      {showModal && createPortal(
         <SeoForm
           page={seo ?? null}
           domain={domain}
@@ -220,7 +222,8 @@ function SeoTab({
           lockedLabel={pageTitle || slug}
           hidePathnameField={false}
           onClose={() => setShowModal(false)}
-        />
+        />,
+        document.body
       )}
     </>
   );
