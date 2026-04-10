@@ -17,10 +17,11 @@ export const users = pgTable("users", {
   email: varchar("email", { length: 255 }).notNull().unique(),
   passwordHash: text("password_hash").notNull(),
   role: varchar("role", { length: 50 }).notNull().default("member"),
-  /** Guard indipendente dalla label del ruolo — usato da middleware e Server Actions */
+  /** Guard indipendente dalla label del ruolo — usato da middleware e Server Actions.
+   *  Flag di emergenza per il super admin: bypassa il controllo RBAC.
+   *  Tutti gli altri accessi si gestiscono tramite permessi RBAC (admin:access, ecc.)
+   */
   isAdmin: boolean("is_admin").notNull().default(false),
-  /** Guard per staff (editor, support, admin) */
-  isStaff: boolean("is_staff").notNull().default(false),
   bannedAt: timestamp("banned_at"),
   bannedReason: varchar("banned_reason", { length: 255 }),
   stripeCustomerId: varchar("stripe_customer_id", { length: 255 }),
@@ -40,13 +41,16 @@ export const roles = pgTable("roles", {
   label: varchar("label", { length: 100 }).notNull(),
   color: varchar("color", { length: 20 }).notNull().default("#6b7280"),
   description: text("description"),
+  /** Flag di emergenza super admin — bypassa il sistema RBAC.
+   *  Solo il ruolo "admin" di sistema deve avere questo a true.
+   *  Per tutti gli altri accessi usare il permesso RBAC "admin:access".
+   */
   isAdmin: boolean("is_admin").notNull().default(false),
-  isStaff: boolean("is_staff").notNull().default(false),
-  /** I ruoli di sistema non possono essere eliminati dall'UI */
+  /** I ruoli di sistema (admin, member) non possono essere eliminati dall'UI */
   isSystem: boolean("is_system").notNull().default(false),
   /** Gerarchia: un admin può assegnare solo ruoli con level <= proprio */
   level: integer("level").notNull().default(0),
-  /** Ruolo assegnato automaticamente ai nuovi utenti */
+  /** Ruolo assegnato automaticamente ai nuovi utenti registrati */
   isDefault: boolean("is_default").notNull().default(false),
   sortOrder: integer("sort_order").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
