@@ -32,8 +32,8 @@ export default async function EditPagePage({
         seo={seo}
         pages={pages.filter((p) => p.id !== page.id)}
         templates={templates}
-        domain={settings?.domain ?? ""}
-        appName={settings?.appName ?? ""}
+        domain={settings?.app_domain ?? ""}
+        appName={settings?.app_name ?? ""}
       />
     </div>
   );
