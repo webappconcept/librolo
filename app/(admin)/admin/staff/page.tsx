@@ -29,7 +29,7 @@ async function StaffContent({
   return (
     <>
       <p className="text-sm -mt-4" style={{ color: "var(--admin-text-faint)" }}>
-        {total} membri dello staff
+        {total} amministratori
       </p>
 
       <div
@@ -106,7 +106,8 @@ export default async function AdminStaffPage({
   const page = Number(params.page ?? 1);
 
   const allRoles = await getAdminRoles();
-  const staffRoles = allRoles.filter((r) => r.isAdmin || r.isStaff);
+  // Mostra solo i ruoli con flag isAdmin (super admin) nel filtro
+  const adminRoles = allRoles.filter((r) => r.isAdmin);
 
   const hasFilters = !!(search || role);
 
@@ -115,7 +116,7 @@ export default async function AdminStaffPage({
       <div>
         <h2 className="text-xl font-bold" style={{ color: "var(--admin-text)" }}>Staff</h2>
         <p className="text-sm mt-0.5" style={{ color: "var(--admin-text-muted)" }}>
-          Gestione amministratori e membri dello staff
+          Gestione amministratori
         </p>
       </div>
 
@@ -152,7 +153,7 @@ export default async function AdminStaffPage({
               color: role ? "var(--admin-text)" : "var(--admin-text-muted)",
             }}>
             <option value="">Tutti i ruoli</option>
-            {staffRoles.map((r) => (
+            {adminRoles.map((r) => (
               <option key={r.name} value={r.name}>{r.label}</option>
             ))}
           </select>
