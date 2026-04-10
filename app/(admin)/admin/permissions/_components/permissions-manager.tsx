@@ -596,7 +596,6 @@ function RoleMatrix({
 
   // ── Preset: assegna o revoca un intero gruppo ──────────────────────
   function handlePreset(roleId: number, permIds: number[], grant: boolean) {
-    // filtra solo quelli che richiedono effettivamente una modifica
     const toChange = grant
       ? permIds.filter((id) => !hasPermission(roleId, id))
       : permIds.filter((id) => hasPermission(roleId, id));
@@ -609,7 +608,6 @@ function RoleMatrix({
         ? { type: "grant_many", roleId, permissionIds: toChange }
         : { type: "revoke_many", roleId, permissionIds: toChange }
       );
-      // Esegue le chiamate in parallelo
       await Promise.all(
         toChange.map((permId) =>
           grant
@@ -838,14 +836,14 @@ function SystemKeysPanel({ keys }: { keys: Props["systemKeys"] }) {
 
 // ─── Tabs ─────────────────────────────────────────────────────────────
 const TABS = [
+  { id: "matrix", label: "Assegnazione permessi ai ruoli", icon: ShieldCheck },
   { id: "catalog", label: "Catalogo permessi", icon: Shield },
-  { id: "matrix", label: "Matrice ruoli", icon: ShieldCheck },
 ] as const;
 type TabId = (typeof TABS)[number]["id"];
 
 // ─── Root ─────────────────────────────────────────────────────────────
 export function PermissionsManager({ permissions: initialPermissions, roles, rolePermissions, systemKeys }: Props) {
-  const [activeTab, setActiveTab] = useState<TabId>("catalog");
+  const [activeTab, setActiveTab] = useState<TabId>("matrix");
   const [optimisticPerms, applyOptimistic] = useOptimistic(
     initialPermissions,
     (
@@ -895,11 +893,11 @@ export function PermissionsManager({ permissions: initialPermissions, roles, rol
         })}
       </div>
 
-      {activeTab === "catalog" && (
-        <PermissionCatalog permissions={optimisticPerms} systemKeys={systemKeys} onDelete={handleDelete} onUpdate={handleUpdate} />
-      )}
       {activeTab === "matrix" && (
         <RoleMatrix permissions={optimisticPerms} roles={roles} initialRolePermissions={rolePermissions} />
+      )}
+      {activeTab === "catalog" && (
+        <PermissionCatalog permissions={optimisticPerms} systemKeys={systemKeys} onDelete={handleDelete} onUpdate={handleUpdate} />
       )}
     </div>
   );
