@@ -33,6 +33,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { upsertPageAction } from "../actions";
+import PlaceholderHint from "./placeholder-hint";
 
 function slugify(value: string): string {
   return value
@@ -72,7 +73,6 @@ const hintStyle: React.CSSProperties = {
   marginTop: "0.25rem",
 };
 
-// ─── Toolbar button
 function TBtn({
   onClick, active, title, children, disabled,
 }: {
@@ -96,7 +96,6 @@ function TDivider() {
   return <div className="w-px h-5 mx-0.5 shrink-0" style={{ background: "var(--admin-divider)" }} />;
 }
 
-// ─── Tab button
 function TabBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button type="button" onClick={onClick}
@@ -112,7 +111,6 @@ function TabBtn({ active, onClick, children }: { active: boolean; onClick: () =>
   );
 }
 
-// ─── SEO Tab (read-only)
 function SeoTab({ seo, slug }: { seo?: SeoPage | null; slug: string }) {
   if (!seo) {
     return (
@@ -171,7 +169,6 @@ function SeoTab({ seo, slug }: { seo?: SeoPage | null; slug: string }) {
   );
 }
 
-// ─── Pubblicazione Tab
 function PubTab({
   status, setStatus,
   publishedAt, setPublishedAt,
@@ -188,7 +185,6 @@ function PubTab({
 }) {
   return (
     <div className="space-y-5">
-      {/* Stato */}
       <div className="rounded-xl px-4 py-4 space-y-3"
         style={{ background: "var(--admin-page-bg)", border: "1px solid var(--admin-input-border)" }}
       >
@@ -225,33 +221,18 @@ function PubTab({
         </p>
       </div>
 
-      {/* Data pubblicazione */}
       <div className="space-y-1.5">
         <label style={labelStyle}>Data di pubblicazione</label>
-        <input
-          type="datetime-local"
-          value={publishedAt}
-          onChange={(e) => setPublishedAt(e.target.value)}
-          style={inputStyle}
-        />
-        <p style={hintStyle}>
-          Se vuota e lo stato è "Pubblicata", verrà usata la data e ora attuale.
-        </p>
+        <input type="datetime-local" value={publishedAt}
+          onChange={(e) => setPublishedAt(e.target.value)} style={inputStyle} />
+        <p style={hintStyle}>Se vuota e lo stato è "Pubblicata", verrà usata la data e ora attuale.</p>
       </div>
 
-      {/* Data scadenza */}
       <div className="space-y-1.5">
         <label style={labelStyle}>Data di scadenza (opzionale)</label>
-        <input
-          type="datetime-local"
-          value={expiresAt}
-          onChange={(e) => setExpiresAt(e.target.value)}
-          style={inputStyle}
-        />
-        <p style={hintStyle}>
-          Dopo questa data la pagina tornerà automaticamente in bozza.
-          Lascia vuoto per nessuna scadenza.
-        </p>
+        <input type="datetime-local" value={expiresAt}
+          onChange={(e) => setExpiresAt(e.target.value)} style={inputStyle} />
+        <p style={hintStyle}>Dopo questa data la pagina tornerà automaticamente in bozza. Lascia vuoto per nessuna scadenza.</p>
       </div>
 
       {expiresAt && (
@@ -272,7 +253,6 @@ function PubTab({
   );
 }
 
-// ─── Main Editor
 export default function PageEditor({
   page,
   seo,
@@ -298,7 +278,6 @@ export default function PageEditor({
     page?.expiresAt ? toDatetimeLocal(page.expiresAt) : "",
   );
 
-  // Toast
   const [savedAt, setSavedAt] = useState<string | null>(null);
   useEffect(() => {
     if (state?.savedAt) {
@@ -338,6 +317,11 @@ export default function PageEditor({
     if (url === null) return;
     if (url === "") editor?.chain().focus().unsetLink().run();
     else editor?.chain().focus().setLink({ href: url }).run();
+  }
+
+  /** Inserisce il token come testo nel punto corrente del cursore */
+  function handleInsertPlaceholder(token: string) {
+    editor?.chain().focus().insertContent(token).run();
   }
 
   return (
@@ -383,7 +367,6 @@ export default function PageEditor({
           </button>
 
           <div className="flex items-center gap-2">
-            {/* Toast salvataggio */}
             {savedAt && (
               <span className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg"
                 style={{
@@ -453,7 +436,6 @@ export default function PageEditor({
         <div className="rounded-xl overflow-hidden"
           style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-card-border)" }}
         >
-          {/* Tab bar */}
           <div className="flex" style={{ borderBottom: "1px solid var(--admin-divider)" }}>
             <TabBtn active={activeTab === "content"} onClick={() => setActiveTab("content")}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -506,18 +488,20 @@ export default function PageEditor({
                 <TBtn onClick={handleLinkInsert} active={editor?.isActive("link")} title="Link"><Link2 size={15} /></TBtn>
                 <TBtn onClick={() => editor?.chain().focus().setHorizontalRule().run()} title="Separatore"><Minus size={15} /></TBtn>
               </div>
+
+              {/* Placeholder hint — sotto la toolbar, sopra l'area di testo */}
+              <div className="px-3 pt-2">
+                <PlaceholderHint onInsert={handleInsertPlaceholder} />
+              </div>
+
               <EditorContent editor={editor} />
             </>
           )}
 
-          {/* Tab: SEO */}
           {activeTab === "seo" && (
-            <div className="p-5">
-              <SeoTab seo={seo} slug={slug} />
-            </div>
+            <div className="p-5"><SeoTab seo={seo} slug={slug} /></div>
           )}
 
-          {/* Tab: Pubblicazione */}
           {activeTab === "pub" && (
             <div className="p-5">
               <PubTab
@@ -530,7 +514,6 @@ export default function PageEditor({
           )}
         </div>
 
-        {/* Error */}
         {state?.error && (
           <p className="text-sm rounded-lg px-3 py-2 mt-4"
             style={{ color: "#ef4444", background: "color-mix(in srgb, #ef4444 10%, var(--admin-card-bg))", border: "1px solid color-mix(in srgb, #ef4444 20%, transparent)" }}

@@ -1,0 +1,48 @@
+import type { AppSettings } from "@/lib/db/settings-queries";
+
+/**
+ * Mappa di tutti i placeholder disponibili nel contenuto CMS.
+ * Chiave  = token che l'editor scrive (es. {appName})
+ * Valore  = funzione che riceve le settings e ritorna la stringa da sostituire
+ *
+ * Aggiungere qui nuovi token — verranno automaticamente mostrati
+ * nel pannello suggerimenti dell'editor.
+ */
+export const PLACEHOLDER_MAP: Record<
+  string,
+  { description: string; resolve: (s: AppSettings) => string }
+> = {
+  appName: {
+    description: "Nome dell'applicazione",
+    resolve: (s) => s.app_name,
+  },
+  appDescription: {
+    description: "Descrizione dell'applicazione",
+    resolve: (s) => s.app_description,
+  },
+  appDomain: {
+    description: "Dominio (es. https://miodominio.it)",
+    resolve: (s) => s.app_domain,
+  },
+  emailFrom: {
+    description: "Indirizzo email mittente",
+    resolve: (s) => s.email_from_address ?? s.app_name,
+  },
+  currentYear: {
+    description: "Anno corrente",
+    resolve: () => String(new Date().getFullYear()),
+  },
+};
+
+/**
+ * Sostituisce tutti i token {xxx} nel contenuto HTML con i valori reali.
+ * Token non riconosciuti vengono lasciati inalterati.
+ * Sicuro: la sostituzione avviene lato server prima del render.
+ */
+export function resolvePlaceholders(html: string, settings: AppSettings): string {
+  return html.replace(/\{([a-zA-Z][a-zA-Z0-9]*)\}/g, (match, token) => {
+    const entry = PLACEHOLDER_MAP[token];
+    if (!entry) return match; // token sconosciuto — lascia invariato
+    return entry.resolve(settings);
+  });
+}
