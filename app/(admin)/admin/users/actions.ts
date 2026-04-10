@@ -41,7 +41,7 @@ export async function changeUserRole(userId: number, roleName: string) {
   await requireAdmin();
 
   const [role] = await db
-    .select({ isAdmin: roles.isAdmin, isStaff: roles.isStaff })
+    .select({ isAdmin: roles.isAdmin })
     .from(roles)
     .where(eq(roles.name, roleName))
     .limit(1);
@@ -51,7 +51,6 @@ export async function changeUserRole(userId: number, roleName: string) {
     .set({
       role: roleName,
       isAdmin: role?.isAdmin ?? false,
-      isStaff: role?.isStaff ?? false,
       updatedAt: new Date(),
     })
     .where(eq(users.id, userId));
