@@ -66,7 +66,6 @@ export type AdminUser = {
   roleLabel: string | null;
   roleColor: string | null;
   isAdmin: boolean;
-  isStaff: boolean;
   planName: string | null;
   subscriptionStatus: string | null;
   emailVerified: boolean;
@@ -144,7 +143,6 @@ export async function getAdminUsers({
         roleLabel: roles.label,
         roleColor: roles.color,
         isAdmin: users.isAdmin,
-        isStaff: users.isStaff,
         planName: users.planName,
         subscriptionStatus: users.subscriptionStatus,
         emailVerified: users.emailVerified,
@@ -210,7 +208,6 @@ export async function getStaffUsers({
         roleLabel: roles.label,
         roleColor: roles.color,
         isAdmin: users.isAdmin,
-        isStaff: users.isStaff,
         planName: users.planName,
         subscriptionStatus: users.subscriptionStatus,
         emailVerified: users.emailVerified,
@@ -246,7 +243,6 @@ export async function getAdminUserById(id: number) {
       email: users.email,
       role: users.role,
       isAdmin: users.isAdmin,
-      isStaff: users.isStaff,
       planName: users.planName,
       subscriptionStatus: users.subscriptionStatus,
       stripeCustomerId: users.stripeCustomerId,
