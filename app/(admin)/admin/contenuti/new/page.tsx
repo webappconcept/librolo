@@ -18,8 +18,8 @@ export default async function NewPagePage() {
       <PageEditor
         pages={pages}
         templates={templates}
-        domain={settings?.domain ?? ""}
-        appName={settings?.appName ?? ""}
+        domain={settings?.app_domain ?? ""}
+        appName={settings?.app_name ?? ""}
       />
     </div>
   );
