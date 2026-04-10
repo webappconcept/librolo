@@ -1,6 +1,6 @@
 import { getPageBySlug, getAllPages } from "@/lib/db/pages-queries";
 import { getAllTemplates } from "@/lib/db/template-queries";
-import { getSeoPageByPathname } from "@/lib/db/seo-queries";
+import { getSeoPage } from "@/lib/db/seo-queries";
 import { getAppSettings } from "@/lib/db/settings-queries";
 import { notFound } from "next/navigation";
 import PageEditor from "../../_components/page-editor";
@@ -23,7 +23,7 @@ export default async function EditPagePage({
 
   if (!page) notFound();
 
-  const seo = await getSeoPageByPathname(`/${slug}`);
+  const seo = await getSeoPage(`/${slug}`);
 
   return (
     <div className="p-6 max-w-4xl">
