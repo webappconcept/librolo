@@ -9,6 +9,7 @@ import {
   Globe,
   KeyRound,
   LayoutDashboard,
+  Layers,
   Map,
   Search,
   Settings,
@@ -259,6 +260,13 @@ export default function AdminSidebar({ appName, open, onClose }: AdminSidebarPro
             <NavLink key={href} href={href} label={label} icon={icon} sub />
           ))}
         </ExpandableGroup>
+
+        {/* Contenuti CMS */}
+        <NavLink
+          href="/admin/contenuti"
+          label="Contenuti"
+          icon={Layers}
+        />
 
         {NAV_BOTTOM.slice(0, 2).map(({ href, label, icon }) => (
           <NavLink key={href} href={href} label={label} icon={icon} />

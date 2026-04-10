@@ -17,8 +17,7 @@ export const users = pgTable("users", {
   email: varchar("email", { length: 255 }).notNull().unique(),
   passwordHash: text("password_hash").notNull(),
   role: varchar("role", { length: 50 }).notNull().default("member"),
-  /** Guard indipendente dalla label del ruolo — usato da middleware e Server Actions.
-   *  Flag di emergenza per il super admin: bypassa il controllo RBAC.
+  /** Flag di emergenza per il super admin: bypassa il controllo RBAC.
    *  Tutti gli altri accessi si gestiscono tramite permessi RBAC (admin:access, ecc.)
    */
   isAdmin: boolean("is_admin").notNull().default(false),
@@ -61,21 +60,16 @@ export const roles = pgTable("roles", {
 // RBAC — Permessi
 // ---------------------------------------------------------------------------
 
-/** Catalogo completo dei permessi disponibili nell'app */
 export const permissions = pgTable("permissions", {
   id: serial("id").primaryKey(),
-  /** Chiave univoca: pattern "risorsa:azione" es. "posts:publish", "admin:access" */
   key: varchar("key", { length: 100 }).notNull().unique(),
   label: varchar("label", { length: 150 }).notNull(),
   description: text("description"),
-  /** Gruppo per raggruppare nella UI: "Contenuti", "Utenti", "Admin"… */
   group: varchar("group", { length: 100 }).notNull().default("Generale"),
-  /** I permessi di sistema non possono essere eliminati dall'UI */
   isSystem: boolean("is_system").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-/** Matrice ruolo → permessi */
 export const rolePermissions = pgTable(
   "role_permissions",
   {
@@ -89,7 +83,6 @@ export const rolePermissions = pgTable(
   (t) => [primaryKey({ columns: [t.roleId, t.permissionId] })],
 );
 
-/** Override individuali per utente (grant o revoca) */
 export const userPermissions = pgTable(
   "user_permissions",
   {
@@ -100,19 +93,40 @@ export const userPermissions = pgTable(
     permissionId: integer("permission_id")
       .notNull()
       .references(() => permissions.id, { onDelete: "cascade" }),
-    /** true = concesso esplicitamente, false = revocato esplicitamente */
     granted: boolean("granted").notNull().default(true),
-    /** Admin che ha applicato l'override */
     grantedBy: integer("granted_by").references(() => users.id),
-    /** Motivazione opzionale */
     reason: text("reason"),
-    /** null = permanente */
     expiresAt: timestamp("expires_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (t) => [uniqueIndex("uq_user_permissions_user_perm").on(t.userId, t.permissionId)],
 );
+
+// ---------------------------------------------------------------------------
+// CMS — Pagine statiche
+// ---------------------------------------------------------------------------
+
+/**
+ * Pagine statiche gestite dal CMS.
+ * I meta SEO (title, description, OG…) risiedono in `seoPages`,
+ * collegati tramite pathname = '/' + slug.
+ * Nessun campo SEO qui — responsabilità separata.
+ */
+export const pages = pgTable("pages", {
+  id: serial("id").primaryKey(),
+  /** Parte dell'URL dopo /: es. "privacy" → pagina pubblica su /privacy */
+  slug: varchar("slug", { length: 255 }).notNull().unique(),
+  /** Titolo editoriale della pagina (h1, non meta title) */
+  title: varchar("title", { length: 255 }).notNull(),
+  /** Corpo della pagina in HTML o markdown */
+  content: text("content").notNull().default(""),
+  /** draft | published */
+  status: varchar("status", { length: 20 }).notNull().default("draft"),
+  publishedAt: timestamp("published_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
 
 // ---------------------------------------------------------------------------
 // Resto delle tabelle
@@ -199,6 +213,8 @@ export type EmailVerification = typeof emailVerifications.$inferSelect;
 export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
 export type SeoPage = typeof seoPages.$inferSelect;
 export type NewSeoPage = typeof seoPages.$inferInsert;
+export type Page = typeof pages.$inferSelect;
+export type NewPage = typeof pages.$inferInsert;
 
 export enum ActivityType {
   SIGN_UP = "SIGN_UP",
@@ -244,4 +260,10 @@ export enum ActivityType {
   PERMISSION_REVOKED = "PERMISSION_REVOKED",
   ROLE_PERMISSION_ADDED = "ROLE_PERMISSION_ADDED",
   ROLE_PERMISSION_REMOVED = "ROLE_PERMISSION_REMOVED",
+  // CMS
+  PAGE_CREATED = "PAGE_CREATED",
+  PAGE_UPDATED = "PAGE_UPDATED",
+  PAGE_DELETED = "PAGE_DELETED",
+  PAGE_PUBLISHED = "PAGE_PUBLISHED",
+  PAGE_UNPUBLISHED = "PAGE_UNPUBLISHED",
 }
