@@ -9,14 +9,15 @@
  *  - permission  : permesso RBAC richiesto per vedere/accedere alla voce
  *  - exact?      : true se il match dell'active state deve essere esatto
  *  - children?   : sottovoci (gruppo espandibile nella sidebar)
+ *  - comingSoon? : true = voce visibile ma disabilitata (badge "Prossimamente")
  *
  * La sidebar legge questo registro e filtra automaticamente le voci
  * in base al Set<string> dei permessi dell'utente corrente.
  *
  * Per aggiungere una nuova sezione:
- *  1. Aggiungi la voce qui
+ *  1. Aggiungi la voce qui (rimuovi comingSoon quando pronta)
  *  2. Aggiungi il permesso in permissions-seed.ts ed esegui il seed
- *  3. Proteggi il layout/page con requireAdminSectionPage("permesso")
+ *  3. Crea app/(admin)/admin/<sezione>/layout.tsx con requireAdminSectionPage()
  *  4. Fine — sidebar, filtro e guard si aggiornano da soli
  */
 
@@ -25,6 +26,7 @@ export interface NavChild {
   label: string;
   icon: string;
   permission: string;
+  comingSoon?: boolean;
 }
 
 export interface NavItem {
@@ -34,6 +36,7 @@ export interface NavItem {
   icon: string;
   permission: string;
   exact?: boolean;
+  comingSoon?: boolean;
   children?: NavChild[];
   childrenMaxHeight?: string;
 }
@@ -48,7 +51,7 @@ export const ADMIN_NAV: NavItem[] = [
     exact: true,
   },
   {
-    key: "utenti",
+    key: "users",
     label: "Utenti",
     icon: "Users",
     permission: "admin:users",
@@ -80,6 +83,24 @@ export const ADMIN_NAV: NavItem[] = [
     label: "Moderazione",
     icon: "ShieldAlert",
     permission: "admin:moderation",
+  },
+  {
+    // [FUTURE] Sezione Billing non ancora implementata.
+    // Rimuovere comingSoon e creare app/(admin)/admin/billing/layout.tsx
+    // quando la sezione sarà pronta.
+    key: "billing",
+    label: "Billing & Pagamenti",
+    icon: "CreditCard",
+    permission: "admin:billing",
+    comingSoon: true,
+    childrenMaxHeight: "220px",
+    children: [
+      { href: "/admin/billing",              label: "Panoramica",        icon: "LayoutDashboard", permission: "admin:billing",          comingSoon: true },
+      { href: "/admin/billing/plans",        label: "Piani",             icon: "PackageCheck",    permission: "billing:manage_plans",    comingSoon: true },
+      { href: "/admin/billing/transactions", label: "Transazioni",       icon: "ArrowLeftRight",  permission: "billing:view_transactions",comingSoon: true },
+      { href: "/admin/billing/subscriptions",label: "Abbonamenti",       icon: "RefreshCcw",      permission: "subscriptions:manage",    comingSoon: true },
+      { href: "/admin/billing/gateways",     label: "Gateway (Stripe…)", icon: "Plug",            permission: "billing:manage_gateways", comingSoon: true },
+    ],
   },
   {
     key: "seo",
