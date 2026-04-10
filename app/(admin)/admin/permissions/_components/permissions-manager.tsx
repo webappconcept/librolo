@@ -6,10 +6,12 @@ import type { Permission } from "@/lib/db/schema";
 import {
   AlertTriangle,
   Check,
+  CheckSquare,
   ChevronDown,
   ChevronRight,
   HelpCircle,
   Loader2,
+  MinusSquare,
   Pencil,
   Plus,
   Search,
@@ -104,41 +106,26 @@ function EditPermissionForm({
         Modifica permesso
       </p>
 
-      {/* key — sola lettura con spiegazione */}
       <div>
-        <label
-          className="block text-xs font-medium mb-1"
-          style={{ color: "var(--admin-text-muted)" }}>
+        <label className="block text-xs font-medium mb-1" style={{ color: "var(--admin-text-muted)" }}>
           Chiave{" "}
-          <span
-            className="font-normal text-[11px]"
-            style={{ color: "var(--admin-text-faint)" }}>
+          <span className="font-normal text-[11px]" style={{ color: "var(--admin-text-faint)" }}>
             (non modificabile)
           </span>
         </label>
         <div
           className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm"
-          style={{
-            background: "var(--admin-hover-bg)",
-            border: "1px solid var(--admin-card-border)",
-          }}>
-          <code
-            className="font-mono text-[12px]"
-            style={{ color: "var(--admin-text-muted)" }}>
+          style={{ background: "var(--admin-hover-bg)", border: "1px solid var(--admin-card-border)" }}>
+          <code className="font-mono text-[12px]" style={{ color: "var(--admin-text-muted)" }}>
             {perm.key}
           </code>
           <span
             className="text-[10px] px-1.5 py-0.5 rounded ml-auto"
-            style={{
-              background: "var(--admin-card-border)",
-              color: "var(--admin-text-faint)",
-            }}>
+            style={{ background: "var(--admin-card-border)", color: "var(--admin-text-faint)" }}>
             {perm.isSystem ? "sistema" : "custom"}
           </span>
         </div>
-        <p
-          className="text-[11px] mt-1 flex items-center gap-1"
-          style={{ color: "var(--admin-text-faint)" }}>
+        <p className="text-[11px] mt-1 flex items-center gap-1" style={{ color: "var(--admin-text-faint)" }}>
           <AlertTriangle size={10} />
           Modificare la chiave romperebbe i controlli nel codice sorgente
         </p>
@@ -146,82 +133,35 @@ function EditPermissionForm({
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label
-            className="block text-xs font-medium mb-1"
-            style={{ color: "var(--admin-text-muted)" }}>
-            Etichetta *
-          </label>
-          <input
-            name="label"
-            required
-            defaultValue={perm.label}
-            placeholder="Es. Pubblica articoli"
-            className={inputCls}
-            style={inputStyle}
-          />
+          <label className="block text-xs font-medium mb-1" style={{ color: "var(--admin-text-muted)" }}>Etichetta *</label>
+          <input name="label" required defaultValue={perm.label} placeholder="Es. Pubblica articoli" className={inputCls} style={inputStyle} />
         </div>
         <div>
-          <label
-            className="block text-xs font-medium mb-1"
-            style={{ color: "var(--admin-text-muted)" }}>
-            Gruppo *
-          </label>
-          <input
-            name="group"
-            required
-            defaultValue={perm.group}
-            placeholder="Es. Contenuti"
-            className={inputCls}
-            style={inputStyle}
-          />
+          <label className="block text-xs font-medium mb-1" style={{ color: "var(--admin-text-muted)" }}>Gruppo *</label>
+          <input name="group" required defaultValue={perm.group} placeholder="Es. Contenuti" className={inputCls} style={inputStyle} />
         </div>
         <div className="col-span-2">
-          <label
-            className="block text-xs font-medium mb-1"
-            style={{ color: "var(--admin-text-muted)" }}>
-            Descrizione
-          </label>
-          <input
-            name="description"
-            defaultValue={perm.description ?? ""}
-            placeholder="Opzionale"
-            className={inputCls}
-            style={inputStyle}
-          />
+          <label className="block text-xs font-medium mb-1" style={{ color: "var(--admin-text-muted)" }}>Descrizione</label>
+          <input name="description" defaultValue={perm.description ?? ""} placeholder="Opzionale" className={inputCls} style={inputStyle} />
         </div>
       </div>
 
       {error && (
-        <p
-          className="text-xs flex items-center gap-1"
-          style={{ color: "#dc2626" }}>
+        <p className="text-xs flex items-center gap-1" style={{ color: "#dc2626" }}>
           <AlertTriangle size={12} /> {error}
         </p>
       )}
 
       <div className="flex items-center justify-end gap-2">
-        <button
-          type="button"
-          onClick={onCancel}
+        <button type="button" onClick={onCancel}
           className="px-3 py-1.5 text-sm rounded-lg transition-colors"
-          style={{
-            background: "var(--admin-hover-bg)",
-            color: "var(--admin-text-muted)",
-          }}>
+          style={{ background: "var(--admin-hover-bg)", color: "var(--admin-text-muted)" }}>
           Annulla
         </button>
-        <button
-          type="submit"
-          disabled={pending}
+        <button type="submit" disabled={pending}
           className="px-3 py-1.5 text-sm rounded-lg font-medium transition-colors disabled:opacity-60 flex items-center gap-1.5"
           style={{ background: "var(--admin-accent)", color: "#fff" }}>
-          {pending ? (
-            <>
-              <Loader2 size={12} className="animate-spin" /> Salvataggio...
-            </>
-          ) : (
-            "Salva modifiche"
-          )}
+          {pending ? (<><Loader2 size={12} className="animate-spin" /> Salvataggio...</>) : "Salva modifiche"}
         </button>
       </div>
     </form>
@@ -258,15 +198,11 @@ function PermissionCatalog({
   const filtered = search.trim()
     ? Object.fromEntries(
         Object.entries(grouped)
-          .map(([g, ps]) => [
-            g,
-            ps.filter(
-              (p) =>
-                p.key.toLowerCase().includes(search.toLowerCase()) ||
-                p.label.toLowerCase().includes(search.toLowerCase()),
-            ),
-          ])
-          .filter(([, ps]) => (ps as Permission[]).length > 0),
+          .map(([g, ps]) => [g, ps.filter((p) =>
+            p.key.toLowerCase().includes(search.toLowerCase()) ||
+            p.label.toLowerCase().includes(search.toLowerCase())
+          )])
+          .filter(([, ps]) => (ps as Permission[]).length > 0)
       )
     : grouped;
 
@@ -285,9 +221,7 @@ function PermissionCatalog({
     });
   }
 
-  // Stile input uniforme al resto dell'admin
-  const inputCls =
-    "w-full px-3 py-2 text-sm rounded-lg outline-none focus:ring-2";
+  const inputCls = "w-full px-3 py-2 text-sm rounded-lg outline-none focus:ring-2";
   const inputStyle = {
     background: "var(--admin-input-bg)",
     border: "1px solid var(--admin-input-border)",
@@ -296,25 +230,16 @@ function PermissionCatalog({
 
   return (
     <div className="space-y-4">
-      {/* Search + create */}
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
-          <Search
-            size={13}
-            className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-            style={{ color: "var(--admin-text-faint)" }}
-          />
+          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "var(--admin-text-faint)" }} />
           <input
             type="text"
             placeholder="Filtra permessi..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-8 pr-4 py-2 text-sm rounded-lg outline-none"
-            style={{
-              background: "var(--admin-input-bg)",
-              border: "1px solid var(--admin-input-border)",
-              color: "var(--admin-text)",
-            }}
+            style={{ background: "var(--admin-input-bg)", border: "1px solid var(--admin-input-border)", color: "var(--admin-text)" }}
           />
         </div>
         {!showCreate && (
@@ -327,119 +252,47 @@ function PermissionCatalog({
         )}
       </div>
 
-      {/* Inline create form */}
       {showCreate && (
-        <form
-          onSubmit={handleCreate}
-          className="rounded-xl p-4 space-y-3"
-          style={{
-            background: "var(--admin-card-bg)",
-            border: "1px solid var(--admin-card-border)",
-          }}>
-          <p
-            className="text-[11px] font-semibold uppercase tracking-widest"
-            style={{ color: "var(--admin-text-faint)" }}>
-            Nuovo permesso
-          </p>
-
+        <form onSubmit={handleCreate} className="rounded-xl p-4 space-y-3"
+          style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-card-border)" }}>
+          <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--admin-text-faint)" }}>Nuovo permesso</p>
           <datalist id={datalistId}>
-            {systemKeys.map((k) => (
-              <option key={k.key} value={k.key} label={k.description} />
-            ))}
+            {systemKeys.map((k) => <option key={k.key} value={k.key} label={k.description} />)}
           </datalist>
-
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label
-                className="block text-xs font-medium mb-1"
-                style={{ color: "var(--admin-text-muted)" }}>
-                Chiave *
-              </label>
-              <input
-                name="key"
-                list={datalistId}
-                required
-                placeholder="risorsa:azione"
-                className={inputCls}
-                style={inputStyle}
-                value={keyValue}
-                onChange={(e) => setKeyValue(e.target.value)}
-              />
+              <label className="block text-xs font-medium mb-1" style={{ color: "var(--admin-text-muted)" }}>Chiave *</label>
+              <input name="key" list={datalistId} required placeholder="risorsa:azione" className={inputCls} style={inputStyle}
+                value={keyValue} onChange={(e) => setKeyValue(e.target.value)} />
             </div>
             <div>
-              <label
-                className="block text-xs font-medium mb-1"
-                style={{ color: "var(--admin-text-muted)" }}>
-                Etichetta *
-              </label>
-              <input
-                name="label"
-                required
-                placeholder="Es. Pubblica articoli"
-                className={inputCls}
-                style={inputStyle}
-                defaultValue={suggested?.description ?? ""}
-                key={suggested?.key ?? "custom"}
-              />
+              <label className="block text-xs font-medium mb-1" style={{ color: "var(--admin-text-muted)" }}>Etichetta *</label>
+              <input name="label" required placeholder="Es. Pubblica articoli" className={inputCls} style={inputStyle}
+                defaultValue={suggested?.description ?? ""} key={suggested?.key ?? "custom"} />
             </div>
             <div>
-              <label
-                className="block text-xs font-medium mb-1"
-                style={{ color: "var(--admin-text-muted)" }}>
-                Gruppo *
-              </label>
-              <input
-                name="group"
-                required
-                placeholder="Es. Contenuti"
-                className={inputCls}
-                style={inputStyle}
-                defaultValue={suggested?.group ?? ""}
-                key={(suggested?.key ?? "custom") + "-group"}
-              />
-              <p className="text-[11px] mt-1">
-                preferibilmente lascia il gruppo suggerito
-              </p>
+              <label className="block text-xs font-medium mb-1" style={{ color: "var(--admin-text-muted)" }}>Gruppo *</label>
+              <input name="group" required placeholder="Es. Contenuti" className={inputCls} style={inputStyle}
+                defaultValue={suggested?.group ?? ""} key={(suggested?.key ?? "custom") + "-group"} />
+              <p className="text-[11px] mt-1">preferibilmente lascia il gruppo suggerito</p>
             </div>
             <div>
-              <label
-                className="block text-xs font-medium mb-1"
-                style={{ color: "var(--admin-text-muted)" }}>
-                Descrizione
-              </label>
-              <input
-                name="description"
-                placeholder="Opzionale"
-                className={inputCls}
-                style={inputStyle}
-              />
+              <label className="block text-xs font-medium mb-1" style={{ color: "var(--admin-text-muted)" }}>Descrizione</label>
+              <input name="description" placeholder="Opzionale" className={inputCls} style={inputStyle} />
             </div>
           </div>
-
           {formError && (
-            <p
-              className="text-xs flex items-center gap-1"
-              style={{ color: "#dc2626" }}>
+            <p className="text-xs flex items-center gap-1" style={{ color: "#dc2626" }}>
               <AlertTriangle size={12} /> {formError}
             </p>
           )}
           <div className="flex items-center justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setShowCreate(false);
-                setFormError(null);
-              }}
+            <button type="button" onClick={() => { setShowCreate(false); setFormError(null); }}
               className="px-3 py-1.5 text-sm rounded-lg transition-colors"
-              style={{
-                background: "var(--admin-hover-bg)",
-                color: "var(--admin-text-muted)",
-              }}>
+              style={{ background: "var(--admin-hover-bg)", color: "var(--admin-text-muted)" }}>
               Annulla
             </button>
-            <button
-              type="submit"
-              disabled={pending}
+            <button type="submit" disabled={pending}
               className="px-3 py-1.5 text-sm rounded-lg font-medium transition-colors disabled:opacity-60"
               style={{ background: "var(--admin-accent)", color: "#fff" }}>
               {pending ? "Salvataggio..." : "Salva"}
@@ -448,21 +301,12 @@ function PermissionCatalog({
         </form>
       )}
 
-      {/* Grouped list */}
       {Object.entries(filtered).map(([group, perms]) => (
-        <GroupSection
-          key={group}
-          group={group}
-          perms={perms as Permission[]}
-          onDelete={onDelete}
-          onUpdate={onUpdate}
-        />
+        <GroupSection key={group} group={group} perms={perms as Permission[]} onDelete={onDelete} onUpdate={onUpdate} />
       ))}
 
       {Object.keys(filtered).length === 0 && (
-        <div
-          className="py-10 text-center"
-          style={{ color: "var(--admin-text-faint)" }}>
+        <div className="py-10 text-center" style={{ color: "var(--admin-text-faint)" }}>
           <Shield size={28} className="mx-auto mb-2 opacity-30" />
           <p className="text-sm">Nessun permesso trovato</p>
         </div>
@@ -473,10 +317,7 @@ function PermissionCatalog({
 
 // ─── GroupSection ─────────────────────────────────────────────────────
 function GroupSection({
-  group,
-  perms,
-  onDelete,
-  onUpdate,
+  group, perms, onDelete, onUpdate,
 }: {
   group: string;
   perms: Permission[];
@@ -496,170 +337,89 @@ function GroupSection({
   }
 
   return (
-    <div
-      className="rounded-xl overflow-hidden"
-      style={{ border: "1px solid var(--admin-card-border)" }}>
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
+    <div className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--admin-card-border)" }}>
+      <button type="button" onClick={() => setOpen((v) => !v)}
         className="w-full flex items-center justify-between px-4 py-2.5 text-left transition-colors"
         style={{ background: "var(--admin-hover-bg)" }}>
-        <span
-          className="text-xs font-semibold uppercase tracking-widest"
-          style={{ color: "var(--admin-text-faint)" }}>
+        <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--admin-text-faint)" }}>
           {group}
         </span>
         <div className="flex items-center gap-2">
-          <span
-            className="text-[10px] font-medium px-2 py-0.5 rounded-full"
-            style={{
-              background: "var(--admin-card-border)",
-              color: "var(--admin-text-faint)",
-            }}>
+          <span className="text-[10px] font-medium px-2 py-0.5 rounded-full"
+            style={{ background: "var(--admin-card-border)", color: "var(--admin-text-faint)" }}>
             {perms.length} {perms.length === 1 ? "chiave" : "chiavi"}
           </span>
-          {open ? (
-            <ChevronDown
-              size={13}
-              style={{ color: "var(--admin-text-faint)" }}
-            />
-          ) : (
-            <ChevronRight
-              size={13}
-              style={{ color: "var(--admin-text-faint)" }}
-            />
-          )}
+          {open
+            ? <ChevronDown size={13} style={{ color: "var(--admin-text-faint)" }} />
+            : <ChevronRight size={13} style={{ color: "var(--admin-text-faint)" }} />}
         </div>
       </button>
 
       {open && (
-        <div
-          className="divide-y"
-          style={{ borderTop: "1px solid var(--admin-card-border)" }}>
+        <div className="divide-y" style={{ borderTop: "1px solid var(--admin-card-border)" }}>
           {perms.map((perm) => (
             <div key={perm.id}>
-              <div
-                className="flex items-center justify-between gap-3 px-4 py-3"
-                style={{ background: "var(--admin-card-bg)" }}>
+              <div className="flex items-center justify-between gap-3 px-4 py-3" style={{ background: "var(--admin-card-bg)" }}>
                 <div className="flex items-start gap-3 min-w-0">
-                  <div
-                    className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
-                    style={{ background: "var(--admin-hover-bg)" }}>
-                    <Shield
-                      size={11}
-                      style={{ color: "var(--admin-text-faint)" }}
-                    />
+                  <div className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0 mt-0.5" style={{ background: "var(--admin-hover-bg)" }}>
+                    <Shield size={11} style={{ color: "var(--admin-text-faint)" }} />
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <PermissionBadge perm={perm} />
-                      <span
-                        className="text-sm font-medium truncate"
-                        style={{ color: "var(--admin-text)" }}>
-                        {perm.label}
-                      </span>
+                      <span className="text-sm font-medium truncate" style={{ color: "var(--admin-text)" }}>{perm.label}</span>
                     </div>
                     {perm.description && (
-                      <p
-                        className="text-[11px] mt-0.5"
-                        style={{ color: "var(--admin-text-faint)" }}>
-                        {perm.description}
-                      </p>
+                      <p className="text-[11px] mt-0.5" style={{ color: "var(--admin-text-faint)" }}>{perm.description}</p>
                     )}
                   </div>
                 </div>
-
                 <div className="flex items-center gap-1 shrink-0">
-                  {/* Bottone edit */}
                   {editingId !== perm.id && deletingId !== perm.id && (
-                    <button
-                      onClick={() => {
-                        setEditingId(perm.id);
-                        setDeletingId(null);
-                      }}
-                      className="p-1.5 rounded-lg transition-colors"
-                      style={{ color: "var(--admin-text-muted)" }}
-                      onMouseEnter={(e) =>
-                        (e.currentTarget.style.background = "var(--admin-hover-bg)")
-                      }
-                      onMouseLeave={(e) =>
-                        (e.currentTarget.style.background = "transparent")
-                      }
-                      title={`Modifica "${perm.label}"`}
-                      aria-label={`Modifica permesso ${perm.label}`}>
+                    <button onClick={() => { setEditingId(perm.id); setDeletingId(null); }}
+                      className="p-1.5 rounded-lg transition-colors" style={{ color: "var(--admin-text-muted)" }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "var(--admin-hover-bg)")}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                      title={`Modifica "${perm.label}"`} aria-label={`Modifica permesso ${perm.label}`}>
                       <Pencil size={13} />
                     </button>
                   )}
-
-                  {/* Bottone delete / conferma */}
                   {deletingId === perm.id ? (
                     <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => handleDelete(perm.id)}
+                      <button onClick={() => handleDelete(perm.id)}
                         className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors disabled:opacity-50"
                         title="Conferma eliminazione">
                         <Check size={13} />
                       </button>
-                      <button
-                        onClick={() => setDeletingId(null)}
-                        className="p-1.5 rounded-lg transition-colors"
-                        style={{ color: "var(--admin-text-muted)" }}
-                        title="Annulla">
+                      <button onClick={() => setDeletingId(null)}
+                        className="p-1.5 rounded-lg transition-colors" style={{ color: "var(--admin-text-muted)" }} title="Annulla">
                         <X size={13} />
                       </button>
                     </div>
                   ) : editingId !== perm.id ? (
-                    <button
-                      onClick={() => {
-                        setDeletingId(perm.id);
-                        setEditingId(null);
-                      }}
+                    <button onClick={() => { setDeletingId(perm.id); setEditingId(null); }}
                       disabled={perm.isSystem}
                       className="p-1.5 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                       style={{ color: "var(--admin-text-muted)" }}
-                      onMouseEnter={(e) => {
-                        if (!perm.isSystem)
-                          e.currentTarget.style.background = "#fef2f2";
-                      }}
-                      onMouseLeave={(e) =>
-                        (e.currentTarget.style.background = "transparent")
-                      }
-                      title={
-                        perm.isSystem
-                          ? "I permessi di sistema non possono essere eliminati"
-                          : `Elimina "${perm.label}"`
-                      }
-                      aria-label={
-                        perm.isSystem
-                          ? "Permesso di sistema, non eliminabile"
-                          : `Elimina permesso ${perm.label}`
-                      }>
+                      onMouseEnter={(e) => { if (!perm.isSystem) e.currentTarget.style.background = "#fef2f2"; }}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                      title={perm.isSystem ? "I permessi di sistema non possono essere eliminati" : `Elimina "${perm.label}"`}
+                      aria-label={perm.isSystem ? "Permesso di sistema, non eliminabile" : `Elimina permesso ${perm.label}`}>
                       <Trash2 size={13} />
                     </button>
                   ) : (
-                    /* Quando si sta editando: mostra solo X per annullare */
-                    <button
-                      onClick={() => setEditingId(null)}
-                      className="p-1.5 rounded-lg transition-colors"
-                      style={{ color: "var(--admin-text-muted)" }}
-                      title="Annulla modifica">
+                    <button onClick={() => setEditingId(null)}
+                      className="p-1.5 rounded-lg transition-colors" style={{ color: "var(--admin-text-muted)" }} title="Annulla modifica">
                       <X size={13} />
                     </button>
                   )}
                 </div>
               </div>
-
-              {/* Form di edit inline */}
               {editingId === perm.id && (
-                <div
-                  className="px-4 pb-4"
-                  style={{ background: "var(--admin-card-bg)" }}>
+                <div className="px-4 pb-4" style={{ background: "var(--admin-card-bg)" }}>
                   <EditPermissionForm
                     perm={perm}
-                    onSuccess={(patch) => {
-                      onUpdate(perm.id, patch);
-                      setEditingId(null);
-                    }}
+                    onSuccess={(patch) => { onUpdate(perm.id, patch); setEditingId(null); }}
                     onCancel={() => setEditingId(null)}
                   />
                 </div>
@@ -668,6 +428,91 @@ function GroupSection({
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── PresetGroupHeader ────────────────────────────────────────────────
+// Header di gruppo nella matrice con bottoni preset "assegna tutto" / "revoca tutto"
+function PresetGroupHeader({
+  group,
+  perms,
+  roleId,
+  roleIsAdmin,
+  hasPermission,
+  onPreset,
+}: {
+  group: string;
+  perms: Permission[];
+  roleId: number;
+  roleIsAdmin: boolean;
+  hasPermission: (roleId: number, permId: number) => boolean;
+  onPreset: (roleId: number, permIds: number[], grant: boolean) => void;
+}) {
+  const allGranted = perms.every((p) => hasPermission(roleId, p.id));
+  const noneGranted = perms.every((p) => !hasPermission(roleId, p.id));
+  const partial = !allGranted && !noneGranted;
+
+  if (roleIsAdmin) {
+    return (
+      <div
+        className="px-4 py-1.5 text-[10px] font-semibold uppercase tracking-widest sticky top-0 flex items-center justify-between"
+        style={{ borderTop: "1px solid var(--admin-card-border)", background: "var(--admin-page-bg)", color: "var(--admin-text-faint)" }}>
+        <span>{group}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="px-4 py-1.5 sticky top-0 flex items-center justify-between gap-2"
+      style={{ borderTop: "1px solid var(--admin-card-border)", background: "var(--admin-page-bg)" }}>
+      <div className="flex items-center gap-1.5">
+        {partial
+          ? <MinusSquare size={11} style={{ color: "var(--admin-accent)" }} />
+          : allGranted
+            ? <CheckSquare size={11} style={{ color: "var(--admin-accent)" }} />
+            : <Shield size={11} style={{ color: "var(--admin-text-faint)" }} />}
+        <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--admin-text-faint)" }}>
+          {group}
+        </span>
+        <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: "var(--admin-card-border)", color: "var(--admin-text-faint)" }}>
+          {perms.filter((p) => hasPermission(roleId, p.id)).length}/{perms.length}
+        </span>
+      </div>
+
+      <div className="flex items-center gap-1">
+        {/* Assegna tutto il gruppo */}
+        {!allGranted && (
+          <button
+            onClick={() => onPreset(roleId, perms.map((p) => p.id), true)}
+            className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded transition-colors whitespace-nowrap"
+            style={{
+              background: "color-mix(in oklch, var(--admin-accent) 12%, transparent)",
+              color: "var(--admin-accent)",
+              border: "1px solid color-mix(in oklch, var(--admin-accent) 25%, transparent)",
+            }}
+            title={`Assegna tutti i permessi del gruppo "${group}" a questo ruolo`}>
+            <CheckSquare size={10} />
+            Assegna tutti
+          </button>
+        )}
+        {/* Revoca tutto il gruppo */}
+        {!noneGranted && (
+          <button
+            onClick={() => onPreset(roleId, perms.map((p) => p.id), false)}
+            className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded transition-colors whitespace-nowrap"
+            style={{
+              background: "#fef2f2",
+              color: "#dc2626",
+              border: "1px solid #fecaca",
+            }}
+            title={`Revoca tutti i permessi del gruppo "${group}" da questo ruolo`}>
+            <X size={10} />
+            Revoca tutti
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -686,32 +531,33 @@ function RoleMatrix({
     initialRolePermissions,
     (
       state,
-      update: {
-        type: "grant" | "revoke";
-        roleId: number;
-        permissionId: number;
-      },
+      update: { type: "grant" | "revoke"; roleId: number; permissionId: number }
+        | { type: "grant_many" | "revoke_many"; roleId: number; permissionIds: number[] },
     ) => {
       if (update.type === "grant") {
-        return [
-          ...state,
-          { roleId: update.roleId, permissionId: update.permissionId },
-        ];
+        return [...state, { roleId: update.roleId, permissionId: update.permissionId }];
       }
-      return state.filter(
-        (rp) =>
-          !(
-            rp.roleId === update.roleId &&
-            rp.permissionId === update.permissionId
-          ),
-      );
+      if (update.type === "revoke") {
+        return state.filter((rp) => !(rp.roleId === update.roleId && rp.permissionId === update.permissionId));
+      }
+      if (update.type === "grant_many") {
+        const existing = new Set(state.filter((rp) => rp.roleId === update.roleId).map((rp) => rp.permissionId));
+        const toAdd = update.permissionIds
+          .filter((id) => !existing.has(id))
+          .map((id) => ({ roleId: update.roleId, permissionId: id }));
+        return [...state, ...toAdd];
+      }
+      if (update.type === "revoke_many") {
+        const toRevoke = new Set(update.permissionIds);
+        return state.filter((rp) => !(rp.roleId === update.roleId && toRevoke.has(rp.permissionId)));
+      }
+      return state;
     },
   );
   const [, startTransition] = useTransition();
   const [search, setSearch] = useState("");
-  const [selectedRole, setSelectedRole] = useState<number | null>(
-    roles.length > 0 ? roles[0].id : null,
-  );
+  const [selectedRole, setSelectedRole] = useState<number | null>(roles.length > 0 ? roles[0].id : null);
+  const [presetLoading, setPresetLoading] = useState(false);
 
   const role = roles.find((r) => r.id === selectedRole);
 
@@ -724,32 +570,22 @@ function RoleMatrix({
   const filtered = search.trim()
     ? Object.fromEntries(
         Object.entries(grouped)
-          .map(([g, ps]) => [
-            g,
-            ps.filter(
-              (p) =>
-                p.key.toLowerCase().includes(search.toLowerCase()) ||
-                p.label.toLowerCase().includes(search.toLowerCase()),
-            ),
-          ])
-          .filter(([, ps]) => (ps as Permission[]).length > 0),
+          .map(([g, ps]) => [g, ps.filter((p) =>
+            p.key.toLowerCase().includes(search.toLowerCase()) ||
+            p.label.toLowerCase().includes(search.toLowerCase())
+          )])
+          .filter(([, ps]) => (ps as Permission[]).length > 0)
       )
     : grouped;
 
   function hasPermission(roleId: number, permId: number) {
-    return optimisticRPs.some(
-      (rp) => rp.roleId === roleId && rp.permissionId === permId,
-    );
+    return optimisticRPs.some((rp) => rp.roleId === roleId && rp.permissionId === permId);
   }
 
   function toggle(roleId: number, permId: number) {
     const has = hasPermission(roleId, permId);
     startTransition(async () => {
-      applyOptimistic({
-        type: has ? "revoke" : "grant",
-        roleId,
-        permissionId: permId,
-      });
+      applyOptimistic({ type: has ? "revoke" : "grant", roleId, permissionId: permId });
       if (has) {
         await revokePermissionFromRole(roleId, permId);
       } else {
@@ -758,11 +594,36 @@ function RoleMatrix({
     });
   }
 
+  // ── Preset: assegna o revoca un intero gruppo ──────────────────────
+  function handlePreset(roleId: number, permIds: number[], grant: boolean) {
+    // filtra solo quelli che richiedono effettivamente una modifica
+    const toChange = grant
+      ? permIds.filter((id) => !hasPermission(roleId, id))
+      : permIds.filter((id) => hasPermission(roleId, id));
+
+    if (toChange.length === 0) return;
+
+    startTransition(async () => {
+      setPresetLoading(true);
+      applyOptimistic(grant
+        ? { type: "grant_many", roleId, permissionIds: toChange }
+        : { type: "revoke_many", roleId, permissionIds: toChange }
+      );
+      // Esegue le chiamate in parallelo
+      await Promise.all(
+        toChange.map((permId) =>
+          grant
+            ? grantPermissionToRole(roleId, permId)
+            : revokePermissionFromRole(roleId, permId)
+        )
+      );
+      setPresetLoading(false);
+    });
+  }
+
   if (roles.length === 0) {
     return (
-      <div
-        className="py-12 text-center"
-        style={{ color: "var(--admin-text-faint)" }}>
+      <div className="py-12 text-center" style={{ color: "var(--admin-text-faint)" }}>
         <Shield size={28} className="mx-auto mb-2 opacity-30" />
         <p className="text-sm">Nessun ruolo trovato</p>
       </div>
@@ -770,65 +631,32 @@ function RoleMatrix({
   }
 
   return (
-    <div
-      className="flex gap-0 rounded-xl overflow-hidden"
-      style={{ border: "1px solid var(--admin-card-border)", minHeight: 400 }}>
+    <div className="flex gap-0 rounded-xl overflow-hidden" style={{ border: "1px solid var(--admin-card-border)", minHeight: 400 }}>
       {/* Sidebar ruoli */}
-      <div
-        className="w-48 shrink-0 flex flex-col"
-        style={{
-          background: "var(--admin-card-bg)",
-          borderRight: "1px solid var(--admin-card-border)",
-        }}>
-        <div
-          className="px-3 py-2.5 text-[10px] font-semibold uppercase tracking-widest"
-          style={{
-            borderBottom: "1px solid var(--admin-card-border)",
-            color: "var(--admin-text-faint)",
-          }}>
+      <div className="w-48 shrink-0 flex flex-col" style={{ background: "var(--admin-card-bg)", borderRight: "1px solid var(--admin-card-border)" }}>
+        <div className="px-3 py-2.5 text-[10px] font-semibold uppercase tracking-widest"
+          style={{ borderBottom: "1px solid var(--admin-card-border)", color: "var(--admin-text-faint)" }}>
           Ruoli
         </div>
         {roles.map((r) => {
           const count = optimisticRPs.filter((rp) => rp.roleId === r.id).length;
           const isActive = selectedRole === r.id;
           return (
-            <button
-              key={r.id}
-              onClick={() => setSelectedRole(r.id)}
+            <button key={r.id} onClick={() => setSelectedRole(r.id)}
               className="w-full text-left px-3 py-2.5 transition-colors"
               style={{
-                background: isActive
-                  ? "color-mix(in oklch, var(--admin-accent) 14%, var(--admin-card-bg))"
-                  : "transparent",
+                background: isActive ? "color-mix(in oklch, var(--admin-accent) 14%, var(--admin-card-bg))" : "transparent",
                 borderBottom: "1px solid var(--admin-card-border)",
-                borderLeft: isActive
-                  ? "3px solid var(--admin-accent)"
-                  : "3px solid transparent",
+                borderLeft: isActive ? "3px solid var(--admin-accent)" : "3px solid transparent",
               }}>
               <div className="flex items-center gap-2">
-                <div
-                  className="w-2 h-2 rounded-full shrink-0"
-                  style={{ background: r.color }}
-                />
-                <span
-                  className="text-xs truncate"
-                  style={{
-                    color: isActive
-                      ? "var(--admin-text)"
-                      : "var(--admin-text-muted)",
-                    fontWeight: isActive ? 600 : 400,
-                  }}>
+                <div className="w-2 h-2 rounded-full shrink-0" style={{ background: r.color }} />
+                <span className="text-xs truncate" style={{ color: isActive ? "var(--admin-text)" : "var(--admin-text-muted)", fontWeight: isActive ? 600 : 400 }}>
                   {r.label}
                 </span>
               </div>
               <div className="flex items-center gap-1 mt-0.5 ml-4">
-                <span
-                  className="text-[10px]"
-                  style={{
-                    color: isActive
-                      ? "var(--admin-text-muted)"
-                      : "var(--admin-text-faint)",
-                  }}>
+                <span className="text-[10px]" style={{ color: isActive ? "var(--admin-text-muted)" : "var(--admin-text-faint)" }}>
                   {count} permessi
                 </span>
               </div>
@@ -841,146 +669,109 @@ function RoleMatrix({
       <div className="flex-1 min-w-0 flex flex-col">
         {role && (
           <>
-            <div
-              className="px-4 py-2.5 flex items-center justify-between gap-3"
-              style={{
-                borderBottom: "1px solid var(--admin-card-border)",
-                background: "var(--admin-card-bg)",
-              }}>
-              <div className="flex items-center gap-2">
-                <div
-                  className="w-2.5 h-2.5 rounded-full"
-                  style={{ background: role.color }}
-                />
-                <span
-                  className="text-sm font-semibold"
-                  style={{ color: "var(--admin-text)" }}>
-                  {role.label}
-                </span>
+            {/* Header ruolo */}
+            <div className="px-4 py-2.5 flex items-center justify-between gap-3"
+              style={{ borderBottom: "1px solid var(--admin-card-border)", background: "var(--admin-card-bg)" }}>
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="w-2.5 h-2.5 rounded-full" style={{ background: role.color }} />
+                <span className="text-sm font-semibold" style={{ color: "var(--admin-text)" }}>{role.label}</span>
                 {role.isAdmin && (
-                  <span
-                    className="text-[10px] font-medium px-1.5 py-0.5 rounded"
-                    style={{
-                      background: "var(--admin-hover-bg)",
-                      color: "var(--admin-text-faint)",
-                    }}>
+                  <span className="text-[10px] font-medium px-1.5 py-0.5 rounded"
+                    style={{ background: "var(--admin-hover-bg)", color: "var(--admin-text-faint)" }}>
                     Admin — tutti i permessi impliciti
                   </span>
                 )}
+                {presetLoading && (
+                  <span className="flex items-center gap-1 text-[10px]" style={{ color: "var(--admin-accent)" }}>
+                    <Loader2 size={10} className="animate-spin" /> Applicazione preset...
+                  </span>
+                )}
               </div>
-              <div className="relative">
-                <Search
-                  size={12}
-                  className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
-                  style={{ color: "var(--admin-text-faint)" }}
-                />
-                <input
-                  type="text"
-                  placeholder="Filtra..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-7 pr-3 py-1.5 text-xs rounded-lg outline-none border"
-                  style={{
-                    background: "var(--admin-input-bg)",
-                    borderColor: "var(--admin-input-border)",
-                    color: "var(--admin-text)",
-                  }}
-                />
+              <div className="flex items-center gap-2">
+                {/* Preset globali: assegna/revoca tutto */}
+                {!role.isAdmin && (
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => handlePreset(role.id, permissions.map((p) => p.id), true)}
+                      className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium rounded transition-colors whitespace-nowrap"
+                      style={{
+                        background: "color-mix(in oklch, var(--admin-accent) 12%, transparent)",
+                        color: "var(--admin-accent)",
+                        border: "1px solid color-mix(in oklch, var(--admin-accent) 25%, transparent)",
+                      }}
+                      title="Assegna TUTTI i permessi a questo ruolo">
+                      <CheckSquare size={10} /> Tutti
+                    </button>
+                    <button
+                      onClick={() => handlePreset(role.id, permissions.map((p) => p.id), false)}
+                      className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium rounded transition-colors whitespace-nowrap"
+                      style={{ background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca" }}
+                      title="Revoca TUTTI i permessi da questo ruolo">
+                      <X size={10} /> Nessuno
+                    </button>
+                  </div>
+                )}
+                <div className="relative">
+                  <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "var(--admin-text-faint)" }} />
+                  <input type="text" placeholder="Filtra..." value={search} onChange={(e) => setSearch(e.target.value)}
+                    className="pl-7 pr-3 py-1.5 text-xs rounded-lg outline-none border"
+                    style={{ background: "var(--admin-input-bg)", borderColor: "var(--admin-input-border)", color: "var(--admin-text)" }} />
+                </div>
               </div>
             </div>
 
+            {/* Lista permessi per gruppo */}
             <div className="flex-1 overflow-auto">
               {Object.entries(filtered).map(([group, perms]) => (
                 <div key={group}>
-                  <div
-                    className="px-4 py-1.5 text-[10px] font-semibold uppercase tracking-widest sticky top-0"
-                    style={{
-                      borderTop: "1px solid var(--admin-card-border)",
-                      background: "var(--admin-page-bg)",
-                      color: "var(--admin-text-faint)",
-                    }}>
-                    {group}
-                  </div>
+                  <PresetGroupHeader
+                    group={group}
+                    perms={perms as Permission[]}
+                    roleId={role.id}
+                    roleIsAdmin={role.isAdmin}
+                    hasPermission={hasPermission}
+                    onPreset={handlePreset}
+                  />
                   {(perms as Permission[]).map((perm) => {
                     const has = hasPermission(role.id, perm.id);
                     return (
-                      <div
-                        key={perm.id}
+                      <div key={perm.id}
                         className="flex items-center justify-between gap-3 px-4 py-2.5 transition-colors"
                         style={{
                           borderTop: "1px solid var(--admin-card-border)",
-                          background: has
-                            ? "color-mix(in oklch, var(--admin-accent) 12%, var(--admin-card-bg))"
-                            : "var(--admin-card-bg)",
-                          borderLeft: has
-                            ? "3px solid var(--admin-accent)"
-                            : "3px solid transparent",
+                          background: has ? "color-mix(in oklch, var(--admin-accent) 12%, var(--admin-card-bg))" : "var(--admin-card-bg)",
+                          borderLeft: has ? "3px solid var(--admin-accent)" : "3px solid transparent",
                         }}>
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <code
-                              className="text-[10px] font-mono px-1.5 py-0.5 rounded"
-                              style={{
-                                background: "var(--admin-hover-bg)",
-                                color: "var(--admin-text-muted)",
-                              }}>
+                            <code className="text-[10px] font-mono px-1.5 py-0.5 rounded"
+                              style={{ background: "var(--admin-hover-bg)", color: "var(--admin-text-muted)" }}>
                               {perm.key}
                             </code>
-                            <span
-                              className="text-xs"
-                              style={{ color: "var(--admin-text)" }}>
-                              {perm.label}
-                            </span>
+                            <span className="text-xs" style={{ color: "var(--admin-text)" }}>{perm.label}</span>
                           </div>
                         </div>
                         <button
                           onClick={() => toggle(role.id, perm.id)}
                           disabled={role.isAdmin}
                           className="w-7 h-7 rounded-lg flex items-center justify-center transition-all disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
-                          title={
-                            role.isAdmin
-                              ? "Admin ha tutti i permessi"
-                              : has
-                                ? `Revoca "${perm.label}"`
-                                : `Assegna "${perm.label}"`
-                          }
-                          aria-label={
-                            role.isAdmin
-                              ? "Admin ha tutti i permessi"
-                              : has
-                                ? `Revoca permesso ${perm.label}`
-                                : `Assegna permesso ${perm.label}`
-                          }
+                          title={role.isAdmin ? "Admin ha tutti i permessi" : has ? `Revoca "${perm.label}"` : `Assegna "${perm.label}"`}
+                          aria-label={role.isAdmin ? "Admin ha tutti i permessi" : has ? `Revoca permesso ${perm.label}` : `Assegna permesso ${perm.label}`}
                           style={{
-                            background: has
-                              ? "color-mix(in oklch, var(--admin-accent) 25%, transparent)"
-                              : "var(--admin-input-bg)",
-                            border: has
-                              ? "1px solid color-mix(in oklch, var(--admin-accent) 40%, transparent)"
-                              : "1px solid var(--admin-input-border)",
+                            background: has ? "color-mix(in oklch, var(--admin-accent) 25%, transparent)" : "var(--admin-input-bg)",
+                            border: has ? "1px solid color-mix(in oklch, var(--admin-accent) 40%, transparent)" : "1px solid var(--admin-input-border)",
                           }}>
-                          {has ? (
-                            <ShieldCheck
-                              size={14}
-                              style={{ color: "var(--admin-accent)" }}
-                            />
-                          ) : (
-                            <ShieldOff
-                              size={14}
-                              style={{ color: "var(--admin-text-muted)" }}
-                            />
-                          )}
+                          {has
+                            ? <ShieldCheck size={14} style={{ color: "var(--admin-accent)" }} />
+                            : <ShieldOff size={14} style={{ color: "var(--admin-text-muted)" }} />}
                         </button>
                       </div>
                     );
                   })}
                 </div>
               ))}
-
               {Object.keys(filtered).length === 0 && (
-                <div
-                  className="py-10 text-center"
-                  style={{ color: "var(--admin-text-faint)" }}>
+                <div className="py-10 text-center" style={{ color: "var(--admin-text-faint)" }}>
                   <p className="text-sm">Nessun permesso trovato</p>
                 </div>
               )}
@@ -995,90 +786,46 @@ function RoleMatrix({
 // ─── SystemKeysPanel ──────────────────────────────────────────────────
 function SystemKeysPanel({ keys }: { keys: Props["systemKeys"] }) {
   const [open, setOpen] = useState(false);
-
   const grouped = keys.reduce<Record<string, typeof keys>>((acc, k) => {
     (acc[k.group] ??= []).push(k);
     return acc;
   }, {});
 
   return (
-    <div
-      className="rounded-xl overflow-hidden"
-      style={{
-        background: "var(--admin-card-bg)",
-        border: "1px solid var(--admin-card-border)",
-      }}>
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
+    <div className="rounded-xl overflow-hidden"
+      style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-card-border)" }}>
+      <button type="button" onClick={() => setOpen((v) => !v)}
         className="w-full flex items-center justify-between px-4 py-3 text-left transition-colors"
-        onMouseEnter={(e) =>
-          (e.currentTarget.style.background = "var(--admin-hover-bg)")
-        }
-        onMouseLeave={(e) =>
-          (e.currentTarget.style.background = "transparent")
-        }>
+        onMouseEnter={(e) => (e.currentTarget.style.background = "var(--admin-hover-bg)")}
+        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
         <div className="flex items-center gap-2">
           <HelpCircle size={14} style={{ color: "var(--admin-accent)" }} />
-          <span
-            className="text-sm font-medium"
-            style={{ color: "var(--admin-text)" }}>
-            Chiavi di sistema disponibili
-          </span>
+          <span className="text-sm font-medium" style={{ color: "var(--admin-text)" }}>Chiavi di sistema disponibili</span>
         </div>
         <div className="flex items-center gap-2">
-          <span
-            className="text-[10px] font-medium px-2 py-0.5 rounded-full"
-            style={{
-              background: "var(--admin-card-border)",
-              color: "var(--admin-text-faint)",
-            }}>
+          <span className="text-[10px] font-medium px-2 py-0.5 rounded-full"
+            style={{ background: "var(--admin-card-border)", color: "var(--admin-text-faint)" }}>
             {keys.length} chiavi
           </span>
-          <ChevronRight
-            size={13}
-            style={{
-              color: "var(--admin-text-faint)",
-              transform: open ? "rotate(90deg)" : "rotate(0deg)",
-              transition: "transform 200ms",
-            }}
-          />
+          <ChevronRight size={13} style={{ color: "var(--admin-text-faint)", transform: open ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 200ms" }} />
         </div>
       </button>
-
       {open && (
         <div style={{ borderTop: "1px solid var(--admin-card-border)" }}>
           {Object.entries(grouped).map(([group, ks]) => (
             <div key={group}>
-              <div
-                className="px-4 py-1.5 text-[10px] font-semibold uppercase tracking-widest"
-                style={{
-                  background: "var(--admin-hover-bg)",
-                  color: "var(--admin-text-faint)",
-                }}>
+              <div className="px-4 py-1.5 text-[10px] font-semibold uppercase tracking-widest"
+                style={{ background: "var(--admin-hover-bg)", color: "var(--admin-text-faint)" }}>
                 {group}
               </div>
               {ks.map((k) => (
-                <div
-                  key={k.key}
-                  className="flex items-center gap-3 px-4 py-2"
-                  style={{
-                    borderTop: "1px solid var(--admin-card-border)",
-                    background: "var(--admin-page-bg)",
-                  }}>
-                  <code
-                    className="text-[11px] font-mono px-1.5 py-0.5 rounded shrink-0"
-                    style={{
-                      background: "var(--admin-hover-bg)",
-                      color: "var(--admin-text-muted)",
-                    }}>
+                <div key={k.key} className="flex items-center gap-3 px-4 py-2"
+                  style={{ borderTop: "1px solid var(--admin-card-border)", background: "var(--admin-page-bg)" }}>
+                  <code className="text-[11px] font-mono px-1.5 py-0.5 rounded shrink-0"
+                    style={{ background: "var(--admin-hover-bg)", color: "var(--admin-text-muted)" }}>
                     {k.key}
                   </code>
-                  <span
-                    className="text-xs"
-                    style={{ color: "var(--admin-text-muted)" }}>
-                    {k.description}
-                  </span>
+                  <span className="text-xs" style={{ color: "var(--admin-text-muted)" }}>{k.description}</span>
                 </div>
               ))}
             </div>
@@ -1094,31 +841,19 @@ const TABS = [
   { id: "catalog", label: "Catalogo permessi", icon: Shield },
   { id: "matrix", label: "Matrice ruoli", icon: ShieldCheck },
 ] as const;
-
 type TabId = (typeof TABS)[number]["id"];
 
 // ─── Root ─────────────────────────────────────────────────────────────
-export function PermissionsManager({
-  permissions: initialPermissions,
-  roles,
-  rolePermissions,
-  systemKeys,
-}: Props) {
+export function PermissionsManager({ permissions: initialPermissions, roles, rolePermissions, systemKeys }: Props) {
   const [activeTab, setActiveTab] = useState<TabId>("catalog");
   const [optimisticPerms, applyOptimistic] = useOptimistic(
     initialPermissions,
     (
       state,
-      action:
-        | { type: "delete"; id: number }
-        | { type: "update"; id: number; patch: Partial<Permission> },
+      action: { type: "delete"; id: number } | { type: "update"; id: number; patch: Partial<Permission> },
     ) => {
-      if (action.type === "delete") {
-        return state.filter((p) => p.id !== action.id);
-      }
-      return state.map((p) =>
-        p.id === action.id ? { ...p, ...action.patch } : p,
-      );
+      if (action.type === "delete") return state.filter((p) => p.id !== action.id);
+      return state.map((p) => p.id === action.id ? { ...p, ...action.patch } : p);
     },
   );
   const [, startTransition] = useTransition();
@@ -1134,27 +869,19 @@ export function PermissionsManager({
   }
 
   function handleUpdate(id: number, patch: Partial<Permission>) {
-    startTransition(() => {
-      applyOptimistic({ type: "update", id, patch });
-    });
+    startTransition(() => { applyOptimistic({ type: "update", id, patch }); });
   }
 
   return (
     <div className="space-y-4">
-      {/* Info card */}
       <SystemKeysPanel keys={systemKeys} />
 
-      {/* Tab bar */}
-      <div
-        className="flex items-center gap-1 p-1 rounded-xl w-fit"
-        style={{ background: "var(--admin-hover-bg)" }}>
+      <div className="flex items-center gap-1 p-1 rounded-xl w-fit" style={{ background: "var(--admin-hover-bg)" }}>
         {TABS.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
           return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
               className="flex items-center gap-1.5 px-4 py-1.5 text-sm rounded-lg font-medium transition-all"
               style={{
                 background: isActive ? "var(--admin-accent)" : "transparent",
@@ -1168,21 +895,11 @@ export function PermissionsManager({
         })}
       </div>
 
-      {/* Tab content */}
       {activeTab === "catalog" && (
-        <PermissionCatalog
-          permissions={optimisticPerms}
-          systemKeys={systemKeys}
-          onDelete={handleDelete}
-          onUpdate={handleUpdate}
-        />
+        <PermissionCatalog permissions={optimisticPerms} systemKeys={systemKeys} onDelete={handleDelete} onUpdate={handleUpdate} />
       )}
       {activeTab === "matrix" && (
-        <RoleMatrix
-          permissions={optimisticPerms}
-          roles={roles}
-          initialRolePermissions={rolePermissions}
-        />
+        <RoleMatrix permissions={optimisticPerms} roles={roles} initialRolePermissions={rolePermissions} />
       )}
     </div>
   );
