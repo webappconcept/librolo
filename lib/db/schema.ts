@@ -9,6 +9,7 @@ import {
   uniqueIndex,
   varchar,
 } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -90,7 +91,78 @@ export const userPermissions = pgTable(
 );
 
 // ---------------------------------------------------------------------------
-// CMS — Pagine statiche
+// CMS — Template grafici
+// ---------------------------------------------------------------------------
+
+/**
+ * Tipi di layout base disponibili nel frontend.
+ * Ogni stringa corrisponde a un file in app/(frontend)/_templates/
+ */
+export type LayoutBase = "default" | "article" | "service" | "landing" | "faq";
+
+/**
+ * Tipi di campo custom supportati dal FieldBuilder.
+ */
+export type FieldType =
+  | "text"
+  | "textarea"
+  | "richtext"
+  | "image"
+  | "url"
+  | "date"
+  | "select"
+  | "toggle"
+  | "number";
+
+export const pageTemplates = pgTable("page_templates", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(),
+  slug: varchar("slug", { length: 100 }).notNull().unique(),
+  description: text("description"),
+  /** Chiave del layout scheletro: default | article | service | landing | faq */
+  layoutBase: varchar("layout_base", { length: 50 }).notNull().default("default"),
+  /** JSON serializzato con TemplateStyleConfig */
+  styleConfig: text("style_config").default("{}"),
+  /** URL thumbnail per anteprima nella lista template */
+  thumbnail: text("thumbnail"),
+  /** I template di sistema non possono essere eliminati */
+  isSystem: boolean("is_system").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const templateFields = pgTable("template_fields", {
+  id: serial("id").primaryKey(),
+  templateId: integer("template_id")
+    .notNull()
+    .references(() => pageTemplates.id, { onDelete: "cascade" }),
+  /** Chiave univoca del campo, usata come key nel JSON customFields della pagina */
+  fieldKey: varchar("field_key", { length: 100 }).notNull(),
+  /** text | textarea | richtext | image | url | date | select | toggle | number */
+  fieldType: varchar("field_type", { length: 50 }).notNull().default("text"),
+  label: varchar("label", { length: 150 }).notNull(),
+  placeholder: varchar("placeholder", { length: 255 }),
+  required: boolean("required").notNull().default(false),
+  defaultValue: text("default_value"),
+  /** JSON serializzato: opzioni extra (es. { options: ["A","B"] } per select) */
+  options: text("options").default("{}"),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+// Drizzle relations per page_templates <-> template_fields
+export const pageTemplatesRelations = relations(pageTemplates, ({ many }) => ({
+  fields: many(templateFields),
+}));
+
+export const templateFieldsRelations = relations(templateFields, ({ one }) => ({
+  template: one(pageTemplates, {
+    fields: [templateFields.templateId],
+    references: [pageTemplates.id],
+  }),
+}));
+
+// ---------------------------------------------------------------------------
+// CMS — Pagine statiche (aggiornata con nuove colonne)
 // ---------------------------------------------------------------------------
 export const pages = pgTable("pages", {
   id: serial("id").primaryKey(),
@@ -103,9 +175,35 @@ export const pages = pgTable("pages", {
   publishedAt: timestamp("published_at"),
   /** Data di scadenza: dopo questa data la pagina torna in draft automaticamente */
   expiresAt: timestamp("expires_at"),
+  /** FK alla pagina padre (nullable) — lo slug nel DB è sempre il full path */
+  parentId: integer("parent_id"),
+  /** FK al template grafico assegnato (nullable) */
+  templateId: integer("template_id").references(() => pageTemplates.id, {
+    onDelete: "set null",
+  }),
+  /** JSON serializzato con i valori dei campi custom del template */
+  customFields: text("custom_fields").default("{}"),
+  /** Tipo di pagina: page | article | service | landing | faq */
+  pageType: varchar("page_type", { length: 50 }).notNull().default("page"),
+  /** Ordinamento manuale tra pagine dello stesso livello */
+  sortOrder: integer("sort_order").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
+
+// Drizzle self-relation pages <-> pages (parent/child)
+export const pagesRelations = relations(pages, ({ one, many }) => ({
+  parent: one(pages, {
+    fields: [pages.parentId],
+    references: [pages.id],
+    relationName: "page_children",
+  }),
+  children: many(pages, { relationName: "page_children" }),
+  template: one(pageTemplates, {
+    fields: [pages.templateId],
+    references: [pageTemplates.id],
+  }),
+}));
 
 // ---------------------------------------------------------------------------
 // Resto delle tabelle
@@ -192,6 +290,21 @@ export type SeoPage = typeof seoPages.$inferSelect;
 export type NewSeoPage = typeof seoPages.$inferInsert;
 export type Page = typeof pages.$inferSelect;
 export type NewPage = typeof pages.$inferInsert;
+export type PageTemplate = typeof pageTemplates.$inferSelect;
+export type NewPageTemplate = typeof pageTemplates.$inferInsert;
+export type TemplateField = typeof templateFields.$inferSelect;
+export type NewTemplateField = typeof templateFields.$inferInsert;
+
+/** Configurazione stile serializzata nel campo styleConfig del template */
+export interface TemplateStyleConfig {
+  fontBody?: string;
+  fontDisplay?: string;
+  colorPrimary?: string;
+  colorBg?: string;
+  colorText?: string;
+  spacing?: "compact" | "normal" | "spacious";
+  borderRadius?: "none" | "small" | "medium" | "large";
+}
 
 export enum ActivityType {
   SIGN_UP = "SIGN_UP",
@@ -241,4 +354,7 @@ export enum ActivityType {
   PAGE_DELETED = "PAGE_DELETED",
   PAGE_PUBLISHED = "PAGE_PUBLISHED",
   PAGE_UNPUBLISHED = "PAGE_UNPUBLISHED",
+  TEMPLATE_CREATED = "TEMPLATE_CREATED",
+  TEMPLATE_UPDATED = "TEMPLATE_UPDATED",
+  TEMPLATE_DELETED = "TEMPLATE_DELETED",
 }
