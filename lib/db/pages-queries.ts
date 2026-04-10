@@ -1,6 +1,6 @@
 import { db } from "@/lib/db/drizzle";
 import { pages, type NewPage, type Page } from "@/lib/db/schema";
-import { eq, desc, asc } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 
 export async function getAllPages(): Promise<Page[]> {
   return db.select().from(pages).orderBy(asc(pages.slug));
@@ -34,6 +34,7 @@ export async function upsertPage(data: NewPage): Promise<void> {
         content: data.content,
         status: data.status,
         publishedAt: data.publishedAt,
+        expiresAt: data.expiresAt ?? null,
         updatedAt: new Date(),
       },
     });

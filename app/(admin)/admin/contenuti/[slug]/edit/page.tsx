@@ -1,4 +1,5 @@
 import { getPageBySlug } from "@/lib/db/pages-queries";
+import { getSeoPage } from "@/lib/db/seo-queries";
 import { notFound } from "next/navigation";
 import PageEditor from "../../_components/page-editor";
 
@@ -10,7 +11,10 @@ interface Props {
 
 export default async function EditPagePage({ params }: Props) {
   const { slug } = await params;
-  const page = await getPageBySlug(slug);
+  const [page, seo] = await Promise.all([
+    getPageBySlug(slug),
+    getSeoPage(`/${slug}`),
+  ]);
   if (!page) notFound();
 
   return (
@@ -20,7 +24,8 @@ export default async function EditPagePage({ params }: Props) {
           Modifica pagina
         </h2>
         <p className="text-sm mt-0.5" style={{ color: "var(--admin-text-muted)" }}>
-          Stai modificando: <strong style={{ color: "var(--admin-text)" }}>/{page.slug}</strong>
+          Stai modificando:{" "}
+          <strong style={{ color: "var(--admin-text)" }}>/{page.slug}</strong>
         </p>
       </div>
       <div
@@ -30,7 +35,7 @@ export default async function EditPagePage({ params }: Props) {
           border: "1px solid var(--admin-card-border)",
         }}
       >
-        <PageEditor page={page} />
+        <PageEditor page={page} seo={seo} />
       </div>
     </div>
   );

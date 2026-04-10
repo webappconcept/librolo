@@ -17,9 +17,6 @@ export const users = pgTable("users", {
   email: varchar("email", { length: 255 }).notNull().unique(),
   passwordHash: text("password_hash").notNull(),
   role: varchar("role", { length: 50 }).notNull().default("member"),
-  /** Flag di emergenza per il super admin: bypassa il controllo RBAC.
-   *  Tutti gli altri accessi si gestiscono tramite permessi RBAC (admin:access, ecc.)
-   */
   isAdmin: boolean("is_admin").notNull().default(false),
   bannedAt: timestamp("banned_at"),
   bannedReason: varchar("banned_reason", { length: 255 }),
@@ -40,25 +37,14 @@ export const roles = pgTable("roles", {
   label: varchar("label", { length: 100 }).notNull(),
   color: varchar("color", { length: 20 }).notNull().default("#6b7280"),
   description: text("description"),
-  /** Flag di emergenza super admin — bypassa il sistema RBAC.
-   *  Solo il ruolo "admin" di sistema deve avere questo a true.
-   *  Per tutti gli altri accessi usare il permesso RBAC "admin:access".
-   */
   isAdmin: boolean("is_admin").notNull().default(false),
-  /** I ruoli di sistema (admin, member) non possono essere eliminati dall'UI */
   isSystem: boolean("is_system").notNull().default(false),
-  /** Gerarchia: un admin può assegnare solo ruoli con level <= proprio */
   level: integer("level").notNull().default(0),
-  /** Ruolo assegnato automaticamente ai nuovi utenti registrati */
   isDefault: boolean("is_default").notNull().default(false),
   sortOrder: integer("sort_order").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
-
-// ---------------------------------------------------------------------------
-// RBAC — Permessi
-// ---------------------------------------------------------------------------
 
 export const permissions = pgTable("permissions", {
   id: serial("id").primaryKey(),
@@ -106,24 +92,17 @@ export const userPermissions = pgTable(
 // ---------------------------------------------------------------------------
 // CMS — Pagine statiche
 // ---------------------------------------------------------------------------
-
-/**
- * Pagine statiche gestite dal CMS.
- * I meta SEO (title, description, OG…) risiedono in `seoPages`,
- * collegati tramite pathname = '/' + slug.
- * Nessun campo SEO qui — responsabilità separata.
- */
 export const pages = pgTable("pages", {
   id: serial("id").primaryKey(),
-  /** Parte dell'URL dopo /: es. "privacy" → pagina pubblica su /privacy */
   slug: varchar("slug", { length: 255 }).notNull().unique(),
-  /** Titolo editoriale della pagina (h1, non meta title) */
   title: varchar("title", { length: 255 }).notNull(),
-  /** Corpo della pagina in HTML o markdown */
   content: text("content").notNull().default(""),
-  /** draft | published */
+  /** draft | published | scheduled */
   status: varchar("status", { length: 20 }).notNull().default("draft"),
+  /** Data di pubblicazione programmata o effettiva */
   publishedAt: timestamp("published_at"),
+  /** Data di scadenza: dopo questa data la pagina torna in draft automaticamente */
+  expiresAt: timestamp("expires_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -131,7 +110,6 @@ export const pages = pgTable("pages", {
 // ---------------------------------------------------------------------------
 // Resto delle tabelle
 // ---------------------------------------------------------------------------
-
 export const activityLogs = pgTable("activity_logs", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").references(() => users.id),
@@ -198,7 +176,6 @@ export const seoPages = pgTable("seo_pages", {
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
-
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Role = typeof roles.$inferSelect;
@@ -255,12 +232,10 @@ export enum ActivityType {
   MESSAGE_SENT = "MESSAGE_SENT",
   CONTENT_REPORTED = "CONTENT_REPORTED",
   CONTENT_REMOVED = "CONTENT_REMOVED",
-  // RBAC
   PERMISSION_GRANTED = "PERMISSION_GRANTED",
   PERMISSION_REVOKED = "PERMISSION_REVOKED",
   ROLE_PERMISSION_ADDED = "ROLE_PERMISSION_ADDED",
   ROLE_PERMISSION_REMOVED = "ROLE_PERMISSION_REMOVED",
-  // CMS
   PAGE_CREATED = "PAGE_CREATED",
   PAGE_UPDATED = "PAGE_UPDATED",
   PAGE_DELETED = "PAGE_DELETED",
