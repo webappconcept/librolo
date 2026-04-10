@@ -3,7 +3,9 @@
 
 import type { RoleRow } from "@/lib/db/roles-queries";
 import {
+  AlertTriangle,
   Check,
+  ChevronDown,
   Lock,
   Pencil,
   Plus,
@@ -60,6 +62,7 @@ function RoleForm({
 }) {
   const [color, setColor] = useState(initial?.color ?? "#6b7280");
   const [isAdmin, setIsAdmin] = useState(initial?.isAdmin ?? false);
+  const [adminOpen, setAdminOpen] = useState(initial?.isAdmin ?? false);
   const [slug, setSlug] = useState(initial?.name ?? "");
   const isEdit = !!initial;
   const isSystem = initial?.isSystem ?? false;
@@ -88,6 +91,21 @@ function RoleForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Label — ora per prima */}
+        <div>
+          <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--admin-text-muted)" }}>
+            Etichetta visibile
+          </label>
+          <input
+            name="label"
+            defaultValue={initial?.label}
+            placeholder="es. Content Editor"
+            required
+            className={inputCls}
+            style={inputStyle}
+          />
+        </div>
+
         {/* Slug */}
         <div>
           <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--admin-text-muted)" }}>
@@ -125,21 +143,6 @@ function RoleForm({
               — spazi e caratteri speciali vengono rimossi automaticamente.
             </p>
           )}
-        </div>
-
-        {/* Label */}
-        <div>
-          <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--admin-text-muted)" }}>
-            Etichetta visibile
-          </label>
-          <input
-            name="label"
-            defaultValue={initial?.label}
-            placeholder="es. Content Editor"
-            required
-            className={inputCls}
-            style={inputStyle}
-          />
         </div>
       </div>
 
@@ -192,32 +195,86 @@ function RoleForm({
         </div>
       </div>
 
-      {/* Flag Admin — solo flag di emergenza super admin */}
-      <div className="pt-1">
-        <label className="flex items-start gap-3 cursor-pointer">
-          <div className="mt-0.5">
-            <button
-              type="button"
-              role="checkbox"
-              aria-checked={isAdmin}
-              onClick={() => setIsAdmin((v) => !v)}
-              className="w-5 h-5 rounded border-2 flex items-center justify-center transition-colors"
-              style={{
-                background: isAdmin ? "#7c3aed" : "transparent",
-                borderColor: isAdmin ? "#7c3aed" : "var(--admin-input-border)",
-              }}>
-              {isAdmin && <Check size={11} className="text-white" />}
-            </button>
+      {/* ─── Impostazioni avanzate (accordion) ───────────────────────── */}
+      <div
+        className="rounded-lg overflow-hidden"
+        style={{ border: adminOpen ? "1px solid #f59e0b40" : "1px solid var(--admin-card-border)" }}>
+        {/* Trigger accordion */}
+        <button
+          type="button"
+          onClick={() => setAdminOpen((v) => !v)}
+          className="w-full flex items-center justify-between px-3 py-2.5 text-left transition-colors"
+          style={{
+            background: adminOpen ? "#fffbeb" : "var(--admin-hover-bg)",
+            color: adminOpen ? "#92400e" : "var(--admin-text-muted)",
+          }}
+          onMouseEnter={(e) => {
+            if (!adminOpen) (e.currentTarget as HTMLButtonElement).style.background = "var(--admin-card-border)";
+          }}
+          onMouseLeave={(e) => {
+            if (!adminOpen) (e.currentTarget as HTMLButtonElement).style.background = "var(--admin-hover-bg)";
+          }}>
+          <span className="flex items-center gap-2 text-xs font-medium">
+            <Shield size={13} />
+            Impostazioni avanzate
+            {isAdmin && (
+              <span
+                className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded"
+                style={{ background: "#f5f3ff", color: "#7c3aed" }}>
+                <ShieldCheck size={9} /> super admin attivo
+              </span>
+            )}
+          </span>
+          <ChevronDown
+            size={14}
+            style={{
+              transform: adminOpen ? "rotate(180deg)" : "rotate(0deg)",
+              transition: "transform 200ms ease",
+            }}
+          />
+        </button>
+
+        {/* Contenuto collassabile */}
+        {adminOpen && (
+          <div className="px-4 py-4 space-y-4" style={{ background: "var(--admin-card-bg)" }}>
+            {/* Warning banner */}
+            <div
+              className="flex items-start gap-3 rounded-lg px-3 py-2.5"
+              style={{ background: "#fffbeb", border: "1px solid #f59e0b40" }}>
+              <AlertTriangle size={14} className="shrink-0 mt-0.5" style={{ color: "#d97706" }} />
+              <p className="text-[11px] leading-relaxed" style={{ color: "#92400e" }}>
+                Queste impostazioni sono riservate a casi estremi.
+                Per gestire gli accessi utilizza la <strong>matrice permessi RBAC</strong> — usa questa opzione solo per il ruolo super admin di sistema.
+              </p>
+            </div>
+
+            {/* Checkbox isAdmin */}
+            <label className="flex items-start gap-3 cursor-pointer">
+              <div className="mt-0.5 shrink-0">
+                <button
+                  type="button"
+                  role="checkbox"
+                  aria-checked={isAdmin}
+                  onClick={() => setIsAdmin((v) => !v)}
+                  className="w-5 h-5 rounded border-2 flex items-center justify-center transition-colors"
+                  style={{
+                    background: isAdmin ? "#7c3aed" : "transparent",
+                    borderColor: isAdmin ? "#7c3aed" : "var(--admin-input-border)",
+                  }}>
+                  {isAdmin && <Check size={11} className="text-white" />}
+                </button>
+              </div>
+              <div>
+                <p className="text-sm font-medium" style={{ color: "var(--admin-text)" }}>Super Amministratore</p>
+                <p className="text-xs mt-0.5" style={{ color: "var(--admin-text-faint)" }}>
+                  Accesso completo e illimitato al pannello admin.
+                  Bypassa completamente il sistema RBAC — incluso il permesso{" "}
+                  <code className="px-1 rounded" style={{ background: "var(--admin-hover-bg)", fontSize: "10px" }}>admin:access</code>.
+                </p>
+              </div>
+            </label>
           </div>
-          <div>
-            <p className="text-sm font-medium" style={{ color: "var(--admin-text)" }}>Amministratore</p>
-            <p className="text-xs" style={{ color: "var(--admin-text-faint)" }}>
-              Accesso completo al pannello admin.
-              Bypassa il sistema RBAC — usare solo per il ruolo super admin di sistema.
-              Per accessi specifici preferire il permesso <code className="px-1 rounded" style={{ background: "var(--admin-hover-bg)", fontSize: "10px" }}>admin:access</code> nella matrice permessi.
-            </p>
-          </div>
-        </label>
+        )}
       </div>
 
       {/* Azioni */}
