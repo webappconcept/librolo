@@ -3,6 +3,7 @@
 // Wrappa solo le route dentro (protected)/, NON /admin/sign-in.
 import { requireAdminPage } from "@/lib/rbac/guards";
 import { getAppSettings } from "@/lib/db/settings-queries";
+import { getUserPermissions } from "@/lib/rbac/can";
 import { Suspense } from "react";
 import AdminShellClient from "../_components/admin-shell-client";
 import AdminHeaderRight from "../_components/header";
@@ -15,9 +16,15 @@ async function AdminShell({ children }: { children: React.ReactNode }) {
 
   const appName = settings.app_name?.trim() || "App";
 
+  const userPermissions = user.isAdmin
+    ? new Set<string>(["__superadmin__"])
+    : await getUserPermissions(user);
+
   return (
     <AdminShellClient
       appName={appName}
+      userPermissions={[...userPermissions]}
+      isSuperAdmin={user.isAdmin === true}
       header={<AdminHeaderRight user={user} />}>
       <Suspense
         fallback={
