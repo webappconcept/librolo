@@ -29,10 +29,10 @@ export interface NavChild {
 
 export interface NavItem {
   key: string;
-  href?: string;        // assente se è solo un gruppo con children
+  href?: string;
   label: string;
   icon: string;
-  permission: string;   // permesso richiesto per il gruppo/voce principale
+  permission: string;
   exact?: boolean;
   children?: NavChild[];
   childrenMaxHeight?: string;
@@ -54,18 +54,18 @@ export const ADMIN_NAV: NavItem[] = [
     permission: "admin:users",
     childrenMaxHeight: "260px",
     children: [
-      { href: "/admin/users",       label: "Gestione Utenti", icon: "Users",      permission: "admin:users" },
-      { href: "/admin/staff",       label: "Gestione Staff",  icon: "UserCog",    permission: "admin:staff" },
+      { href: "/admin/users",       label: "Gestione Utenti", icon: "Users",       permission: "admin:users" },
+      { href: "/admin/staff",       label: "Gestione Staff",  icon: "UserCog",     permission: "admin:staff" },
       { href: "/admin/roles",       label: "Gestione Ruoli",  icon: "ShieldCheck", permission: "admin:roles" },
-      { href: "/admin/permissions", label: "Permessi",        icon: "KeyRound",   permission: "admin:roles" },
+      { href: "/admin/permissions", label: "Permessi",        icon: "KeyRound",    permission: "admin:roles" },
     ],
   },
   {
-    key: "contenuti",
+    key: "content",
     href: "/admin/contenuti",
     label: "Contenuti",
     icon: "Layers",
-    permission: "admin:contenuti",
+    permission: "admin:content",
   },
   {
     key: "analytics",
@@ -75,7 +75,7 @@ export const ADMIN_NAV: NavItem[] = [
     permission: "admin:analytics",
   },
   {
-    key: "moderazione",
+    key: "moderation",
     href: "/admin/moderation",
     label: "Moderazione",
     icon: "ShieldAlert",
@@ -94,7 +94,7 @@ export const ADMIN_NAV: NavItem[] = [
     ],
   },
   {
-    key: "impostazioni",
+    key: "settings",
     href: "/admin/settings",
     label: "Impostazioni",
     icon: "Settings",
