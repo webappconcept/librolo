@@ -2,82 +2,22 @@
   "version": "7",
   "dialect": "postgresql",
   "entries": [
-    {
-      "idx": 0,
-      "version": "7",
-      "when": 1726443359662,
-      "tag": "0000_soft_the_anarchist",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1775243146079,
-      "tag": "0001_medical_mister_fear",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1775243493222,
-      "tag": "0002_workable_lionheart",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1775289817753,
-      "tag": "0003_chubby_blacklash",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1775290401635,
-      "tag": "0004_plain_cerise",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1775304250044,
-      "tag": "0005_faulty_baron_strucker",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1775305233872,
-      "tag": "0006_lumpy_ronan",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "7",
-      "when": 1775333588575,
-      "tag": "0007_hot_robbie_robertson",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "7",
-      "when": 1775334893298,
-      "tag": "0008_lively_silver_surfer",
-      "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "7",
-      "when": 1775478904763,
-      "tag": "0009_blue_medusa",
-      "breakpoints": true
-    },
-    {
-      "idx": 10,
-      "version": "7",
-      "when": 1775485588539,
-      "tag": "0010_married_inhumans",
-      "breakpoints": true
-    }
+    { "idx": 0,  "version": "7", "when": 1726443359662, "tag": "0000_soft_the_anarchist",      "breakpoints": true },
+    { "idx": 1,  "version": "7", "when": 1775243146079, "tag": "0001_medical_mister_fear",      "breakpoints": true },
+    { "idx": 2,  "version": "7", "when": 1775243493222, "tag": "0002_workable_lionheart",        "breakpoints": true },
+    { "idx": 3,  "version": "7", "when": 1775289817753, "tag": "0003_chubby_blacklash",          "breakpoints": true },
+    { "idx": 4,  "version": "7", "when": 1775290401635, "tag": "0004_plain_cerise",               "breakpoints": true },
+    { "idx": 5,  "version": "7", "when": 1775304250044, "tag": "0005_faulty_baron_strucker",     "breakpoints": true },
+    { "idx": 6,  "version": "7", "when": 1775305233872, "tag": "0006_lumpy_ronan",               "breakpoints": true },
+    { "idx": 7,  "version": "7", "when": 1775333588575, "tag": "0007_hot_robbie_robertson",      "breakpoints": true },
+    { "idx": 8,  "version": "7", "when": 1775334893298, "tag": "0008_lively_silver_surfer",      "breakpoints": true },
+    { "idx": 9,  "version": "7", "when": 1775478904763, "tag": "0009_blue_medusa",               "breakpoints": true },
+    { "idx": 10, "version": "7", "when": 1775485588539, "tag": "0010_married_inhumans",          "breakpoints": true },
+    { "idx": 11, "version": "7", "when": 1775500000000, "tag": "0011_seo_jsonld",                "breakpoints": true },
+    { "idx": 12, "version": "7", "when": 1775510000000, "tag": "0012_roles_rbac",                "breakpoints": true },
+    { "idx": 13, "version": "7", "when": 1775520000000, "tag": "0013_rbac_permissions",          "breakpoints": true },
+    { "idx": 15, "version": "7", "when": 1775530000000, "tag": "0015_uq_user_permissions",       "breakpoints": true },
+    { "idx": 16, "version": "7", "when": 1775540000000, "tag": "0016_pages_cms",                 "breakpoints": true },
+    { "idx": 17, "version": "7", "when": 1744318260000, "tag": "0017_templates_and_pages_columns", "breakpoints": true }
   ]
 }
