@@ -37,8 +37,12 @@ const roleSchema = z.object({
   label: z.string().min(2, "Minimo 2 caratteri").max(100),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Colore HEX non valido"),
   description: z.string().max(300).optional(),
+  /**
+   * isAdmin = true solo per il ruolo "admin" di sistema.
+   * Per tutti gli altri accessi usare i permessi RBAC (es. admin:access).
+   * Flag di emergenza: bypassa il sistema RBAC.
+   */
   isAdmin: z.boolean().default(false),
-  isStaff: z.boolean().default(false),
 });
 
 export async function createRole(formData: FormData) {
@@ -50,7 +54,6 @@ export async function createRole(formData: FormData) {
     color: formData.get("color"),
     description: formData.get("description") || undefined,
     isAdmin: formData.get("isAdmin") === "true",
-    isStaff: formData.get("isStaff") === "true",
   });
 
   if (!parsed.success) {
@@ -93,7 +96,6 @@ export async function updateRole(id: number, formData: FormData) {
     color: formData.get("color"),
     description: formData.get("description") || undefined,
     isAdmin: formData.get("isAdmin") === "true",
-    isStaff: formData.get("isStaff") === "true",
   });
 
   if (!parsed.success) return { error: parsed.error.issues[0].message };
@@ -103,12 +105,11 @@ export async function updateRole(id: number, formData: FormData) {
     .set({ ...parsed.data, updatedAt: new Date() })
     .where(eq(roles.id, id));
 
-  // Sincronizza is_admin / is_staff su tutti gli utenti con questo ruolo
+  // Sincronizza is_admin su tutti gli utenti con questo ruolo
   await db
     .update(users)
     .set({
       isAdmin: parsed.data.isAdmin,
-      isStaff: parsed.data.isStaff,
       updatedAt: new Date(),
     })
     .where(eq(users.role, parsed.data.name));
@@ -116,7 +117,7 @@ export async function updateRole(id: number, formData: FormData) {
   await logRbacAction(
     admin.id,
     ActivityType.ADMIN_CHANGE_ROLE,
-    `update_role name=${existing.name} label="${parsed.data.label}" isAdmin=${parsed.data.isAdmin} isStaff=${parsed.data.isStaff}`,
+    `update_role name=${existing.name} label="${parsed.data.label}" isAdmin=${parsed.data.isAdmin}`,
   );
 
   revalidatePath("/admin/roles");
@@ -139,7 +140,7 @@ export async function deleteRole(id: number) {
   // Riassegna gli utenti con questo ruolo a 'member'
   await db
     .update(users)
-    .set({ role: "member", isAdmin: false, isStaff: false, updatedAt: new Date() })
+    .set({ role: "member", isAdmin: false, updatedAt: new Date() })
     .where(and(eq(users.role, existing.name), ne(users.role, "member")));
 
   await db.delete(roles).where(eq(roles.id, id));
@@ -159,14 +160,13 @@ export async function setUserRole(userId: number, roleName: string) {
   const admin = await requireAdmin();
 
   const [role] = await db
-    .select({ isAdmin: roles.isAdmin, isStaff: roles.isStaff })
+    .select({ isAdmin: roles.isAdmin })
     .from(roles)
     .where(eq(roles.name, roleName))
     .limit(1);
 
   if (!role) return { error: "Ruolo non trovato" };
 
-  // Leggi il ruolo precedente per il log
   const [target] = await db
     .select({ role: users.role })
     .from(users)
@@ -178,7 +178,6 @@ export async function setUserRole(userId: number, roleName: string) {
     .set({
       role: roleName,
       isAdmin: role.isAdmin,
-      isStaff: role.isStaff,
       updatedAt: new Date(),
     })
     .where(eq(users.id, userId));
