@@ -1,5 +1,6 @@
 import { getPageBySlug } from "@/lib/db/pages-queries";
 import { getSeoPage } from "@/lib/db/seo-queries";
+import { getAppSettings } from "@/lib/db/settings-queries";
 import { notFound } from "next/navigation";
 import PageEditor from "../../_components/page-editor";
 
@@ -11,11 +12,18 @@ interface Props {
 
 export default async function EditPagePage({ params }: Props) {
   const { slug } = await params;
-  const [page, seo] = await Promise.all([
+  const [page, seo, settings] = await Promise.all([
     getPageBySlug(slug),
     getSeoPage(`/${slug}`),
+    getAppSettings(),
   ]);
   if (!page) notFound();
+
+  let domain = settings.app_domain?.trim() ?? "";
+  if (domain && !/^https?:\/\//i.test(domain)) domain = `https://${domain}`;
+  domain = domain.replace(/\/$/, "");
+
+  const appName = settings.app_name?.trim() ?? "";
 
   return (
     <div className="space-y-5">
@@ -35,7 +43,7 @@ export default async function EditPagePage({ params }: Props) {
           border: "1px solid var(--admin-card-border)",
         }}
       >
-        <PageEditor page={page} seo={seo} />
+        <PageEditor page={page} seo={seo} domain={domain} appName={appName} />
       </div>
     </div>
   );
