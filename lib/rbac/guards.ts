@@ -1,38 +1,35 @@
 // lib/rbac/guards.ts
 // Guard centralizzati per i controlli di accesso.
 //
+// Architettura:
+//  - Ruoli di sistema: solo "admin" e "member".
+//  - Tutti gli altri accessi si gestiscono tramite permessi RBAC.
+//
 // Livelli di verifica per /admin:
 //  1. Edge middleware (middleware.ts)  — verifica cookie/JWT, no DB
 //  2. requireAdminPage()              — verifica RBAC reale con DB
 //
-// Logica di accesso admin (OR):
-//  - user.isAdmin === true           (flag legacy, sempre valido)
-//  - ruolo dell'utente ha il permesso "admin:access" nella tabella RBAC
+// Logica accesso admin (OR):
+//  - user.isAdmin === true  → super admin, BYPASSA il sistema RBAC (fallback di emergenza)
+//  - permesso RBAC "admin:access" assegnato al ruolo  → accesso via matrice
 //
-// In questo modo i ruoli custom con permesso "admin:access" accedono
-// al pannello senza dover impostare il flag is_admin manualmente.
+// Per proteggere route specifiche usare requirePermission() da can.ts
+// invece di creare nuovi guard isStaff / isEditor / ecc.
 import { getUser } from "@/lib/db/queries";
 import type { User } from "@/lib/db/schema";
 import { redirect } from "next/navigation";
 import { can } from "@/lib/rbac/can";
 import "server-only";
 
-/** Restituisce true se l'utente ha il flag is_admin */
+/** true se l'utente è il super admin (flag di emergenza, bypassa RBAC) */
 export function isAdmin(user: User): boolean {
   return user.isAdmin === true;
 }
 
-/** Restituisce true se l'utente ha il flag is_staff o is_admin */
-export function isStaff(user: User): boolean {
-  return user.isStaff === true || user.isAdmin === true;
-}
-
 /**
- * Controlla se l'utente può accedere al pannello admin.
- *
- * Regola (OR):
- *  - is_admin flag = true   (super admin, accesso sempre garantito)
- *  - permesso RBAC "admin:access" assegnato al suo ruolo o come override
+ * Controlla accesso admin:
+ *  - is_admin flag  → super admin, sempre autorizzato
+ *  - permesso RBAC "admin:access"  → ruolo personalizzato con accesso admin
  */
 async function hasAdminAccess(user: User): Promise<boolean> {
   if (user.isAdmin) return true;
@@ -44,7 +41,7 @@ async function hasAdminAccess(user: User): Promise<boolean> {
 // ---------------------------------------------------------------------------
 
 /**
- * Server Action guard — lancia eccezione se non admin.
+ * Guard per Server Action — lancia eccezione se non admin.
  * Uso: const user = await requireAdmin();
  */
 export async function requireAdmin(): Promise<User> {
@@ -55,27 +52,13 @@ export async function requireAdmin(): Promise<User> {
   return user;
 }
 
-/**
- * Server Action guard — lancia eccezione se non staff.
- */
-export async function requireStaff(): Promise<User> {
-  const user = await getUser();
-  if (!user || !isStaff(user)) throw new Error("Non autorizzato");
-  return user;
-}
-
 // ---------------------------------------------------------------------------
 // Page guards — redirect
 // ---------------------------------------------------------------------------
 
 /**
- * Page guard — redirige se non admin (RBAC-aware).
+ * Page guard — redirige a /admin/sign-in se non admin (RBAC-aware).
  * Usa in async page components o layout.
- *
- * Controlla in ordine:
- *  1. Utente autenticato           → altrimenti redirect /admin/sign-in
- *  2. isAdmin flag OPPURE          → altrimenti redirect /admin/sign-in
- *     permesso RBAC "admin:access"
  */
 export async function requireAdminPage(): Promise<User> {
   const user = await getUser();
@@ -84,14 +67,5 @@ export async function requireAdminPage(): Promise<User> {
   const ok = await hasAdminAccess(user);
   if (!ok) redirect("/admin/sign-in");
 
-  return user;
-}
-
-/**
- * Page guard più permissivo — redirige se non staff.
- */
-export async function requireStaffPage(): Promise<User> {
-  const user = await getUser();
-  if (!user || !isStaff(user)) redirect("/sign-in");
   return user;
 }
