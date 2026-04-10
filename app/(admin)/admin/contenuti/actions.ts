@@ -1,7 +1,8 @@
 "use server";
 
-import { deletePage, upsertPage } from "@/lib/db/pages-queries";
+import { deletePage, getPageBySlug, upsertPage } from "@/lib/db/pages-queries";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 
 const schema = z.object({
@@ -11,7 +12,8 @@ const schema = z.object({
     .min(1, "Lo slug è obbligatorio")
     .max(255)
     .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, {
-      message: "Slug non valido: usa solo lettere minuscole, numeri e trattini (es. chi-siamo)",
+      message:
+        "Slug non valido: usa solo lettere minuscole, numeri e trattini (es. chi-siamo)",
     }),
   title: z.string().min(1, "Il titolo è obbligatorio").max(255),
   content: z.string().default(""),
@@ -36,18 +38,14 @@ export async function upsertPageAction(
   }
 
   const { originalSlug, ...data } = parsed.data;
-
-  const publishedAt =
-    data.status === "published" ? new Date() : null;
+  const publishedAt = data.status === "published" ? new Date() : null;
 
   try {
     await upsertPage({ ...data, publishedAt });
     revalidatePath("/admin/contenuti");
     revalidatePath(`/${data.slug}`);
-    // Se lo slug è cambiato, invalida anche il vecchio path
     if (originalSlug && originalSlug !== data.slug) {
       revalidatePath(`/${originalSlug}`);
-      // Aggiorna anche meta-tags SEO (invalidazione lista)
       revalidatePath("/admin/seo/meta-tags");
     }
   } catch (err) {
@@ -55,7 +53,7 @@ export async function upsertPageAction(
     return { error: "Errore nel salvataggio. Riprova." };
   }
 
-  return { success: true };
+  redirect("/admin/contenuti");
 }
 
 export async function deletePageAction(
@@ -72,4 +70,8 @@ export async function deletePageAction(
     return { error: "Errore nell'eliminazione. Riprova." };
   }
   return { success: true };
+}
+
+export async function getPageForEditAction(slug: string) {
+  return getPageBySlug(slug);
 }
