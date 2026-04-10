@@ -15,7 +15,7 @@ import {
 import { useTransition, useState } from "react";
 import { createRole, deleteRole, updateRole } from "../actions";
 
-// ─── Sanitizza lo slug in tempo reale ────────────────────────────────
+// ─── Sanitizza lo slug in tempo reale ──────────────────────────────────
 function sanitizeSlug(raw: string): string {
   return raw
     .toLowerCase()
@@ -25,13 +25,13 @@ function sanitizeSlug(raw: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-// ─── Colori preset ────────────────────────────────────────────────────
+// ─── Colori preset ────────────────────────────────────────────
 const COLOR_PRESETS = [
   "#6b7280", "#2563eb", "#16a34a", "#7c3aed",
   "#dc2626", "#d97706", "#db2777", "#0891b2",
 ];
 
-// ─── RoleBadge ────────────────────────────────────────────────────────
+// ─── RoleBadge ──────────────────────────────────────────────
 function RoleBadge({ role }: { role: RoleRow }) {
   return (
     <span
@@ -46,7 +46,7 @@ function RoleBadge({ role }: { role: RoleRow }) {
   );
 }
 
-// ─── RoleForm (create / edit) ─────────────────────────────────────────
+// ─── RoleForm (create / edit) ───────────────────────────────────
 function RoleForm({
   initial,
   onSave,
@@ -60,7 +60,6 @@ function RoleForm({
 }) {
   const [color, setColor] = useState(initial?.color ?? "#6b7280");
   const [isAdmin, setIsAdmin] = useState(initial?.isAdmin ?? false);
-  const [isStaff, setIsStaff] = useState(initial?.isStaff ?? false);
   const [slug, setSlug] = useState(initial?.name ?? "");
   const isEdit = !!initial;
   const isSystem = initial?.isSystem ?? false;
@@ -75,11 +74,9 @@ function RoleForm({
     fd.set("name", slug);
     fd.set("color", color);
     fd.set("isAdmin", String(isAdmin));
-    fd.set("isStaff", String(isStaff || isAdmin));
     onSave(fd);
   }
 
-  // Stile identico alle Impostazioni: sfondo page-bg + bordo input-border
   const inputCls =
     "w-full px-3 py-2 text-sm rounded-lg focus:outline-none transition-colors";
   const inputStyle = {
@@ -195,43 +192,15 @@ function RoleForm({
         </div>
       </div>
 
-      {/* Guard flag */}
-      <div className="flex flex-col gap-3 pt-1">
-        <label className="flex items-start gap-3 cursor-pointer">
-          <div className="mt-0.5">
-            <button
-              type="button"
-              role="checkbox"
-              aria-checked={isStaff || isAdmin}
-              onClick={() => { if (!isAdmin) setIsStaff((v) => !v); }}
-              className="w-5 h-5 rounded border-2 flex items-center justify-center transition-colors"
-              style={{
-                background: (isStaff || isAdmin) ? "var(--admin-accent)" : "transparent",
-                borderColor: (isStaff || isAdmin) ? "var(--admin-accent)" : "var(--admin-input-border)",
-                opacity: isAdmin ? 0.6 : 1,
-              }}>
-              {(isStaff || isAdmin) && <Check size={11} className="text-white" />}
-            </button>
-          </div>
-          <div>
-            <p className="text-sm font-medium" style={{ color: "var(--admin-text)" }}>Staff</p>
-            <p className="text-xs" style={{ color: "var(--admin-text-faint)" }}>
-              Può accedere alle sezioni riservate allo staff (es. dashboard, ticket).
-            </p>
-          </div>
-        </label>
-
+      {/* Flag Admin — solo flag di emergenza super admin */}
+      <div className="pt-1">
         <label className="flex items-start gap-3 cursor-pointer">
           <div className="mt-0.5">
             <button
               type="button"
               role="checkbox"
               aria-checked={isAdmin}
-              onClick={() => {
-                const next = !isAdmin;
-                setIsAdmin(next);
-                if (next) setIsStaff(true);
-              }}
+              onClick={() => setIsAdmin((v) => !v)}
               className="w-5 h-5 rounded border-2 flex items-center justify-center transition-colors"
               style={{
                 background: isAdmin ? "#7c3aed" : "transparent",
@@ -243,7 +212,9 @@ function RoleForm({
           <div>
             <p className="text-sm font-medium" style={{ color: "var(--admin-text)" }}>Amministratore</p>
             <p className="text-xs" style={{ color: "var(--admin-text-faint)" }}>
-              Accesso completo al pannello admin. Implica automaticamente lo Staff.
+              Accesso completo al pannello admin.
+              Bypassa il sistema RBAC — usare solo per il ruolo super admin di sistema.
+              Per accessi specifici preferire il permesso <code className="px-1 rounded" style={{ background: "var(--admin-hover-bg)", fontSize: "10px" }}>admin:access</code> nella matrice permessi.
             </p>
           </div>
         </label>
@@ -275,7 +246,7 @@ function RoleForm({
   );
 }
 
-// ─── RoleCard ─────────────────────────────────────────────────────────
+// ─── RoleCard ─────────────────────────────────────────────────
 function RoleCard({ role, onEdit }: { role: RoleRow; onEdit: (r: RoleRow) => void }) {
   const [pending, startTransition] = useTransition();
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -312,6 +283,13 @@ function RoleCard({ role, onEdit }: { role: RoleRow; onEdit: (r: RoleRow) => voi
                   className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded"
                   style={{ background: "var(--admin-hover-bg)", color: "var(--admin-text-faint)" }}>
                   <Lock size={9} /> sistema
+                </span>
+              )}
+              {role.isAdmin && (
+                <span
+                  className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded"
+                  style={{ background: "#f5f3ff", color: "#7c3aed" }}>
+                  <ShieldCheck size={9} /> super admin
                 </span>
               )}
             </div>
@@ -373,30 +351,11 @@ function RoleCard({ role, onEdit }: { role: RoleRow; onEdit: (r: RoleRow) => voi
           {role.description}
         </p>
       )}
-
-      <div className="flex items-center gap-1.5 mt-3">
-        <span
-          className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full"
-          style={{
-            background: role.isStaff ? "#eff6ff" : "var(--admin-hover-bg)",
-            color: role.isStaff ? "#2563eb" : "var(--admin-text-faint)",
-          }}>
-          {role.isStaff ? <Check size={9} /> : <X size={9} />} Staff
-        </span>
-        <span
-          className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full"
-          style={{
-            background: role.isAdmin ? "#f5f3ff" : "var(--admin-hover-bg)",
-            color: role.isAdmin ? "#7c3aed" : "var(--admin-text-faint)",
-          }}>
-          {role.isAdmin ? <Check size={9} /> : <X size={9} />} Admin
-        </span>
-      </div>
     </div>
   );
 }
 
-// ─── RolesManager (root) ──────────────────────────────────────────────
+// ─── RolesManager (root) ─────────────────────────────────────────
 export function RolesManager({ roles }: { roles: RoleRow[] }) {
   const [showCreate, setShowCreate] = useState(false);
   const [editingRole, setEditingRole] = useState<RoleRow | null>(null);
@@ -482,6 +441,9 @@ export function RolesManager({ roles }: { roles: RoleRow[] }) {
             style={{ borderColor: "var(--admin-card-border)", color: "var(--admin-text-faint)" }}>
             <Shield size={28} style={{ opacity: 0.3 }} />
             <p className="text-sm">Nessun ruolo personalizzato</p>
+            <p className="text-xs text-center max-w-xs" style={{ color: "var(--admin-text-faint)" }}>
+              Crea ruoli personalizzati e assegna i permessi granulari dalla matrice RBAC.
+            </p>
             <button
               onClick={() => setShowCreate(true)}
               className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg text-white transition-colors"
