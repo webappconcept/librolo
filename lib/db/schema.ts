@@ -94,8 +94,6 @@ export const userPermissions = pgTable(
 // CMS — Template grafici
 // ---------------------------------------------------------------------------
 
-export type LayoutBase = "default" | "article" | "service" | "landing" | "faq";
-
 export type FieldType =
   | "text"
   | "textarea"
@@ -112,7 +110,6 @@ export const pageTemplates = pgTable("page_templates", {
   name: varchar("name", { length: 100 }).notNull(),
   slug: varchar("slug", { length: 100 }).notNull().unique(),
   description: text("description"),
-  layoutBase: varchar("layout_base", { length: 50 }).notNull().default("default"),
   styleConfig: text("style_config").default("{}"),
   thumbnail: text("thumbnail"),
   isSystem: boolean("is_system").notNull().default(false),

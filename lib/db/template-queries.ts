@@ -68,8 +68,7 @@ export async function getTemplateBySlug(slug: string): Promise<TemplateWithField
 
 /**
  * Crea o aggiorna un template con i suoi campi.
- * Strategia: upsert template, poi elimina tutti i campi esistenti e li ricrea
- * (semplice e sicuro per un numero piccolo di campi).
+ * Strategia: upsert template, poi elimina tutti i campi esistenti e li ricrea.
  */
 export async function upsertTemplate(
   data: NewPageTemplate,
@@ -78,7 +77,6 @@ export async function upsertTemplate(
   let template: PageTemplate;
 
   if (data.id) {
-    // UPDATE
     await db
       .update(pageTemplates)
       .set({ ...data, updatedAt: new Date() })
@@ -90,7 +88,6 @@ export async function upsertTemplate(
       .limit(1);
     template = updated;
   } else {
-    // INSERT
     const [inserted] = await db
       .insert(pageTemplates)
       .values(data)
@@ -98,7 +95,6 @@ export async function upsertTemplate(
     template = inserted;
   }
 
-  // Ricrea tutti i campi
   await db.delete(templateFields).where(eq(templateFields.templateId, template.id));
 
   if (fields.length > 0) {
@@ -124,7 +120,6 @@ export async function deleteTemplate(id: number): Promise<{ error?: string }> {
   if (!tmpl) return { error: "Template non trovato" };
   if (tmpl.isSystem) return { error: "I template di sistema non possono essere eliminati" };
 
-  // I template_fields vengono eliminati in cascade
   await db.delete(pageTemplates).where(eq(pageTemplates.id, id));
   return {};
 }
@@ -141,7 +136,6 @@ export async function duplicateTemplate(id: number): Promise<PageTemplate | unde
       name: `${source.name} (copia)`,
       slug: newSlug,
       description: source.description,
-      layoutBase: source.layoutBase,
       styleConfig: source.styleConfig,
       thumbnail: source.thumbnail,
       isSystem: false,
