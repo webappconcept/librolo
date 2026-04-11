@@ -37,6 +37,15 @@ export async function getPageBySlug(slug: string): Promise<Page | undefined> {
   return row;
 }
 
+export async function getPageById(id: number): Promise<Page | undefined> {
+  const [row] = await db
+    .select()
+    .from(pages)
+    .where(eq(pages.id, id))
+    .limit(1);
+  return row;
+}
+
 /** Carica pagina con template e campi custom — usato dal frontend */
 export async function getPageWithTemplate(
   slug: string,
