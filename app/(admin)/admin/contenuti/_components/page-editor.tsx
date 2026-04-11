@@ -362,13 +362,28 @@ export default function PageEditor({
   });
 
   const [savedAt, setSavedAt] = useState<string | null>(null);
+
+  // Ref per tracciare lo slug inviato al momento del submit
+  const submittedSlugRef = useRef<string>("");
+
   useEffect(() => {
     if (state?.savedAt) {
       setSavedAt(new Date(state.savedAt).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" }));
+
+      // Se lo slug è cambiato, aggiorna la URL admin al nuovo slug
+      // così il browser non rimane sul vecchio path che ora è inesistente (404)
+      if (isEdit && submittedSlugRef.current && submittedSlugRef.current !== originalSlug) {
+        router.replace(`/admin/contenuti/${submittedSlugRef.current}`);
+        return;
+      }
+
+      // Nessun cambio slug: semplice refresh per aggiornare i dati server
+      router.refresh();
+
       const t = setTimeout(() => setSavedAt(null), 4000);
       return () => clearTimeout(t);
     }
-  }, [state?.savedAt]);
+  }, [state?.savedAt]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const contentRef = useRef<HTMLInputElement>(null);
   const editor = useEditor({
@@ -428,7 +443,14 @@ export default function PageEditor({
         .tiptap-editor .ProseMirror-focused { outline: none; }
       `}</style>
 
-      <form action={action} className="space-y-0">
+      <form
+        action={action}
+        className="space-y-0"
+        onSubmit={() => {
+          // Salva lo slug corrente prima che la server action venga eseguita
+          submittedSlugRef.current = slug;
+        }}
+      >
         {/* id nascosto: necessario per UPDATE WHERE id in edit mode (evita duplicati al cambio slug) */}
         {isEdit && page?.id && <input type="hidden" name="id" value={page.id} />}
         {isEdit && <input type="hidden" name="originalSlug" value={originalSlug} />}
