@@ -145,8 +145,9 @@ function CustomFieldsBlock({ template, customFields, setCustomFields }: {
 }
 
 // ─── SEO Tab ──────────────────────────────────────────────────────────────────────────────────
-function SeoTab({ seo, slug, domain, appName, pageTitle }: {
+function SeoTab({ seo, slug, domain, appName, pageTitle, onSeoSaved }: {
   seo?: SeoPage | null; slug: string; domain: string; appName: string; pageTitle: string;
+  onSeoSaved?: () => void;
 }) {
   const [showModal, setShowModal] = useState(false);
   const rows = seo ? [
@@ -206,7 +207,10 @@ function SeoTab({ seo, slug, domain, appName, pageTitle }: {
         <SeoForm page={seo ?? null} domain={domain} appName={appName}
           unconfiguredRoutes={[]} lockedPathname={`/${slug}`}
           lockedLabel={pageTitle || slug} hidePathnameField={false}
-          onClose={() => setShowModal(false)}
+          onClose={() => {
+            setShowModal(false);
+            onSeoSaved?.();
+          }}
         />,
         document.body
       )}
@@ -670,7 +674,14 @@ export default function PageEditor({
 
           {activeTab === "seo" && (
             <div className="p-5">
-              <SeoTab seo={seo} slug={slug} domain={domain} appName={appName} pageTitle={title} />
+              <SeoTab
+                seo={seo}
+                slug={slug}
+                domain={domain}
+                appName={appName}
+                pageTitle={title}
+                onSeoSaved={() => router.refresh()}
+              />
             </div>
           )}
 
