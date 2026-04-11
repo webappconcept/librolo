@@ -336,7 +336,7 @@ function StrutturaTab({ pages, templates, parentId, onParentChange, templateId, 
 
 // ─── Main PageEditor ──────────────────────────────────────────────────────────────────────────────────
 export default function PageEditor({
-  page, seo, pages = [], templates = [], domain = "", appName = "",
+  page, seo, pages = [], templates = [], domain = "", appName = "", initialParentId = null,
 }: {
   page?: Page | null;
   seo?: SeoPage | null;
@@ -344,6 +344,7 @@ export default function PageEditor({
   templates?: TemplateWithFields[];
   domain?: string;
   appName?: string;
+  initialParentId?: number | null;
 }) {
   const router = useRouter();
   const isEdit = !!page;
@@ -357,7 +358,7 @@ export default function PageEditor({
   const [publishedAt, setPublishedAt] = useState(page?.publishedAt ? toDatetimeLocal(page.publishedAt) : "");
   const [expiresAt, setExpiresAt] = useState(page?.expiresAt ? toDatetimeLocal(page.expiresAt) : "");
 
-  const [parentId, setParentId] = useState<number | null>(page?.parentId ?? null);
+  const [parentId, setParentId] = useState<number | null>(page?.parentId ?? initialParentId ?? null);
   const [templateId, setTemplateId] = useState<number | null>(page?.templateId ?? null);
   const [customFields, setCustomFields] = useState<Record<string, string>>(() => {
     try { return JSON.parse(page?.customFields ?? "{}"); } catch { return {}; }
