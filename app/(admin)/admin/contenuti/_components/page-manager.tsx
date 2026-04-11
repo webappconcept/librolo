@@ -1,5 +1,6 @@
 "use client";
 
+import Tooltip from "@/app/(admin)/admin/_components/tooltip";
 import type { Page, PageTemplate } from "@/lib/db/schema";
 import { ChevronRight, EyeOff, FileText, GitFork, Globe, PanelTop, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -68,7 +69,6 @@ function PageRow({
             cursor: hasChildren ? "pointer" : "default",
             background: "transparent",
           }}
-          aria-label={isExpanded ? "Comprimi figli" : "Espandi figli"}
         >
           <ChevronRight
             size={14}
@@ -96,7 +96,6 @@ function PageRow({
               minWidth: "28px",
               justifyContent: "center",
             }}
-            title={`${children.length} ${children.length === 1 ? "pagina figlia" : "pagine figlie"}`}
           >
             +{children.length}
           </button>
@@ -153,92 +152,94 @@ function PageRow({
 
         {/* Actions */}
         <div className="flex items-center gap-0.5 shrink-0">
-          {/* New child */}
-          <button
-            onClick={() => onNewChild(page.id)}
-            className="p-1.5 rounded-lg transition-colors"
-            style={{ color: "var(--admin-text-faint)" }}
-            title="Nuova pagina figlia"
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "color-mix(in srgb, var(--admin-accent) 10%, var(--admin-card-bg))";
-              e.currentTarget.style.color = "var(--admin-accent)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "transparent";
-              e.currentTarget.style.color = "var(--admin-text-faint)";
-            }}
-          >
-            <GitFork size={13} />
-          </button>
 
-          {/* Edit */}
-          <button
-            onClick={() => onEdit(page.id)}
-            className="p-1.5 rounded-lg transition-colors"
-            style={{ color: "var(--admin-text-faint)" }}
-            title="Modifica"
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "var(--admin-hover-bg)";
-              e.currentTarget.style.color = "var(--admin-text-muted)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "transparent";
-              e.currentTarget.style.color = "var(--admin-text-faint)";
-            }}
-          >
-            <Pencil size={13} />
-          </button>
+          <Tooltip label="Nuova pagina figlia" side="top">
+            <button
+              onClick={() => onNewChild(page.id)}
+              className="p-1.5 rounded-lg transition-colors"
+              style={{ color: "var(--admin-text-faint)" }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "color-mix(in srgb, var(--admin-accent) 10%, var(--admin-card-bg))";
+                e.currentTarget.style.color = "var(--admin-accent)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "transparent";
+                e.currentTarget.style.color = "var(--admin-text-faint)";
+              }}
+            >
+              <GitFork size={13} />
+            </button>
+          </Tooltip>
 
-          {/* Publish / Unpublish */}
-          <button
-            onClick={() => onToggleStatus(page.id, page.status)}
-            disabled={isPendingToggle}
-            className="p-1.5 rounded-lg transition-colors"
-            style={{ color: isPublished ? "#22c55e" : "var(--admin-text-faint)" }}
-            title={isPublished ? "Depubblica" : "Pubblica"}
-            onMouseEnter={(e) => {
-              if (isPublished) {
+          <Tooltip label="Modifica pagina" side="top">
+            <button
+              onClick={() => onEdit(page.id)}
+              className="p-1.5 rounded-lg transition-colors"
+              style={{ color: "var(--admin-text-faint)" }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "var(--admin-hover-bg)";
+                e.currentTarget.style.color = "var(--admin-text-muted)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "transparent";
+                e.currentTarget.style.color = "var(--admin-text-faint)";
+              }}
+            >
+              <Pencil size={13} />
+            </button>
+          </Tooltip>
+
+          <Tooltip label={isPublished ? "Depubblica" : "Pubblica"} side="top">
+            <button
+              onClick={() => onToggleStatus(page.id, page.status)}
+              disabled={isPendingToggle}
+              className="p-1.5 rounded-lg transition-colors"
+              style={{ color: isPublished ? "#22c55e" : "var(--admin-text-faint)" }}
+              onMouseEnter={(e) => {
+                if (isPublished) {
+                  e.currentTarget.style.background = "color-mix(in srgb, #ef4444 10%, var(--admin-card-bg))";
+                  e.currentTarget.style.color = "#ef4444";
+                } else {
+                  e.currentTarget.style.background = "color-mix(in srgb, #22c55e 10%, var(--admin-card-bg))";
+                  e.currentTarget.style.color = "#22c55e";
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "transparent";
+                e.currentTarget.style.color = isPublished ? "#22c55e" : "var(--admin-text-faint)";
+              }}
+            >
+              {isPendingToggle ? (
+                <span
+                  className="block w-3 h-3 border border-t-transparent rounded-full animate-spin"
+                  style={{ borderColor: "var(--admin-accent)", borderTopColor: "transparent" }}
+                />
+              ) : isPublished ? (
+                <EyeOff size={13} />
+              ) : (
+                <Globe size={13} />
+              )}
+            </button>
+          </Tooltip>
+
+          <Tooltip label="Elimina pagina" side="top">
+            <button
+              onClick={() => onDelete(page.slug, page.title)}
+              className="p-1.5 rounded-lg transition-colors"
+              style={{ color: "var(--admin-text-faint)" }}
+              onMouseEnter={(e) => {
                 e.currentTarget.style.background = "color-mix(in srgb, #ef4444 10%, var(--admin-card-bg))";
                 e.currentTarget.style.color = "#ef4444";
-              } else {
-                e.currentTarget.style.background = "color-mix(in srgb, #22c55e 10%, var(--admin-card-bg))";
-                e.currentTarget.style.color = "#22c55e";
-              }
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "transparent";
-              e.currentTarget.style.color = isPublished ? "#22c55e" : "var(--admin-text-faint)";
-            }}
-          >
-            {isPendingToggle ? (
-              <span
-                className="block w-3 h-3 border border-t-transparent rounded-full animate-spin"
-                style={{ borderColor: "var(--admin-accent)", borderTopColor: "transparent" }}
-              />
-            ) : isPublished ? (
-              <EyeOff size={13} />
-            ) : (
-              <Globe size={13} />
-            )}
-          </button>
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "transparent";
+                e.currentTarget.style.color = "var(--admin-text-faint)";
+              }}
+            >
+              <Trash2 size={13} />
+            </button>
+          </Tooltip>
 
-          {/* Delete */}
-          <button
-            onClick={() => onDelete(page.slug, page.title)}
-            className="p-1.5 rounded-lg transition-colors"
-            style={{ color: "var(--admin-text-faint)" }}
-            title="Elimina"
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "color-mix(in srgb, #ef4444 10%, var(--admin-card-bg))";
-              e.currentTarget.style.color = "#ef4444";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "transparent";
-              e.currentTarget.style.color = "var(--admin-text-faint)";
-            }}
-          >
-            <Trash2 size={13} />
-          </button>
         </div>
       </div>
 
