@@ -45,9 +45,20 @@ function PageRow({
   const isPendingToggle = pendingToggleId === page.id;
   const indent = depth * 20;
 
+  // Clicking the row body (not the action buttons) toggles expand when hasChildren
+  function handleRowClick() {
+    if (hasChildren) toggleExpand(page.id);
+  }
+
+  // Prevent row click from firing when an action button is clicked
+  function stopRow(e: React.MouseEvent) {
+    e.stopPropagation();
+  }
+
   return (
     <>
       <div
+        onClick={handleRowClick}
         className="flex items-center gap-2 px-3 py-2.5 rounded-xl transition-colors group"
         style={{
           background: "var(--admin-card-bg)",
@@ -55,20 +66,15 @@ function PageRow({
           marginLeft: `${indent}px`,
           opacity: isPendingToggle ? 0.6 : 1,
           transition: "opacity 160ms ease, border-color 160ms ease",
+          cursor: hasChildren ? "pointer" : "default",
         }}
         onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.borderColor = "var(--admin-input-border)")}
         onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.borderColor = "var(--admin-card-border)")}
       >
-        {/* Expand toggle */}
-        <button
-          type="button"
-          onClick={() => hasChildren && toggleExpand(page.id)}
+        {/* Chevron — purely visual, click handled by row */}
+        <span
           className="flex items-center justify-center w-6 h-6 rounded shrink-0"
-          style={{
-            color: hasChildren ? "var(--admin-text-muted)" : "transparent",
-            cursor: hasChildren ? "pointer" : "default",
-            background: "transparent",
-          }}
+          style={{ color: hasChildren ? "var(--admin-text-muted)" : "transparent" }}
         >
           <ChevronRight
             size={14}
@@ -77,13 +83,11 @@ function PageRow({
               transition: "transform 160ms ease",
             }}
           />
-        </button>
+        </span>
 
         {/* Children count badge */}
         {hasChildren ? (
-          <button
-            type="button"
-            onClick={() => toggleExpand(page.id)}
+          <span
             className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-semibold shrink-0 transition-colors"
             style={{
               background: isExpanded
@@ -98,7 +102,7 @@ function PageRow({
             }}
           >
             +{children.length}
-          </button>
+          </span>
         ) : (
           <span className="w-7 shrink-0" />
         )}
@@ -150,8 +154,8 @@ function PageRow({
           {isPublished ? <><Globe size={10} /> Pubblicata</> : <>Bozza</>}
         </span>
 
-        {/* Actions */}
-        <div className="flex items-center gap-0.5 shrink-0">
+        {/* Actions — stopPropagation so row click doesn't fire */}
+        <div className="flex items-center gap-0.5 shrink-0" onClick={stopRow}>
 
           <Tooltip label="Nuova pagina figlia" side="top">
             <button
