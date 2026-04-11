@@ -416,7 +416,6 @@ export default function PageEditor({
     setTitle(val);
     if (!isEdit) {
       const leaf = slugify(val);
-      // Store the full path in state, but the input will show only the leaf
       setSlug(buildFullSlug(slugPrefix, leaf));
     }
   }
@@ -476,6 +475,8 @@ export default function PageEditor({
       <form action={action} className="space-y-0">
         {isEdit && page?.id && <input type="hidden" name="id" value={page.id} />}
         {isEdit && <input type="hidden" name="originalSlug" value={originalSlug} />}
+        {/* Hidden input sends the FULL slug path to the server action */}
+        <input type="hidden" name="slug" value={slug} />
         <input type="hidden" name="content" ref={contentRef} />
         <input type="hidden" name="status" value={status} />
         <input type="hidden" name="publishedAt" value={publishedAt} />
@@ -545,9 +546,12 @@ export default function PageEditor({
                 >
                   /{slugPrefix}
                 </span>
-                {/* Editable input: shows only the leaf segment */}
+                {/*
+                  Display-only input — NO name attribute.
+                  Shows only the leaf segment (e.g. "il-team").
+                  The actual full slug is submitted via the hidden input above.
+                */}
                 <input
-                  name="slug"
                   value={slugLeaf}
                   onChange={(e) => handleSlugLeafChange(e.target.value)}
                   placeholder="nome-pagina"
