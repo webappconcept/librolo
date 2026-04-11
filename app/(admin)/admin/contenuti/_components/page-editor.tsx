@@ -71,7 +71,7 @@ function TabBtn({ active, onClick, children }: { active: boolean; onClick: () =>
   );
 }
 
-// ─── Custom Fields ──────────────────────────────────────────────────────────────────
+// ─── Custom Fields ───────────────────────────────────────────────────────────────────────────────────────
 function CustomFieldsBlock({ template, customFields, setCustomFields }: {
   template: TemplateWithFields;
   customFields: Record<string, string>;
@@ -139,7 +139,7 @@ function CustomFieldsBlock({ template, customFields, setCustomFields }: {
   );
 }
 
-// ─── SEO Tab ──────────────────────────────────────────────────────────────────
+// ─── SEO Tab ──────────────────────────────────────────────────────────────────────────────────
 function SeoTab({ seo, slug, domain, appName, pageTitle }: {
   seo?: SeoPage | null; slug: string; domain: string; appName: string; pageTitle: string;
 }) {
@@ -209,7 +209,7 @@ function SeoTab({ seo, slug, domain, appName, pageTitle }: {
   );
 }
 
-// ─── Pub Tab ──────────────────────────────────────────────────────────────────
+// ─── Pub Tab ───────────────────────────────────────────────────────────────────────────────────────
 function PubTab({ status, setStatus, publishedAt, setPublishedAt, expiresAt, setExpiresAt, slug }: {
   status: "draft" | "published"; setStatus: (v: "draft" | "published") => void;
   publishedAt: string; setPublishedAt: (v: string) => void;
@@ -262,7 +262,7 @@ function PubTab({ status, setStatus, publishedAt, setPublishedAt, expiresAt, set
   );
 }
 
-// ─── Struttura Tab ────────────────────────────────────────────────────────────
+// ─── Struttura Tab ────────────────────────────────────────────────────────────────────────────────
 function StrutturaTab({ pages, templates, parentId, onParentChange, templateId, setTemplateId, setCustomFields, currentPageId }: {
   pages: Page[];
   templates: TemplateWithFields[];
@@ -334,7 +334,7 @@ function StrutturaTab({ pages, templates, parentId, onParentChange, templateId, 
   );
 }
 
-// ─── Main PageEditor ──────────────────────────────────────────────────────────
+// ─── Main PageEditor ──────────────────────────────────────────────────────────────────────────────────
 export default function PageEditor({
   page, seo, pages = [], templates = [], domain = "", appName = "",
 }: {
@@ -372,12 +372,19 @@ export default function PageEditor({
   const slugPrefix = parentPage ? `${parentPage.slug}/` : "";
 
   useEffect(() => {
-    if (state?.savedAt) {
-      setSavedAt(new Date(state.savedAt).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" }));
-      router.refresh();
-      const t = setTimeout(() => setSavedAt(null), 4000);
-      return () => clearTimeout(t);
+    if (!state?.savedAt) return;
+
+    // Nuova pagina creata: vai direttamente alla route di edit
+    // così isEdit diventa true e il bottone mostra "Salva modifiche"
+    if (!isEdit && state.createdId) {
+      router.replace(`/admin/contenuti/${state.createdId}/edit`);
+      return;
     }
+
+    setSavedAt(new Date(state.savedAt).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" }));
+    router.refresh();
+    const t = setTimeout(() => setSavedAt(null), 4000);
+    return () => clearTimeout(t);
   }, [state?.savedAt]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const editor = useEditor({
@@ -400,17 +407,11 @@ export default function PageEditor({
   function handleTitleChange(val: string) {
     setTitle(val);
     if (!isEdit) {
-      // In creazione: prefissa con il parent slug se già selezionato
       const base = slugify(val);
       setSlug(parentPage ? `${parentPage.slug}/${base}` : base);
     }
   }
 
-  /**
-   * Aggiorna il parentId E ricalcola lo slug:
-   * - Se viene selezionato un parent: parentSlug/foglia
-   * - Se il parent viene rimosso: solo la foglia (senza prefisso)
-   */
   function handleParentChange(newParentId: number | null) {
     setParentId(newParentId);
     const leaf = leafSlug(slug) || slugify(title);
@@ -512,7 +513,6 @@ export default function PageEditor({
             <div>
               <label style={{ ...labelStyle, marginBottom: "0.375rem" }}>Slug (URL)</label>
               <div className="flex">
-                {/* Prefix: mostra "/" oppure "/parentSlug/" se c'è un parent */}
                 <span className="px-3 py-2 text-sm rounded-l-lg shrink-0 select-none"
                   style={{
                     background: "var(--admin-hover-bg)",
