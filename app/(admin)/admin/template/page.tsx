@@ -11,11 +11,11 @@ export default async function TemplatePage() {
   const templates = await getAllTemplates();
 
   return (
-    <div className="p-6 max-w-5xl">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
+    <div className="p-4 sm:p-6 max-w-5xl">
+      <div className="flex items-start justify-between gap-3 mb-6">
+        <div className="flex items-start gap-3 min-w-0">
           <div
-            className="w-9 h-9 rounded-xl flex items-center justify-center"
+            className="w-9 h-9 shrink-0 rounded-xl flex items-center justify-center"
             style={{
               background: "color-mix(in srgb, var(--admin-accent) 12%, var(--admin-card-bg))",
               border: "1px solid color-mix(in srgb, var(--admin-accent) 25%, transparent)",
@@ -23,7 +23,7 @@ export default async function TemplatePage() {
           >
             <PanelTop size={18} style={{ color: "var(--admin-accent)" }} />
           </div>
-          <div>
+          <div className="min-w-0">
             <h1 className="text-xl font-bold" style={{ color: "var(--admin-text)" }}>
               Template pagine
             </h1>
@@ -34,11 +34,12 @@ export default async function TemplatePage() {
         </div>
         <Link
           href="/admin/template/nuovo"
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white"
+          className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-sm font-medium text-white shrink-0"
           style={{ background: "var(--admin-accent)" }}
         >
           <Plus size={16} />
-          Nuovo template
+          <span className="hidden sm:inline">Nuovo template</span>
+          <span className="sm:hidden">Nuovo</span>
         </Link>
       </div>
 
@@ -73,8 +74,8 @@ export default async function TemplatePage() {
             >
               <div className="p-4">
                 <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="font-semibold text-sm" style={{ color: "var(--admin-text)" }}>
+                  <div className="min-w-0">
+                    <p className="font-semibold text-sm truncate" style={{ color: "var(--admin-text)" }}>
                       {tpl.name}
                       {tpl.isSystem && (
                         <span

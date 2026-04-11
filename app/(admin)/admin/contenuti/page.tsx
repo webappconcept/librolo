@@ -14,9 +14,9 @@ async function ContenutiContent() {
 export default function ContenutiPage() {
   return (
     <div className="space-y-5">
-      <div className="flex items-center gap-3">
+      <div className="flex items-start gap-3">
         <div
-          className="w-9 h-9 rounded-xl flex items-center justify-center"
+          className="w-9 h-9 shrink-0 rounded-xl flex items-center justify-center"
           style={{
             background: "color-mix(in srgb, var(--admin-accent) 12%, var(--admin-card-bg))",
             border: "1px solid color-mix(in srgb, var(--admin-accent) 25%, transparent)",
@@ -24,7 +24,7 @@ export default function ContenutiPage() {
         >
           <FileText size={18} style={{ color: "var(--admin-accent)" }} />
         </div>
-        <div>
+        <div className="min-w-0">
           <h2 className="text-xl font-bold" style={{ color: "var(--admin-text)" }}>
             Pagine
           </h2>
