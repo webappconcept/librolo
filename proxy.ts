@@ -1,5 +1,6 @@
 // proxy.ts
 import { signToken, verifyToken } from "@/lib/auth/session";
+import { getRedirectByFromPath } from "@/lib/db/redirects-queries";
 import { ADMIN_ROUTES, ADMIN_SIGNIN_ROUTE, AUTH_ROUTES, PUBLIC_ROUTES } from "@/lib/routes";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
@@ -32,6 +33,30 @@ export async function proxy(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-pathname", pathname);
 
+  // --- REDIRECT DA DB (301/302/307/308) ---
+  // Eseguito prima di qualsiasi check auth, così i redirect funzionano
+  // per tutti gli utenti indipendentemente dallo stato di login.
+  // Skippiamo asset statici, API routes e route admin per evitare overhead inutile.
+  const isStaticOrApi =
+    pathname.startsWith("/_next/") ||
+    pathname.startsWith("/api/") ||
+    pathname.startsWith("/admin/");
+
+  if (!isStaticOrApi) {
+    try {
+      const redirect = await getRedirectByFromPath(pathname);
+      if (redirect && redirect.isActive) {
+        const destination = new URL(redirect.toPath, request.url);
+        return NextResponse.redirect(destination, {
+          status: redirect.statusCode,
+        });
+      }
+    } catch {
+      // Se il DB non risponde non blocchiamo la request — degradiamo silenziosamente
+    }
+  }
+
+  // --- ROUTE PUBBLICHE (non-auth) ---
   const isPublicRoute = PUBLIC_ROUTES.some(
     (route) => pathname === route || pathname.startsWith(route + "/"),
   );
@@ -54,7 +79,6 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
-  // --- ROUTE PUBBLICHE (non-auth) ---
   if (isPublicRoute && !isAuthRoute) {
     return NextResponse.next({ request: { headers: requestHeaders } });
   }
