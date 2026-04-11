@@ -1,6 +1,6 @@
 import { db } from "@/lib/db/drizzle";
 import { pages, pageTemplates, templateFields, type NewPage, type Page, type PageTemplate, type TemplateField } from "@/lib/db/schema";
-import { asc, eq, isNull } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 
 // ---------------------------------------------------------------------------
 // Pages
@@ -126,4 +126,18 @@ export async function upsertPage(data: NewPage & { id?: number }): Promise<numbe
 
 export async function deletePage(slug: string): Promise<void> {
   await db.delete(pages).where(eq(pages.slug, slug));
+}
+
+/** Inverte lo status published <-> draft aggiornando publishedAt se necessario */
+export async function togglePageStatus(id: number, currentStatus: string): Promise<void> {
+  const newStatus = currentStatus === "published" ? "draft" : "published";
+  const now = new Date();
+  await db
+    .update(pages)
+    .set({
+      status: newStatus as "draft" | "published",
+      publishedAt: newStatus === "published" ? now : undefined,
+      updatedAt: now,
+    })
+    .where(eq(pages.id, id));
 }

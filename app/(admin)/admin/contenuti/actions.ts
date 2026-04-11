@@ -1,6 +1,6 @@
 "use server";
 
-import { deletePage, getPageBySlug, upsertPage } from "@/lib/db/pages-queries";
+import { deletePage, getPageBySlug, togglePageStatus, upsertPage } from "@/lib/db/pages-queries";
 import { upsertRedirect } from "@/lib/db/redirects-queries";
 import { deleteSeoPage, getSeoPage, renameSeoPage } from "@/lib/db/seo-queries";
 import { revalidatePath } from "next/cache";
@@ -148,28 +148,7 @@ export async function togglePageStatusAction(
   currentStatus: string,
 ): Promise<{ error?: string; success?: boolean }> {
   try {
-    const page = await getPageBySlug(
-      // fetch by id via raw query workaround: reuse upsertPage with minimal fields
-      // We need the full page first — use a direct db import
-      "",
-    );
-    // Instead: import and call a targeted db helper
-    const { db } = await import("@/lib/db");
-    const { pages } = await import("@/lib/db/schema");
-    const { eq } = await import("drizzle-orm");
-
-    const newStatus = currentStatus === "published" ? "draft" : "published";
-    const now = new Date();
-
-    await db
-      .update(pages)
-      .set({
-        status: newStatus,
-        publishedAt: newStatus === "published" ? now : undefined,
-        updatedAt: now,
-      })
-      .where(eq(pages.id, id));
-
+    await togglePageStatus(id, currentStatus);
     revalidatePath("/admin/contenuti");
   } catch (err) {
     console.error("[togglePageStatusAction] error:", err);
