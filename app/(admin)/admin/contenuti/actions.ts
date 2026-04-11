@@ -142,3 +142,38 @@ export async function deletePageAction(
 export async function getPageForEditAction(slug: string) {
   return getPageBySlug(slug);
 }
+
+export async function togglePageStatusAction(
+  id: number,
+  currentStatus: string,
+): Promise<{ error?: string; success?: boolean }> {
+  try {
+    const page = await getPageBySlug(
+      // fetch by id via raw query workaround: reuse upsertPage with minimal fields
+      // We need the full page first — use a direct db import
+      "",
+    );
+    // Instead: import and call a targeted db helper
+    const { db } = await import("@/lib/db");
+    const { pages } = await import("@/lib/db/schema");
+    const { eq } = await import("drizzle-orm");
+
+    const newStatus = currentStatus === "published" ? "draft" : "published";
+    const now = new Date();
+
+    await db
+      .update(pages)
+      .set({
+        status: newStatus,
+        publishedAt: newStatus === "published" ? now : undefined,
+        updatedAt: now,
+      })
+      .where(eq(pages.id, id));
+
+    revalidatePath("/admin/contenuti");
+  } catch (err) {
+    console.error("[togglePageStatusAction] error:", err);
+    return { error: "Errore nel cambio stato. Riprova." };
+  }
+  return { success: true };
+}

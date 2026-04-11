@@ -1,14 +1,14 @@
 "use client";
 
 import type { Page, PageTemplate } from "@/lib/db/schema";
-import { ChevronRight, FileText, GitFork, Globe, PanelTop, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { ChevronRight, EyeOff, FileText, GitFork, Globe, PanelTop, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { deletePageAction } from "../actions";
+import { deletePageAction, togglePageStatusAction } from "../actions";
 
 type TemplateWithFields = PageTemplate & { fields: import("@/lib/db/schema").TemplateField[] };
 
-// ─── PageRow ────────────────────────────────────────────────────────────────────
+// ─── PageRow ──────────────────────────────────────────────────────────────────
 function PageRow({
   page,
   allPages,
@@ -19,6 +19,8 @@ function PageRow({
   onEdit,
   onDelete,
   onNewChild,
+  onToggleStatus,
+  pendingToggleId,
   searchActive,
 }: {
   page: Page;
@@ -30,6 +32,8 @@ function PageRow({
   onEdit: (id: number) => void;
   onDelete: (slug: string, title: string) => void;
   onNewChild: (id: number) => void;
+  onToggleStatus: (id: number, status: string) => void;
+  pendingToggleId: number | null;
   searchActive: boolean;
 }) {
   const children = allPages.filter((p) => p.parentId === page.id);
@@ -37,8 +41,7 @@ function PageRow({
   const isExpanded = expandedIds.has(page.id);
   const isPublished = page.status === "published";
   const tplName = templates.find((t) => t.id === page.templateId)?.name;
-
-  // indent: 0px at root, 20px per level
+  const isPendingToggle = pendingToggleId === page.id;
   const indent = depth * 20;
 
   return (
@@ -49,15 +52,17 @@ function PageRow({
           background: "var(--admin-card-bg)",
           border: "1px solid var(--admin-card-border)",
           marginLeft: `${indent}px`,
+          opacity: isPendingToggle ? 0.6 : 1,
+          transition: "opacity 160ms ease, border-color 160ms ease",
         }}
         onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.borderColor = "var(--admin-input-border)")}
         onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.borderColor = "var(--admin-card-border)")}
       >
-        {/* Expand toggle or spacer */}
+        {/* Expand toggle */}
         <button
           type="button"
           onClick={() => hasChildren && toggleExpand(page.id)}
-          className="flex items-center justify-center w-6 h-6 rounded shrink-0 transition-colors"
+          className="flex items-center justify-center w-6 h-6 rounded shrink-0"
           style={{
             color: hasChildren ? "var(--admin-text-muted)" : "transparent",
             cursor: hasChildren ? "pointer" : "default",
@@ -101,7 +106,7 @@ function PageRow({
 
         {/* Status dot */}
         <span
-          className="w-2 h-2 rounded-full shrink-0"
+          className="w-2 h-2 rounded-full shrink-0 transition-colors"
           style={{ background: isPublished ? "#22c55e" : "var(--admin-text-faint)" }}
         />
 
@@ -132,7 +137,7 @@ function PageRow({
 
         {/* Status badge */}
         <span
-          className="hidden sm:flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium shrink-0 whitespace-nowrap"
+          className="hidden sm:flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium shrink-0 whitespace-nowrap transition-all"
           style={{
             background: isPublished
               ? "color-mix(in srgb, #22c55e 12%, var(--admin-card-bg))"
@@ -148,6 +153,7 @@ function PageRow({
 
         {/* Actions */}
         <div className="flex items-center gap-0.5 shrink-0">
+          {/* New child */}
           <button
             onClick={() => onNewChild(page.id)}
             className="p-1.5 rounded-lg transition-colors"
@@ -164,6 +170,8 @@ function PageRow({
           >
             <GitFork size={13} />
           </button>
+
+          {/* Edit */}
           <button
             onClick={() => onEdit(page.id)}
             className="p-1.5 rounded-lg transition-colors"
@@ -180,6 +188,41 @@ function PageRow({
           >
             <Pencil size={13} />
           </button>
+
+          {/* Publish / Unpublish */}
+          <button
+            onClick={() => onToggleStatus(page.id, page.status)}
+            disabled={isPendingToggle}
+            className="p-1.5 rounded-lg transition-colors"
+            style={{ color: isPublished ? "#22c55e" : "var(--admin-text-faint)" }}
+            title={isPublished ? "Depubblica" : "Pubblica"}
+            onMouseEnter={(e) => {
+              if (isPublished) {
+                e.currentTarget.style.background = "color-mix(in srgb, #ef4444 10%, var(--admin-card-bg))";
+                e.currentTarget.style.color = "#ef4444";
+              } else {
+                e.currentTarget.style.background = "color-mix(in srgb, #22c55e 10%, var(--admin-card-bg))";
+                e.currentTarget.style.color = "#22c55e";
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "transparent";
+              e.currentTarget.style.color = isPublished ? "#22c55e" : "var(--admin-text-faint)";
+            }}
+          >
+            {isPendingToggle ? (
+              <span
+                className="block w-3 h-3 border border-t-transparent rounded-full animate-spin"
+                style={{ borderColor: "var(--admin-accent)", borderTopColor: "transparent" }}
+              />
+            ) : isPublished ? (
+              <EyeOff size={13} />
+            ) : (
+              <Globe size={13} />
+            )}
+          </button>
+
+          {/* Delete */}
           <button
             onClick={() => onDelete(page.slug, page.title)}
             className="p-1.5 rounded-lg transition-colors"
@@ -213,6 +256,8 @@ function PageRow({
             onEdit={onEdit}
             onDelete={onDelete}
             onNewChild={onNewChild}
+            onToggleStatus={onToggleStatus}
+            pendingToggleId={pendingToggleId}
             searchActive={searchActive}
           />
         ))}
@@ -220,7 +265,7 @@ function PageRow({
   );
 }
 
-// ─── PageManager ────────────────────────────────────────────────────────────────
+// ─── PageManager ──────────────────────────────────────────────────────────────
 export default function PageManager({
   initialPages,
   templates,
@@ -231,18 +276,19 @@ export default function PageManager({
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
+  const [pendingToggleId, setPendingToggleId] = useState<number | null>(null);
   const [, startTransition] = useTransition();
 
   const searchActive = search.trim().length > 0;
 
-  // When searching, find all pages that match and include their ancestors
   const visiblePages: Page[] = searchActive
     ? (() => {
         const q = search.toLowerCase();
-        const matched = new Set(initialPages.filter(
-          (p) => p.title.toLowerCase().includes(q) || p.slug.includes(q)
-        ).map((p) => p.id));
-        // Include all ancestors of matched pages so the tree path is visible
+        const matched = new Set(
+          initialPages
+            .filter((p) => p.title.toLowerCase().includes(q) || p.slug.includes(q))
+            .map((p) => p.id),
+        );
         const toShow = new Set(matched);
         for (const page of initialPages) {
           if (!matched.has(page.id)) continue;
@@ -256,11 +302,8 @@ export default function PageManager({
       })()
     : initialPages;
 
-  // Root pages: those with no parent (or whose parent is not in visiblePages)
   const visibleIds = new Set(visiblePages.map((p) => p.id));
-  const rootPages = visiblePages.filter(
-    (p) => !p.parentId || !visibleIds.has(p.parentId)
-  );
+  const rootPages = visiblePages.filter((p) => !p.parentId || !visibleIds.has(p.parentId));
 
   function toggleExpand(id: number) {
     setExpandedIds((prev) => {
@@ -271,18 +314,27 @@ export default function PageManager({
   }
 
   function handleDelete(slug: string, title: string) {
-    const childCount = initialPages.filter((p) => p.parentId != null).length;
     const directChildren = initialPages.filter(
-      (p) => p.parentId === initialPages.find((x) => x.slug === slug)?.id
+      (p) => p.parentId === initialPages.find((x) => x.slug === slug)?.id,
     ).length;
-    const childWarning = directChildren > 0
-      ? `\n\nATTENZIONE: questa pagina ha ${directChildren} ${directChildren === 1 ? "pagina figlia" : "pagine figlie"} che rimarranno orfane.`
-      : "";
+    const childWarning =
+      directChildren > 0
+        ? `\n\nATTENZIONE: questa pagina ha ${directChildren} ${directChildren === 1 ? "pagina figlia" : "pagine figlie"} che rimarranno orfane.`
+        : "";
     if (!confirm(`Eliminare la pagina "${title}"?\n\nL'URL /${slug} non sarà più disponibile.${childWarning}`))
       return;
     startTransition(async () => {
       await deletePageAction(slug);
       router.refresh();
+    });
+  }
+
+  function handleToggleStatus(id: number, currentStatus: string) {
+    setPendingToggleId(id);
+    startTransition(async () => {
+      await togglePageStatusAction(id, currentStatus);
+      router.refresh();
+      setPendingToggleId(null);
     });
   }
 
@@ -318,7 +370,7 @@ export default function PageManager({
               background: "var(--admin-card-bg)",
             }}
             onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--admin-input-border)")}
-            onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--admin-card-border)"  )}
+            onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--admin-card-border)")}
           >
             Comprimi tutto
           </button>
@@ -359,6 +411,8 @@ export default function PageManager({
               onEdit={(id) => router.push(`/admin/contenuti/${id}/edit`)}
               onDelete={handleDelete}
               onNewChild={(id) => router.push(`/admin/contenuti/new?parentId=${id}`)}
+              onToggleStatus={handleToggleStatus}
+              pendingToggleId={pendingToggleId}
               searchActive={searchActive}
             />
           ))}
