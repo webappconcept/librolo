@@ -63,26 +63,52 @@ export async function getPageWithTemplate(
   return { ...page, template: { ...template, fields } };
 }
 
-export async function upsertPage(data: NewPage): Promise<void> {
-  await db
-    .insert(pages)
-    .values(data)
-    .onConflictDoUpdate({
-      target: pages.slug,
-      set: {
-        title: data.title,
-        content: data.content,
-        status: data.status,
-        publishedAt: data.publishedAt,
-        expiresAt: data.expiresAt ?? null,
-        parentId: data.parentId ?? null,
-        templateId: data.templateId ?? null,
-        customFields: data.customFields ?? "{}",
-        pageType: data.pageType ?? "page",
-        sortOrder: data.sortOrder ?? 0,
+/**
+ * Crea o aggiorna una pagina.
+ * - Se `data.id` è presente → UPDATE WHERE id (gestisce cambio slug senza duplicati).
+ * - Se `data.id` è assente → INSERT ... ON CONFLICT (slug) DO UPDATE (crea nuova pagina).
+ */
+export async function upsertPage(data: NewPage & { id?: number }): Promise<void> {
+  if (data.id) {
+    const { id, ...rest } = data;
+    await db
+      .update(pages)
+      .set({
+        slug: rest.slug,
+        title: rest.title,
+        content: rest.content,
+        status: rest.status,
+        publishedAt: rest.publishedAt ?? null,
+        expiresAt: rest.expiresAt ?? null,
+        parentId: rest.parentId ?? null,
+        templateId: rest.templateId ?? null,
+        customFields: rest.customFields ?? "{}",
+        pageType: rest.pageType ?? "page",
+        sortOrder: rest.sortOrder ?? 0,
         updatedAt: new Date(),
-      },
-    });
+      })
+      .where(eq(pages.id, id));
+  } else {
+    await db
+      .insert(pages)
+      .values(data)
+      .onConflictDoUpdate({
+        target: pages.slug,
+        set: {
+          title: data.title,
+          content: data.content,
+          status: data.status,
+          publishedAt: data.publishedAt ?? null,
+          expiresAt: data.expiresAt ?? null,
+          parentId: data.parentId ?? null,
+          templateId: data.templateId ?? null,
+          customFields: data.customFields ?? "{}",
+          pageType: data.pageType ?? "page",
+          sortOrder: data.sortOrder ?? 0,
+          updatedAt: new Date(),
+        },
+      });
+  }
 }
 
 export async function deletePage(slug: string): Promise<void> {

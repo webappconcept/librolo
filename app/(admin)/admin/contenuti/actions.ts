@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 const schema = z.object({
+  id: z.string().optional(),
   originalSlug: z.string().optional(),
   slug: z
     .string()
@@ -31,6 +32,7 @@ export async function upsertPageAction(
   formData: FormData,
 ): Promise<{ error?: string; success?: boolean; savedAt?: string }> {
   const raw = {
+    id: formData.get("id") || undefined,
     originalSlug: formData.get("originalSlug") || undefined,
     slug: formData.get("slug"),
     title: formData.get("title"),
@@ -50,7 +52,7 @@ export async function upsertPageAction(
     return { error: parsed.error.issues[0]?.message ?? "Dati non validi" };
   }
 
-  const { originalSlug, publishedAt, expiresAt, parentId, templateId, customFields, pageType, sortOrder, ...data } = parsed.data;
+  const { id, originalSlug, publishedAt, expiresAt, parentId, templateId, customFields, pageType, sortOrder, ...data } = parsed.data;
 
   let resolvedPublishedAt: Date | null = null;
   if (data.status === "published") {
@@ -70,6 +72,9 @@ export async function upsertPageAction(
 
   try {
     await upsertPage({
+      // Passa l'id numerico se presente: upsertPage farà UPDATE WHERE id
+      // evitando di creare un duplicato quando lo slug cambia.
+      ...(id ? { id: Number(id) } : {}),
       ...data,
       publishedAt: resolvedPublishedAt,
       expiresAt: resolvedExpiresAt,
