@@ -1,6 +1,7 @@
 // app/(admin)/admin/roles/page.tsx
 import { getAdminRoles } from "@/lib/db/roles-queries";
 import { requireAdminPage } from "@/lib/rbac/guards";
+import { ShieldCheck } from "lucide-react";
 import { Suspense } from "react";
 import { RolesManager } from "./_components/roles-manager";
 
@@ -16,13 +17,24 @@ export default async function AdminRolesPage() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h2 className="text-lg font-bold" style={{ color: "var(--admin-text)" }}>
-          Gestione Ruoli
-        </h2>
-        <p className="text-sm mt-0.5" style={{ color: "var(--admin-text-faint)" }}>
-          Crea e gestisci i ruoli dell'applicazione. I ruoli di sistema non possono essere eliminati.
-        </p>
+      <div className="flex items-center gap-3">
+        <div
+          className="w-9 h-9 rounded-xl flex items-center justify-center"
+          style={{
+            background: "color-mix(in srgb, var(--admin-accent) 12%, var(--admin-card-bg))",
+            border: "1px solid color-mix(in srgb, var(--admin-accent) 25%, transparent)",
+          }}
+        >
+          <ShieldCheck size={18} style={{ color: "var(--admin-accent)" }} />
+        </div>
+        <div>
+          <h2 className="text-lg font-bold" style={{ color: "var(--admin-text)" }}>
+            Gestione Ruoli
+          </h2>
+          <p className="text-sm mt-0.5" style={{ color: "var(--admin-text-faint)" }}>
+            Crea e gestisci i ruoli dell&apos;applicazione. I ruoli di sistema non possono essere eliminati.
+          </p>
+        </div>
       </div>
 
       <Suspense

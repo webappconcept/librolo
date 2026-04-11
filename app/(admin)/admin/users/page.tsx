@@ -1,7 +1,7 @@
 // app/(admin)/admin/users/page.tsx
 import { getAdminUsers } from "@/lib/db/admin-queries";
 import { getAdminRoles } from "@/lib/db/roles-queries";
-import { Search } from "lucide-react";
+import { Search, Users } from "lucide-react";
 import { Suspense } from "react";
 import UsersTable from "./_components/users-table";
 
@@ -120,16 +120,26 @@ export default async function AdminUsersPage({
   const verified = params.verified ?? "";
   const page = Number(params.page ?? 1);
 
-  // Ruoli dal DB per il select dinamico
   const allRoles = await getAdminRoles();
 
   const hasFilters = !!(search || role || plan || verified);
 
   return (
     <div className="space-y-5">
-      <div>
-        <h2 className="text-xl font-bold" style={{ color: "var(--admin-text)" }}>Utenti</h2>
-        <p className="text-sm mt-0.5" style={{ color: "var(--admin-text-muted)" }}>Gestione iscritti</p>
+      <div className="flex items-center gap-3">
+        <div
+          className="w-9 h-9 rounded-xl flex items-center justify-center"
+          style={{
+            background: "color-mix(in srgb, var(--admin-accent) 12%, var(--admin-card-bg))",
+            border: "1px solid color-mix(in srgb, var(--admin-accent) 25%, transparent)",
+          }}
+        >
+          <Users size={18} style={{ color: "var(--admin-accent)" }} />
+        </div>
+        <div>
+          <h2 className="text-xl font-bold" style={{ color: "var(--admin-text)" }}>Utenti</h2>
+          <p className="text-sm mt-0.5" style={{ color: "var(--admin-text-muted)" }}>Gestione iscritti</p>
+        </div>
       </div>
 
       {/* Filtri */}
@@ -137,7 +147,6 @@ export default async function AdminUsersPage({
         className="rounded-xl shadow-sm p-4"
         style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-card-border)" }}>
         <form className="flex flex-wrap gap-3">
-          {/* Ricerca */}
           <div className="relative flex-1 min-w-[200px]">
             <Search
               size={15}
@@ -157,7 +166,6 @@ export default async function AdminUsersPage({
             />
           </div>
 
-          {/* Ruolo — opzioni dal DB */}
           <select
             name="role"
             defaultValue={role}
@@ -175,7 +183,6 @@ export default async function AdminUsersPage({
             ))}
           </select>
 
-          {/* Piano */}
           <select
             name="plan"
             defaultValue={plan}
@@ -190,7 +197,6 @@ export default async function AdminUsersPage({
             <option value="premium">Premium</option>
           </select>
 
-          {/* Verifica email */}
           <select
             name="verified"
             defaultValue={verified}

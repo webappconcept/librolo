@@ -113,7 +113,7 @@ export const ADMIN_NAV: NavItem[] = [
       { href: "/admin/seo/meta-tags", label: "Meta Tags", icon: "FileText",  permission: "admin:seo" },
       { href: "/admin/seo/robots",    label: "Robots",    icon: "Globe",     permission: "admin:seo" },
       { href: "/admin/seo/sitemap",   label: "Sitemap",   icon: "Map",       permission: "admin:seo" },
-      { href: "/admin/redirect",      label: "Redirect",  icon: "ArrowRight", permission: "admin:seo" },
+      { href: "/admin/redirect",      label: "Redirect",  icon: "GitMerge",  permission: "admin:seo" },
     ],
   },
   {

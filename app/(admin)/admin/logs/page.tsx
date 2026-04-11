@@ -1,6 +1,7 @@
 // app/(admin)/admin/logs/page.tsx
 import { requireAdminPage } from "@/lib/rbac/guards";
 import { getActivityLogs } from "@/lib/db/admin-queries";
+import { ClipboardList } from "lucide-react";
 import { LogsClient } from "./_components/logs-client";
 import { Suspense } from "react";
 
@@ -30,13 +31,24 @@ export default async function AdminLogsPage({
 
   return (
     <div className="space-y-5">
-      <div>
-        <h2 className="text-lg font-bold" style={{ color: "var(--admin-text)" }}>
-          Log attività
-        </h2>
-        <p className="text-sm mt-0.5" style={{ color: "var(--admin-text-faint)" }}>
-          Traccia delle operazioni eseguite in app e in amministrazione
-        </p>
+      <div className="flex items-center gap-3">
+        <div
+          className="w-9 h-9 rounded-xl flex items-center justify-center"
+          style={{
+            background: "color-mix(in srgb, var(--admin-accent) 12%, var(--admin-card-bg))",
+            border: "1px solid color-mix(in srgb, var(--admin-accent) 25%, transparent)",
+          }}
+        >
+          <ClipboardList size={18} style={{ color: "var(--admin-accent)" }} />
+        </div>
+        <div>
+          <h2 className="text-lg font-bold" style={{ color: "var(--admin-text)" }}>
+            Log attività
+          </h2>
+          <p className="text-sm mt-0.5" style={{ color: "var(--admin-text-faint)" }}>
+            Traccia delle operazioni eseguite in app e in amministrazione
+          </p>
+        </div>
       </div>
 
       <Suspense

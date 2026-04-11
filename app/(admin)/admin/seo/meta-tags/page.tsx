@@ -7,10 +7,10 @@ import {
   PUBLIC_ROUTES,
   USER_MENU_ITEMS,
 } from "@/lib/routes";
+import { SearchCheck } from "lucide-react";
 import { Suspense } from "react";
 import SeoManager from "../_components/seo-manager";
 
-// Pagina admin con query DB — disabilita il prerender statico
 export const dynamic = "force-dynamic";
 
 function getStaticAppRoutes(): string[] {
@@ -39,10 +39,7 @@ async function SeoContent() {
   const appName = settings.app_name?.trim() ?? "";
 
   const staticRoutes = getStaticAppRoutes();
-
-  // Percorsi CMS (tutte le pagine, anche bozze — per pre-configurare SEO prima della pubblicazione)
   const cmsRoutes = cmsPages.map((p) => `/${p.slug}`);
-
   const allRoutes = [...new Set([...staticRoutes, ...cmsRoutes])].sort();
 
   const configuredPaths = new Set(seoPagesList.map((p) => p.pathname));
@@ -61,19 +58,30 @@ async function SeoContent() {
 export default function MetaTagsPage() {
   return (
     <div className="space-y-5">
-      <div>
-        <h2
-          className="text-xl font-bold"
-          style={{ color: "var(--admin-text)" }}
+      <div className="flex items-center gap-3">
+        <div
+          className="w-9 h-9 rounded-xl flex items-center justify-center"
+          style={{
+            background: "color-mix(in srgb, var(--admin-accent) 12%, var(--admin-card-bg))",
+            border: "1px solid color-mix(in srgb, var(--admin-accent) 25%, transparent)",
+          }}
         >
-          Meta Tags
-        </h2>
-        <p
-          className="text-sm mt-0.5"
-          style={{ color: "var(--admin-text-muted)" }}
-        >
-          Gestisci i meta tag delle pagine dell&apos;app.
-        </p>
+          <SearchCheck size={18} style={{ color: "var(--admin-accent)" }} />
+        </div>
+        <div>
+          <h2
+            className="text-xl font-bold"
+            style={{ color: "var(--admin-text)" }}
+          >
+            Meta Tags
+          </h2>
+          <p
+            className="text-sm mt-0.5"
+            style={{ color: "var(--admin-text-muted)" }}
+          >
+            Gestisci i meta tag delle pagine dell&apos;app.
+          </p>
+        </div>
       </div>
 
       <div

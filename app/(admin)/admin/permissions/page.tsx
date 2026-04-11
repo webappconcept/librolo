@@ -5,6 +5,7 @@ import { db } from "@/lib/db/drizzle";
 import { rolePermissions } from "@/lib/db/schema";
 import { requireAdminPage } from "@/lib/rbac/guards";
 import { SYSTEM_PERMISSIONS } from "@/lib/rbac/system-permissions";
+import { KeyRound } from "lucide-react";
 import { Suspense } from "react";
 import { PermissionsManager } from "./_components/permissions-manager";
 import { PermissionsInfoCard } from "./_components/permissions-info-card";
@@ -40,13 +41,24 @@ export default async function AdminPermissionsPage() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div>
-        <h2 className="text-lg font-bold" style={{ color: "var(--admin-text)" }}>
-          Permessi
-        </h2>
-        <p className="text-sm mt-0.5" style={{ color: "var(--admin-text-faint)" }}>
-          Gestisci il catalogo dei permessi e la matrice ruoli → permessi.
-        </p>
+      <div className="flex items-center gap-3">
+        <div
+          className="w-9 h-9 rounded-xl flex items-center justify-center"
+          style={{
+            background: "color-mix(in srgb, var(--admin-accent) 12%, var(--admin-card-bg))",
+            border: "1px solid color-mix(in srgb, var(--admin-accent) 25%, transparent)",
+          }}
+        >
+          <KeyRound size={18} style={{ color: "var(--admin-accent)" }} />
+        </div>
+        <div>
+          <h2 className="text-lg font-bold" style={{ color: "var(--admin-text)" }}>
+            Permessi
+          </h2>
+          <p className="text-sm mt-0.5" style={{ color: "var(--admin-text-faint)" }}>
+            Gestisci il catalogo dei permessi e la matrice ruoli → permessi.
+          </p>
+        </div>
       </div>
 
       {/* Scheda informativa collassabile */}

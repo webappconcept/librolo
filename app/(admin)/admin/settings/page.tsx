@@ -1,5 +1,6 @@
 // app/(admin)/admin/settings/page.tsx
 import { getAppSettings } from "@/lib/db/settings-queries";
+import { Settings } from "lucide-react";
 import { Suspense } from "react";
 import { SettingsTabs } from "./settings-tabs";
 
@@ -11,17 +12,28 @@ async function SettingsContent() {
 export default function AdminSettingsPage() {
   return (
     <div className="space-y-5">
-      <div>
-        <h2
-          className="text-xl font-bold"
-          style={{ color: "var(--admin-text)" }}>
-          Impostazioni
-        </h2>
-        <p
-          className="text-sm mt-0.5"
-          style={{ color: "var(--admin-text-muted)" }}>
-          Configurazione generale dell'app
-        </p>
+      <div className="flex items-center gap-3">
+        <div
+          className="w-9 h-9 rounded-xl flex items-center justify-center"
+          style={{
+            background: "color-mix(in srgb, var(--admin-accent) 12%, var(--admin-card-bg))",
+            border: "1px solid color-mix(in srgb, var(--admin-accent) 25%, transparent)",
+          }}
+        >
+          <Settings size={18} style={{ color: "var(--admin-accent)" }} />
+        </div>
+        <div>
+          <h2
+            className="text-xl font-bold"
+            style={{ color: "var(--admin-text)" }}>
+            Impostazioni
+          </h2>
+          <p
+            className="text-sm mt-0.5"
+            style={{ color: "var(--admin-text-muted)" }}>
+            Configurazione generale dell&apos;app
+          </p>
+        </div>
       </div>
 
       <Suspense

@@ -1,7 +1,7 @@
 // app/(admin)/admin/staff/page.tsx
 import { getStaffUsers } from "@/lib/db/admin-queries";
 import { getAdminRoles } from "@/lib/db/roles-queries";
-import { Search } from "lucide-react";
+import { Search, UserCog } from "lucide-react";
 import { Suspense } from "react";
 import StaffTable from "./_components/staff-table";
 
@@ -106,18 +106,28 @@ export default async function AdminStaffPage({
   const page = Number(params.page ?? 1);
 
   const allRoles = await getAdminRoles();
-  // Mostra solo i ruoli con flag isAdmin (super admin) nel filtro
   const adminRoles = allRoles.filter((r) => r.isAdmin);
 
   const hasFilters = !!(search || role);
 
   return (
     <div className="space-y-5">
-      <div>
-        <h2 className="text-xl font-bold" style={{ color: "var(--admin-text)" }}>Staff</h2>
-        <p className="text-sm mt-0.5" style={{ color: "var(--admin-text-muted)" }}>
-          Gestione amministratori
-        </p>
+      <div className="flex items-center gap-3">
+        <div
+          className="w-9 h-9 rounded-xl flex items-center justify-center"
+          style={{
+            background: "color-mix(in srgb, var(--admin-accent) 12%, var(--admin-card-bg))",
+            border: "1px solid color-mix(in srgb, var(--admin-accent) 25%, transparent)",
+          }}
+        >
+          <UserCog size={18} style={{ color: "var(--admin-accent)" }} />
+        </div>
+        <div>
+          <h2 className="text-xl font-bold" style={{ color: "var(--admin-text)" }}>Staff</h2>
+          <p className="text-sm mt-0.5" style={{ color: "var(--admin-text-muted)" }}>
+            Gestione amministratori
+          </p>
+        </div>
       </div>
 
       <div

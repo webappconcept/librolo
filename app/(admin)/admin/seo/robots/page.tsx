@@ -1,4 +1,5 @@
 import { getAppSettings } from "@/lib/db/settings-queries";
+import { Globe } from "lucide-react";
 import { Suspense } from "react";
 import RobotsEditor from "./_components/robots-editor";
 
@@ -7,7 +8,6 @@ async function RobotsContent() {
   const robotsTxt = (settings as Record<string, string | null>)["robots_txt"] ?? "";
   const humansTxt = (settings as Record<string, string | null>)["humans_txt"] ?? "";
 
-  // Normalizza il dominio: assicura sempre https:// prefix
   let domain = settings.app_domain?.trim() ?? "";
   if (domain && !/^https?:\/\//i.test(domain)) domain = `https://${domain}`;
   domain = domain.replace(/\/$/, "");
@@ -24,25 +24,36 @@ async function RobotsContent() {
 export default function RobotsPage() {
   return (
     <div className="space-y-5">
-      <div>
-        <h2 className="text-xl font-bold" style={{ color: "var(--admin-text)" }}>
-          Robots
-        </h2>
-        <p className="text-sm mt-0.5" style={{ color: "var(--admin-text-muted)" }}>
-          Gestisci i file{" "}
-          <code
-            className="font-mono text-xs px-1 py-0.5 rounded"
-            style={{ background: "var(--admin-hover-bg)" }}>
-            robots.txt
-          </code>{" "}
-          e{" "}
-          <code
-            className="font-mono text-xs px-1 py-0.5 rounded"
-            style={{ background: "var(--admin-hover-bg)" }}>
-            humans.txt
-          </code>{" "}
-          serviti dall&apos;app.
-        </p>
+      <div className="flex items-center gap-3">
+        <div
+          className="w-9 h-9 rounded-xl flex items-center justify-center"
+          style={{
+            background: "color-mix(in srgb, var(--admin-accent) 12%, var(--admin-card-bg))",
+            border: "1px solid color-mix(in srgb, var(--admin-accent) 25%, transparent)",
+          }}
+        >
+          <Globe size={18} style={{ color: "var(--admin-accent)" }} />
+        </div>
+        <div>
+          <h2 className="text-xl font-bold" style={{ color: "var(--admin-text)" }}>
+            Robots
+          </h2>
+          <p className="text-sm mt-0.5" style={{ color: "var(--admin-text-muted)" }}>
+            Gestisci i file{" "}
+            <code
+              className="font-mono text-xs px-1 py-0.5 rounded"
+              style={{ background: "var(--admin-hover-bg)" }}>
+              robots.txt
+            </code>{" "}
+            e{" "}
+            <code
+              className="font-mono text-xs px-1 py-0.5 rounded"
+              style={{ background: "var(--admin-hover-bg)" }}>
+              humans.txt
+            </code>{" "}
+            serviti dall&apos;app.
+          </p>
+        </div>
       </div>
 
       <Suspense
