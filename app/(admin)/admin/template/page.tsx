@@ -74,17 +74,6 @@ export default async function TemplatePage() {
                   border: "1px solid var(--admin-border)",
                 }}
               >
-                <div
-                  className="w-full h-32 flex items-center justify-center"
-                  style={{ background: "var(--admin-page-bg)" }}
-                >
-                  {tpl.thumbnail ? (
-                    <img src={tpl.thumbnail} alt={tpl.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <PanelTop size={32} style={{ color: "var(--admin-text-faint)" }} />
-                  )}
-                </div>
-
                 <div className="p-4">
                   <div className="flex items-start justify-between gap-2">
                     <div>
