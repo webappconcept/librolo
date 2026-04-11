@@ -26,6 +26,12 @@ function slugify(value: string): string {
     .replace(/[^a-z0-9\s-]/g, "").trim().replace(/[\s_]+/g, "-").replace(/-+/g, "-");
 }
 
+/** Estrae l'ultimo segmento di uno slug (la "foglia"), ignorando il prefisso parent. */
+function leafSlug(slug: string): string {
+  const parts = slug.split("/");
+  return parts[parts.length - 1] ?? slug;
+}
+
 const inputStyle: React.CSSProperties = {
   background: "var(--admin-page-bg)", border: "1px solid var(--admin-input-border)",
   color: "var(--admin-text)", borderRadius: "0.5rem",
@@ -257,11 +263,11 @@ function PubTab({ status, setStatus, publishedAt, setPublishedAt, expiresAt, set
 }
 
 // ─── Struttura Tab ────────────────────────────────────────────────────────────
-function StrutturaTab({ pages, templates, parentId, setParentId, templateId, setTemplateId, setCustomFields, currentPageId }: {
+function StrutturaTab({ pages, templates, parentId, onParentChange, templateId, setTemplateId, setCustomFields, currentPageId }: {
   pages: Page[];
   templates: TemplateWithFields[];
   parentId: number | null;
-  setParentId: (v: number | null) => void;
+  onParentChange: (v: number | null) => void;
   templateId: number | null;
   setTemplateId: (v: number | null) => void;
   setCustomFields: (v: Record<string, string>) => void;
@@ -275,7 +281,7 @@ function StrutturaTab({ pages, templates, parentId, setParentId, templateId, set
         <label style={labelStyle}>Pagina padre (opzionale)</label>
         <select
           value={parentId ?? ""}
-          onChange={(e) => setParentId(e.target.value ? Number(e.target.value) : null)}
+          onChange={(e) => onParentChange(e.target.value ? Number(e.target.value) : null)}
           style={inputStyle}
         >
           <option value="">— Nessuna (pagina radice) —</option>
@@ -361,10 +367,13 @@ export default function PageEditor({
 
   const contentRef = useRef<HTMLInputElement>(null);
 
+  // Slug prefix da mostrare nell'input (parentSlug + "/")
+  const parentPage = pages.find((p) => p.id === parentId) ?? null;
+  const slugPrefix = parentPage ? `${parentPage.slug}/` : "";
+
   useEffect(() => {
     if (state?.savedAt) {
       setSavedAt(new Date(state.savedAt).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" }));
-      // La route usa /[id]/edit: l'ID non cambia mai, router.refresh() è sufficiente
       router.refresh();
       const t = setTimeout(() => setSavedAt(null), 4000);
       return () => clearTimeout(t);
@@ -390,9 +399,29 @@ export default function PageEditor({
 
   function handleTitleChange(val: string) {
     setTitle(val);
-    // Auto-genera lo slug solo in creazione nuova pagina
-    if (!isEdit) setSlug(slugify(val));
+    if (!isEdit) {
+      // In creazione: prefissa con il parent slug se già selezionato
+      const base = slugify(val);
+      setSlug(parentPage ? `${parentPage.slug}/${base}` : base);
+    }
   }
+
+  /**
+   * Aggiorna il parentId E ricalcola lo slug:
+   * - Se viene selezionato un parent: parentSlug/foglia
+   * - Se il parent viene rimosso: solo la foglia (senza prefisso)
+   */
+  function handleParentChange(newParentId: number | null) {
+    setParentId(newParentId);
+    const leaf = leafSlug(slug) || slugify(title);
+    if (newParentId) {
+      const parent = pages.find((p) => p.id === newParentId);
+      if (parent) setSlug(`${parent.slug}/${leaf}`);
+    } else {
+      setSlug(leaf);
+    }
+  }
+
   function handleLinkInsert() {
     const url = window.prompt("URL del link:");
     if (url === null) return;
@@ -483,9 +512,24 @@ export default function PageEditor({
             <div>
               <label style={{ ...labelStyle, marginBottom: "0.375rem" }}>Slug (URL)</label>
               <div className="flex">
-                <span className="px-3 py-2 text-sm rounded-l-lg shrink-0"
-                  style={{ background: "var(--admin-hover-bg)", border: "1px solid var(--admin-input-border)", borderRight: "none", color: "var(--admin-text-faint)", fontSize: "0.875rem" }}
-                >/</span>
+                {/* Prefix: mostra "/" oppure "/parentSlug/" se c'è un parent */}
+                <span className="px-3 py-2 text-sm rounded-l-lg shrink-0 select-none"
+                  style={{
+                    background: "var(--admin-hover-bg)",
+                    border: "1px solid var(--admin-input-border)",
+                    borderRight: "none",
+                    color: slugPrefix ? "var(--admin-text-muted)" : "var(--admin-text-faint)",
+                    fontSize: "0.875rem",
+                    fontFamily: "monospace",
+                    maxWidth: "180px",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                  title={slugPrefix ? `/${slugPrefix}` : "/"}
+                >
+                  /{slugPrefix}
+                </span>
                 <input name="slug" value={slug}
                   onChange={(e) => setSlug(e.target.value)}
                   placeholder="chi-siamo"
@@ -593,7 +637,7 @@ export default function PageEditor({
                 pages={pages}
                 templates={templates}
                 parentId={parentId}
-                setParentId={setParentId}
+                onParentChange={handleParentChange}
                 templateId={templateId}
                 setTemplateId={setTemplateId}
                 setCustomFields={setCustomFields}
