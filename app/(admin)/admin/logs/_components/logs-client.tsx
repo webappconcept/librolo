@@ -8,8 +8,15 @@ import {
   Activity,
   ChevronLeft,
   ChevronRight,
+  Eye,
+  EyeOff,
+  FileEdit,
+  FilePlus2,
+  FileText,
+  FileX2,
   Filter,
   KeyRound,
+  LayoutTemplate,
   LogIn,
   Search,
   Shield,
@@ -41,6 +48,7 @@ type Props = { data: PaginatedData };
 const TABS = [
   { id: "rbac", label: "RBAC", icon: KeyRound },
   { id: "auth", label: "Autenticazione", icon: LogIn },
+  { id: "contenuti", label: "Contenuti", icon: FileText },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
@@ -55,6 +63,17 @@ const AUTH_TYPES = new Set([
   ActivityType.EMAIL_VERIFIED,
 ]);
 
+const CONTENT_TYPES = new Set([
+  ActivityType.PAGE_CREATED,
+  ActivityType.PAGE_UPDATED,
+  ActivityType.PAGE_DELETED,
+  ActivityType.PAGE_PUBLISHED,
+  ActivityType.PAGE_UNPUBLISHED,
+  ActivityType.TEMPLATE_CREATED,
+  ActivityType.TEMPLATE_UPDATED,
+  ActivityType.TEMPLATE_DELETED,
+]);
+
 function getActionType(action: string): ActivityType | null {
   const part = action.split(" | ")[0].trim() as ActivityType;
   return Object.values(ActivityType).includes(part) ? part : null;
@@ -67,6 +86,7 @@ function getDetail(action: string): string {
 
 function ActionIcon({ type }: { type: ActivityType | null }) {
   if (!type) return <Activity size={13} />;
+  // RBAC
   if (type === ActivityType.PERMISSION_GRANTED || type === ActivityType.ROLE_PERMISSION_ADDED)
     return <ShieldCheck size={13} style={{ color: "#16a34a" }} />;
   if (type === ActivityType.PERMISSION_REVOKED || type === ActivityType.ROLE_PERMISSION_REMOVED)
@@ -75,7 +95,18 @@ function ActionIcon({ type }: { type: ActivityType | null }) {
   if (type === ActivityType.ADMIN_BAN_USER || type === ActivityType.ADMIN_DELETE_USER)
     return <Trash2 size={13} style={{ color: "#dc2626" }} />;
   if (type === ActivityType.ADMIN_UNBAN_USER) return <Shield size={13} style={{ color: "#16a34a" }} />;
+  // Auth
   if (AUTH_TYPES.has(type)) return <LogIn size={13} style={{ color: "#0284c7" }} />;
+  // Contenuti — pagine
+  if (type === ActivityType.PAGE_CREATED) return <FilePlus2 size={13} style={{ color: "#16a34a" }} />;
+  if (type === ActivityType.PAGE_UPDATED) return <FileEdit size={13} style={{ color: "#0284c7" }} />;
+  if (type === ActivityType.PAGE_DELETED) return <FileX2 size={13} style={{ color: "#dc2626" }} />;
+  if (type === ActivityType.PAGE_PUBLISHED) return <Eye size={13} style={{ color: "#16a34a" }} />;
+  if (type === ActivityType.PAGE_UNPUBLISHED) return <EyeOff size={13} style={{ color: "#d97706" }} />;
+  // Contenuti — template
+  if (type === ActivityType.TEMPLATE_CREATED) return <LayoutTemplate size={13} style={{ color: "#16a34a" }} />;
+  if (type === ActivityType.TEMPLATE_UPDATED) return <LayoutTemplate size={13} style={{ color: "#0284c7" }} />;
+  if (type === ActivityType.TEMPLATE_DELETED) return <LayoutTemplate size={13} style={{ color: "#dc2626" }} />;
   return <Activity size={13} />;
 }
 
@@ -84,6 +115,8 @@ function TypeBadge({ type }: { type: ActivityType | null }) {
   const label = type.replace(/_/g, " ");
   let bg = "var(--admin-hover-bg)";
   let color = "var(--admin-text-muted)";
+
+  // RBAC
   if (type === ActivityType.PERMISSION_GRANTED || type === ActivityType.ROLE_PERMISSION_ADDED) {
     bg = "#dcfce7"; color = "#15803d";
   } else if (type === ActivityType.PERMISSION_REVOKED || type === ActivityType.ROLE_PERMISSION_REMOVED) {
@@ -94,9 +127,22 @@ function TypeBadge({ type }: { type: ActivityType | null }) {
     bg = "#fef2f2"; color = "#b91c1c";
   } else if (type === ActivityType.ADMIN_UNBAN_USER) {
     bg = "#dcfce7"; color = "#166534";
+  // Auth
   } else if (AUTH_TYPES.has(type)) {
     bg = "#e0f2fe"; color = "#0369a1";
+  // Contenuti
+  } else if (type === ActivityType.PAGE_CREATED || type === ActivityType.TEMPLATE_CREATED) {
+    bg = "#dcfce7"; color = "#15803d";
+  } else if (type === ActivityType.PAGE_UPDATED || type === ActivityType.TEMPLATE_UPDATED) {
+    bg = "#eff6ff"; color = "#1d4ed8";
+  } else if (type === ActivityType.PAGE_DELETED || type === ActivityType.TEMPLATE_DELETED) {
+    bg = "#fef2f2"; color = "#b91c1c";
+  } else if (type === ActivityType.PAGE_PUBLISHED) {
+    bg = "#dcfce7"; color = "#15803d";
+  } else if (type === ActivityType.PAGE_UNPUBLISHED) {
+    bg = "#fffbeb"; color = "#92400e";
   }
+
   return (
     <span
       className="inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0"

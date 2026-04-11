@@ -3,6 +3,9 @@
 import { deletePageCascade, getPageBySlug, togglePageStatus, upsertPage } from "@/lib/db/pages-queries";
 import { upsertRedirect } from "@/lib/db/redirects-queries";
 import { deleteSeoPage, getSeoPage, renameSeoPage } from "@/lib/db/seo-queries";
+import { logContentActivity } from "@/lib/db/content-activity";
+import { ActivityType } from "@/lib/db/schema";
+import { getUser } from "@/lib/db/queries";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -111,6 +114,22 @@ export async function upsertPageAction(
       revalidatePath("/admin/redirect");
     }
 
+    // ── Activity log ──────────────────────────────────────────────────────────
+    const user = await getUser();
+    const uid = user?.id ?? null;
+    const detail = `slug: /${data.slug} | titolo: ${data.title}`;
+
+    if (isCreating) {
+      await logContentActivity(ActivityType.PAGE_CREATED, detail, uid);
+    } else {
+      // Se lo stato è cambiato a published/draft logghiamo anche il cambio stato
+      if (data.status === "published") {
+        await logContentActivity(ActivityType.PAGE_PUBLISHED, detail, uid);
+      }
+      await logContentActivity(ActivityType.PAGE_UPDATED, detail, uid);
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
     return {
       success: true,
       savedAt: new Date().toISOString(),
@@ -129,9 +148,18 @@ export async function deletePageAction(
   try {
     const deleted = await deletePageCascade(slug);
     await deleteSeoPage(`/${slug}`);
+
     revalidatePath("/admin/contenuti");
     revalidatePath(`/${slug}`);
     revalidatePath("/admin/seo/meta-tags");
+
+    const user = await getUser();
+    await logContentActivity(
+      ActivityType.PAGE_DELETED,
+      `slug: /${slug}`,
+      user?.id ?? null,
+    );
+
     return { success: true, deleted };
   } catch (err) {
     console.error("[deletePageAction] error:", err);
@@ -150,6 +178,18 @@ export async function togglePageStatusAction(
   try {
     await togglePageStatus(id, currentStatus);
     revalidatePath("/admin/contenuti");
+
+    const user = await getUser();
+    const nextStatus = currentStatus === "published" ? "draft" : "published";
+    const actType =
+      nextStatus === "published"
+        ? ActivityType.PAGE_PUBLISHED
+        : ActivityType.PAGE_UNPUBLISHED;
+    await logContentActivity(
+      actType,
+      `id: ${id} | nuovo stato: ${nextStatus}`,
+      user?.id ?? null,
+    );
   } catch (err) {
     console.error("[togglePageStatusAction] error:", err);
     return { error: "Errore nel cambio stato. Riprova." };

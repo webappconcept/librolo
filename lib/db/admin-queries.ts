@@ -1,15 +1,12 @@
 // lib/db/admin-queries.ts
 import { db } from "@/lib/db/drizzle";
 import { activityLogs, permissions, rolePermissions, roles, users } from "@/lib/db/schema";
-import { and, count, desc, eq, exists, isNotNull, isNull, sql } from "drizzle-orm";
+import { and, count, desc, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { unstable_noStore as noStore } from "next/cache";
 import "server-only";
 
 // ---------------------------------------------------------------------------
-// Subquery riutilizzabile: "il ruolo dell'utente ha almeno un permesso admin:*"
-// Un utente è considerato staff/admin se:
-//   1. ha users.isAdmin = true (super-admin legacy, fallback di emergenza), OPPURE
-//   2. il suo ruolo ha almeno un permesso con key che inizia per 'admin:'
+// Subquery riutilizzabile
 // ---------------------------------------------------------------------------
 const hasAdminPermission = (userAlias: typeof users) =>
   sql<boolean>`(
@@ -115,9 +112,6 @@ export type AdminUser = {
   bannedReason: string | null;
 };
 
-// ---------------------------------------------------------------------------
-// getAdminUsers — utenti regolari (nessun permesso admin:* nel ruolo)
-// ---------------------------------------------------------------------------
 export async function getAdminUsers({
   search = "",
   role = "",
@@ -212,9 +206,6 @@ export async function getAdminUsers({
   };
 }
 
-// ---------------------------------------------------------------------------
-// getStaffUsers — utenti il cui ruolo ha almeno un permesso admin:*
-// ---------------------------------------------------------------------------
 export async function getStaffUsers({
   search = "",
   role = "",
@@ -305,10 +296,6 @@ export async function getAdminUserById(id: number) {
   return user ?? null;
 }
 
-/**
- * Tipo del singolo utente restituito da getAdminUserById.
- * Usato dai componenti client della pagina /admin/users/[id].
- */
 export type AdminUserDetail = NonNullable<Awaited<ReturnType<typeof getAdminUserById>>>;
 
 export type AdminUserActivity = {
@@ -336,7 +323,7 @@ export async function getAdminUserActivity(userId: number): Promise<AdminUserAct
 
 /**
  * Recupera gli activity log globali con email dell'utente — paginati lato server.
- * Usato dalla pagina /admin/logs.
+ * Tab supportati: "rbac" | "auth" | "contenuti"
  */
 export async function getActivityLogs({
   page = 1,
@@ -370,8 +357,25 @@ export async function getActivityLogs({
     "PASSWORD_RESET_COMPLETED",
     "EMAIL_VERIFIED",
   ];
+  const CONTENT_ACTIONS = [
+    "PAGE_CREATED",
+    "PAGE_UPDATED",
+    "PAGE_DELETED",
+    "PAGE_PUBLISHED",
+    "PAGE_UNPUBLISHED",
+    "TEMPLATE_CREATED",
+    "TEMPLATE_UPDATED",
+    "TEMPLATE_DELETED",
+  ];
 
-  const actionList = tab === "rbac" ? RBAC_ACTIONS : tab === "auth" ? AUTH_ACTIONS : null;
+  const actionList =
+    tab === "rbac"
+      ? RBAC_ACTIONS
+      : tab === "auth"
+        ? AUTH_ACTIONS
+        : tab === "contenuti"
+          ? CONTENT_ACTIONS
+          : null;
 
   const whereClause = actionList
     ? sql`split_part(${activityLogs.action}, ' | ', 1) = ANY(ARRAY[${sql.raw(actionList.map((a) => `'${a}'`).join(","))}])`
