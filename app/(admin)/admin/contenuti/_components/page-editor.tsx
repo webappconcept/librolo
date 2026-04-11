@@ -11,7 +11,7 @@ import {
   AlignCenter, AlignLeft, AlignRight, ArrowLeft, Bold, Calendar,
   Check, Code, Eye, EyeOff, Heading2, Heading3, Italic, Link2,
   List, ListOrdered, Minus, Pencil, PanelTop, RotateCcw, RotateCw,
-  Search, UnderlineIcon, GitBranch,
+  Search, UnderlineIcon, GitBranch, AlertTriangle,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef, useState } from "react";
@@ -65,7 +65,7 @@ function TabBtn({ active, onClick, children }: { active: boolean; onClick: () =>
   );
 }
 
-// ─── Custom Fields (fuori dai tab, tra titolo e tab bar) ──────────────────────
+// ─── Custom Fields ──────────────────────────────────────────────────────────────────
 function CustomFieldsBlock({ template, customFields, setCustomFields }: {
   template: TemplateWithFields;
   customFields: Record<string, string>;
@@ -343,6 +343,7 @@ export default function PageEditor({
 }) {
   const router = useRouter();
   const isEdit = !!page;
+  const originalSlug = page?.slug ?? "";
   const [activeTab, setActiveTab] = useState<"content" | "seo" | "pub" | "struttura">("content");
 
   const [state, action, isPending] = useActionState(upsertPageAction, {});
@@ -401,8 +402,8 @@ export default function PageEditor({
     editor?.chain().focus().insertContent(token).run();
   }
 
-  // Template selezionato con i suoi campi
   const selectedTemplate = templates.find((t) => t.id === templateId) ?? null;
+  const slugChanged = isEdit && slug !== originalSlug && slug.trim() !== "";
 
   return (
     <>
@@ -428,7 +429,7 @@ export default function PageEditor({
       `}</style>
 
       <form action={action} className="space-y-0">
-        {isEdit && <input type="hidden" name="originalSlug" value={page!.slug} />}
+        {isEdit && <input type="hidden" name="originalSlug" value={originalSlug} />}
         <input type="hidden" name="content" ref={contentRef} />
         <input type="hidden" name="status" value={status} />
         <input type="hidden" name="publishedAt" value={publishedAt} />
@@ -480,11 +481,9 @@ export default function PageEditor({
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label style={{ ...labelStyle, marginBottom: 0 }}>Slug (URL)</label>
-                {!isEdit && (
-                  <button type="button" onClick={() => setSlugManual((v) => !v)}
-                    className="text-xs" style={{ color: "var(--admin-accent)" }}
-                  >{slugManual ? "Auto" : "Modifica"}</button>
-                )}
+                <button type="button" onClick={() => setSlugManual((v) => !v)}
+                  className="text-xs" style={{ color: "var(--admin-accent)" }}
+                >{slugManual ? "Auto" : "Modifica"}</button>
               </div>
               <div className="flex">
                 <span className="px-3 py-2 text-sm rounded-l-lg shrink-0"
@@ -492,22 +491,33 @@ export default function PageEditor({
                 >/</span>
                 <input name="slug" value={slug}
                   onChange={(e) => { setSlug(e.target.value); setSlugManual(true); }}
-                  readOnly={isEdit} placeholder="chi-siamo"
-                  style={{ ...inputStyle, borderRadius: "0 0.5rem 0.5rem 0", fontFamily: "monospace",
-                    background: isEdit ? "var(--admin-hover-bg)" : inputStyle.background,
-                    color: isEdit ? "var(--admin-text-muted)" : inputStyle.color,
-                  }}
+                  placeholder="chi-siamo"
+                  style={{ ...inputStyle, borderRadius: "0 0.5rem 0.5rem 0", fontFamily: "monospace" }}
                 />
               </div>
-              <p style={hintStyle}>
-                {isEdit ? "Lo slug non può essere modificato dopo la creazione."
-                  : <>URL: <strong style={{ color: "var(--admin-text-muted)" }}>/{slug || "slug-pagina"}</strong></>}
-              </p>
+              {/* Banner avviso cambio slug */}
+              {slugChanged ? (
+                <div className="flex items-start gap-2 mt-2 rounded-lg px-3 py-2"
+                  style={{ background: "color-mix(in srgb, #f59e0b 8%, var(--admin-card-bg))", border: "1px solid color-mix(in srgb, #f59e0b 30%, transparent)" }}
+                >
+                  <AlertTriangle size={13} className="mt-0.5 shrink-0" style={{ color: "#f59e0b" }} />
+                  <p className="text-xs leading-relaxed" style={{ color: "var(--admin-text-muted)" }}>
+                    Verrà creato un redirect 301 automatico da{" "}
+                    <code className="font-mono" style={{ color: "var(--admin-text)" }}>/{originalSlug}</code>{" "}
+                    a{" "}
+                    <code className="font-mono" style={{ color: "var(--admin-text)" }}>/{slug}</code>.
+                  </p>
+                </div>
+              ) : (
+                <p style={hintStyle}>
+                  URL: <strong style={{ color: "var(--admin-text-muted)" }}>/{slug || "slug-pagina"}</strong>
+                </p>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Campi custom — fuori dai tab, tra titolo e tab bar */}
+        {/* Campi custom — fuori dai tab */}
         {selectedTemplate && selectedTemplate.fields.length > 0 && (
           <CustomFieldsBlock
             template={selectedTemplate}
@@ -551,7 +561,6 @@ export default function PageEditor({
 
           {activeTab === "content" && (
             <>
-              {/* Toolbar editor */}
               <div className="flex flex-wrap items-center gap-0.5 px-3 py-2"
                 style={{ borderBottom: "1px solid var(--admin-divider)", background: "var(--admin-page-bg)" }}
               >
