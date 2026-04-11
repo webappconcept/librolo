@@ -1,6 +1,7 @@
 "use server";
 
 import { deletePage, getPageBySlug, upsertPage } from "@/lib/db/pages-queries";
+import { upsertRedirect } from "@/lib/db/redirects-queries";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -65,6 +66,8 @@ export async function upsertPageAction(
     try { parsedCustomFields = JSON.parse(customFields); } catch { /* noop */ }
   }
 
+  const slugChanged = originalSlug && originalSlug !== data.slug;
+
   try {
     await upsertPage({
       ...data,
@@ -76,11 +79,22 @@ export async function upsertPageAction(
       pageType: pageType ?? "page",
       sortOrder: sortOrder ? Number(sortOrder) : 0,
     });
+
+    // Auto-redirect 301: vecchio slug → nuovo slug
+    if (slugChanged) {
+      await upsertRedirect({
+        fromPath: `/${originalSlug}`,
+        toPath: `/${data.slug}`,
+        statusCode: 301,
+      });
+    }
+
     revalidatePath("/admin/contenuti");
     revalidatePath(`/${data.slug}`);
-    if (originalSlug && originalSlug !== data.slug) {
+    if (slugChanged) {
       revalidatePath(`/${originalSlug}`);
       revalidatePath("/admin/seo/meta-tags");
+      revalidatePath("/admin/redirect");
     }
   } catch (err) {
     console.error("[upsertPageAction] error:", err);
