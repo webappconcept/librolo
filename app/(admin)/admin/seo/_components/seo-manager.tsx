@@ -1,6 +1,7 @@
 "use client";
 
 import type { SeoPage } from "@/lib/db/schema";
+import ConfirmModal, { type ConfirmModalProps } from "@/app/(admin)/admin/_components/confirm-modal";
 import { FileText, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { useState, useTransition } from "react";
 import { deleteSeoPageAction } from "../actions";
@@ -20,7 +21,8 @@ export default function SeoManager({
 }) {
   const [search, setSearch] = useState("");
   const [editPage, setEditPage] = useState<SeoPage | null | "new">(null);
-  const [, startTransition] = useTransition();
+  const [modal, setModal] = useState<ConfirmModalProps | null>(null);
+  const [isDeleting, startTransition] = useTransition();
 
   const filtered = initialPages.filter(
     (p) =>
@@ -28,10 +30,32 @@ export default function SeoManager({
       p.label.toLowerCase().includes(search.toLowerCase()),
   );
 
-  function handleDelete(pathname: string) {
-    if (!confirm(`Eliminare la pagina "${pathname}"?`)) return;
-    startTransition(async () => {
-      await deleteSeoPageAction(pathname);
+  function handleDelete(pathname: string, label: string) {
+    setModal({
+      open: true,
+      title: "Elimina configurazione SEO",
+      message: (
+        <div className="space-y-2">
+          <p>
+            Stai per eliminare la configurazione SEO associata a <strong>{label}</strong>.
+          </p>
+          <p>
+            Path: <code style={{ color: "var(--admin-text)", fontFamily: "monospace" }}>{pathname}</code>
+          </p>
+          <p>L'operazione è irreversibile.</p>
+        </div>
+      ),
+      variant: "danger",
+      confirmLabel: "Elimina",
+      cancelLabel: "Annulla",
+      loading: isDeleting,
+      onCancel: () => setModal(null),
+      onConfirm: () => {
+        startTransition(async () => {
+          await deleteSeoPageAction(pathname);
+          setModal(null);
+        });
+      },
     });
   }
 
@@ -237,7 +261,7 @@ export default function SeoManager({
                     <Pencil size={14} />
                   </button>
                   <button
-                    onClick={() => handleDelete(page.pathname)}
+                    onClick={() => handleDelete(page.pathname, page.label)}
                     className="p-2 rounded-lg transition-colors"
                     style={{ color: "var(--admin-text-faint)" }}
                     onMouseEnter={(e) => {
@@ -268,6 +292,8 @@ export default function SeoManager({
           onClose={() => setEditPage(null)}
         />
       )}
+
+      {modal && <ConfirmModal {...modal} loading={isDeleting} />}
     </>
   );
 }
