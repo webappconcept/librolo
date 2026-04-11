@@ -32,6 +32,11 @@ function leafSlug(slug: string): string {
   return parts[parts.length - 1] ?? slug;
 }
 
+/** Costruisce lo slug completo concatenando prefisso + foglia. */
+function buildFullSlug(prefix: string, leaf: string): string {
+  return prefix ? `${prefix}${leaf}` : leaf;
+}
+
 const inputStyle: React.CSSProperties = {
   background: "var(--admin-page-bg)", border: "1px solid var(--admin-input-border)",
   color: "var(--admin-text)", borderRadius: "0.5rem",
@@ -353,6 +358,7 @@ export default function PageEditor({
 
   const [state, action, isPending] = useActionState(upsertPageAction, {});
   const [title, setTitle] = useState(page?.title ?? "");
+  // slug state always stores the FULL path (e.g. "chi-siamo/il-team")
   const [slug, setSlug] = useState(page?.slug ?? "");
   const [status, setStatus] = useState<"draft" | "published">((page?.status as "draft" | "published") ?? "draft");
   const [publishedAt, setPublishedAt] = useState(page?.publishedAt ? toDatetimeLocal(page.publishedAt) : "");
@@ -368,15 +374,16 @@ export default function PageEditor({
 
   const contentRef = useRef<HTMLInputElement>(null);
 
-  // Slug prefix da mostrare nell'input (parentSlug + "/")
+  // Derived: parent page and its slug prefix (used in the readonly badge)
   const parentPage = pages.find((p) => p.id === parentId) ?? null;
   const slugPrefix = parentPage ? `${parentPage.slug}/` : "";
+
+  // What the editable input field shows: only the leaf segment
+  const slugLeaf = leafSlug(slug) || slug;
 
   useEffect(() => {
     if (!state?.savedAt) return;
 
-    // Nuova pagina creata: vai direttamente alla route di edit
-    // così isEdit diventa true e il bottone mostra "Salva modifiche"
     if (!isEdit && state.createdId) {
       router.replace(`/admin/contenuti/${state.createdId}/edit`);
       return;
@@ -408,9 +415,15 @@ export default function PageEditor({
   function handleTitleChange(val: string) {
     setTitle(val);
     if (!isEdit) {
-      const base = slugify(val);
-      setSlug(parentPage ? `${parentPage.slug}/${base}` : base);
+      const leaf = slugify(val);
+      // Store the full path in state, but the input will show only the leaf
+      setSlug(buildFullSlug(slugPrefix, leaf));
     }
+  }
+
+  // When the user manually edits the leaf in the input field
+  function handleSlugLeafChange(leafVal: string) {
+    setSlug(buildFullSlug(slugPrefix, leafVal));
   }
 
   function handleParentChange(newParentId: number | null) {
@@ -514,6 +527,7 @@ export default function PageEditor({
             <div>
               <label style={{ ...labelStyle, marginBottom: "0.375rem" }}>Slug (URL)</label>
               <div className="flex">
+                {/* Readonly prefix badge: shows "/" or "/parent-slug/" */}
                 <span className="px-3 py-2 text-sm rounded-l-lg shrink-0 select-none"
                   style={{
                     background: "var(--admin-hover-bg)",
@@ -527,13 +541,16 @@ export default function PageEditor({
                     textOverflow: "ellipsis",
                     whiteSpace: "nowrap",
                   }}
-                  title={slugPrefix ? `/${slugPrefix}` : "/"}
+                  title={`/${slugPrefix}`}
                 >
                   /{slugPrefix}
                 </span>
-                <input name="slug" value={slug}
-                  onChange={(e) => setSlug(e.target.value)}
-                  placeholder="chi-siamo"
+                {/* Editable input: shows only the leaf segment */}
+                <input
+                  name="slug"
+                  value={slugLeaf}
+                  onChange={(e) => handleSlugLeafChange(e.target.value)}
+                  placeholder="nome-pagina"
                   style={{ ...inputStyle, borderRadius: "0 0.5rem 0.5rem 0", fontFamily: "monospace" }}
                 />
               </div>
