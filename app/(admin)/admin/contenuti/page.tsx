@@ -26,7 +26,7 @@ export default function ContenutiPage() {
         </div>
         <div>
           <h2 className="text-xl font-bold" style={{ color: "var(--admin-text)" }}>
-            Contenuti
+            Pagine
           </h2>
           <p className="text-sm mt-0.5" style={{ color: "var(--admin-text-muted)" }}>
             Gestisci le pagine statiche del sito (privacy, condizioni, cookie, ecc.).
