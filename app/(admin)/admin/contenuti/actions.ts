@@ -2,6 +2,7 @@
 
 import { deletePage, getPageBySlug, upsertPage } from "@/lib/db/pages-queries";
 import { upsertRedirect } from "@/lib/db/redirects-queries";
+import { deleteSeoPage, getSeoPage, renameSeoPage } from "@/lib/db/seo-queries";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -85,8 +86,20 @@ export async function upsertPageAction(
       sortOrder: sortOrder ? Number(sortOrder) : 0,
     });
 
-    // Auto-redirect 301: vecchio slug → nuovo slug
     if (slugChanged) {
+      // Migra i meta SEO dal vecchio pathname al nuovo, preservando tutti i dati.
+      // Se non esiste un record SEO per il vecchio slug non fa nulla.
+      const existingSeo = await getSeoPage(`/${originalSlug}`);
+      if (existingSeo) {
+        await renameSeoPage(`/${originalSlug}`, {
+          ...existingSeo,
+          pathname: `/${data.slug}`,
+          label: data.title,
+          updatedAt: new Date(),
+        });
+      }
+
+      // Auto-redirect 301: vecchio slug → nuovo slug
       await upsertRedirect({
         fromPath: `/${originalSlug}`,
         toPath: `/${data.slug}`,
@@ -115,6 +128,8 @@ export async function deletePageAction(
   if (!slug) return { error: "Slug mancante" };
   try {
     await deletePage(slug);
+    // Rimuove anche l'eventuale record SEO associato allo slug eliminato.
+    await deleteSeoPage(`/${slug}`);
     revalidatePath("/admin/contenuti");
     revalidatePath(`/${slug}`);
     revalidatePath("/admin/seo/meta-tags");
