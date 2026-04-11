@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  ArrowRight,
   BarChart2,
   BookOpen,
   ChevronDown,
@@ -41,6 +42,7 @@ const ICON_MAP: Record<string, React.ElementType> = {
   Map,
   Settings,
   ClipboardList,
+  ArrowRight,
 };
 
 interface AdminSidebarProps {
