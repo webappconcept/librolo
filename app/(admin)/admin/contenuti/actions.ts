@@ -31,7 +31,7 @@ const schema = z.object({
 export async function upsertPageAction(
   _: unknown,
   formData: FormData,
-): Promise<{ error?: string; success?: boolean; savedAt?: string }> {
+): Promise<{ error?: string; success?: boolean; savedAt?: string; createdId?: number }> {
   const raw = {
     id: formData.get("id") || undefined,
     originalSlug: formData.get("originalSlug") || undefined,
@@ -54,6 +54,7 @@ export async function upsertPageAction(
   }
 
   const { id, originalSlug, publishedAt, expiresAt, parentId, templateId, customFields, pageType, sortOrder, ...data } = parsed.data;
+  const isCreating = !id;
 
   let resolvedPublishedAt: Date | null = null;
   if (data.status === "published") {
@@ -72,9 +73,7 @@ export async function upsertPageAction(
   const slugChanged = originalSlug && originalSlug !== data.slug;
 
   try {
-    await upsertPage({
-      // Passa l'id numerico se presente: upsertPage farà UPDATE WHERE id
-      // evitando di creare un duplicato quando lo slug cambia.
+    const savedId = await upsertPage({
       ...(id ? { id: Number(id) } : {}),
       ...data,
       publishedAt: resolvedPublishedAt,
@@ -87,8 +86,6 @@ export async function upsertPageAction(
     });
 
     if (slugChanged) {
-      // Migra i meta SEO dal vecchio pathname al nuovo, preservando tutti i dati.
-      // Se non esiste un record SEO per il vecchio slug non fa nulla.
       const existingSeo = await getSeoPage(`/${originalSlug}`);
       if (existingSeo) {
         await renameSeoPage(`/${originalSlug}`, {
@@ -99,7 +96,6 @@ export async function upsertPageAction(
         });
       }
 
-      // Auto-redirect 301: vecchio slug → nuovo slug
       await upsertRedirect({
         fromPath: `/${originalSlug}`,
         toPath: `/${data.slug}`,
@@ -114,12 +110,16 @@ export async function upsertPageAction(
       revalidatePath("/admin/seo/meta-tags");
       revalidatePath("/admin/redirect");
     }
+
+    return {
+      success: true,
+      savedAt: new Date().toISOString(),
+      ...(isCreating ? { createdId: savedId } : {}),
+    };
   } catch (err) {
     console.error("[upsertPageAction] error:", err);
     return { error: "Errore nel salvataggio. Riprova." };
   }
-
-  return { success: true, savedAt: new Date().toISOString() };
 }
 
 export async function deletePageAction(
@@ -128,7 +128,6 @@ export async function deletePageAction(
   if (!slug) return { error: "Slug mancante" };
   try {
     await deletePage(slug);
-    // Rimuove anche l'eventuale record SEO associato allo slug eliminato.
     await deleteSeoPage(`/${slug}`);
     revalidatePath("/admin/contenuti");
     revalidatePath(`/${slug}`);

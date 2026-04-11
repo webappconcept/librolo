@@ -76,8 +76,9 @@ export async function getPageWithTemplate(
  * Crea o aggiorna una pagina.
  * - Se `data.id` è presente → UPDATE WHERE id (gestisce cambio slug senza duplicati).
  * - Se `data.id` è assente → INSERT ... ON CONFLICT (slug) DO UPDATE (crea nuova pagina).
+ * Ritorna sempre l'id della riga.
  */
-export async function upsertPage(data: NewPage & { id?: number }): Promise<void> {
+export async function upsertPage(data: NewPage & { id?: number }): Promise<number> {
   if (data.id) {
     const { id, ...rest } = data;
     await db
@@ -97,8 +98,9 @@ export async function upsertPage(data: NewPage & { id?: number }): Promise<void>
         updatedAt: new Date(),
       })
       .where(eq(pages.id, id));
+    return id;
   } else {
-    await db
+    const [row] = await db
       .insert(pages)
       .values(data)
       .onConflictDoUpdate({
@@ -116,7 +118,9 @@ export async function upsertPage(data: NewPage & { id?: number }): Promise<void>
           sortOrder: data.sortOrder ?? 0,
           updatedAt: new Date(),
         },
-      });
+      })
+      .returning({ id: pages.id });
+    return row.id;
   }
 }
 
