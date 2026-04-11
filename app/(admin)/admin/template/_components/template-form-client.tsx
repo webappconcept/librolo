@@ -35,9 +35,12 @@ interface TemplateFormClientProps {
     name: string;
     slug: string;
     description: string;
+    layoutBase: string;
+    styleConfig: Record<string, string>;
     fields: TemplateField[];
     isSystem: boolean;
   };
+  layoutBases?: { key: string; label: string; description: string }[];
   saveAction: (formData: FormData) => Promise<void>;
 }
 
