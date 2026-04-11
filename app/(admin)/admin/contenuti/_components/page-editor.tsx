@@ -10,7 +10,7 @@ import TextAlign from "@tiptap/extension-text-align";
 import {
   AlignCenter, AlignLeft, AlignRight, ArrowLeft, Bold, Calendar,
   Check, Code, Eye, EyeOff, Heading2, Heading3, Italic, Link2,
-  List, ListOrdered, Minus, Pencil, PanelTop, RotateCcw, RotateCw,
+  List, ListOrdered, Minus, Pencil, RotateCcw, RotateCw,
   Search, UnderlineIcon, GitBranch, AlertTriangle,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -271,7 +271,6 @@ function StrutturaTab({ pages, templates, parentId, setParentId, templateId, set
 
   return (
     <div className="space-y-5">
-      {/* Pagina parent */}
       <div className="space-y-1.5">
         <label style={labelStyle}>Pagina padre (opzionale)</label>
         <select
@@ -291,7 +290,6 @@ function StrutturaTab({ pages, templates, parentId, setParentId, templateId, set
         <p style={hintStyle}>Assegnare una pagina padre costruisce la gerarchia del sito (es. /servizi/consulenza).</p>
       </div>
 
-      {/* Template */}
       <div className="space-y-1.5">
         <label style={labelStyle}>Template (opzionale)</label>
         {templates.length === 0 ? (
@@ -354,7 +352,6 @@ export default function PageEditor({
   const [publishedAt, setPublishedAt] = useState(page?.publishedAt ? toDatetimeLocal(page.publishedAt) : "");
   const [expiresAt, setExpiresAt] = useState(page?.expiresAt ? toDatetimeLocal(page.expiresAt) : "");
 
-  // Struttura
   const [parentId, setParentId] = useState<number | null>(page?.parentId ?? null);
   const [templateId, setTemplateId] = useState<number | null>(page?.templateId ?? null);
   const [customFields, setCustomFields] = useState<Record<string, string>>(() => {
@@ -363,29 +360,18 @@ export default function PageEditor({
 
   const [savedAt, setSavedAt] = useState<string | null>(null);
 
-  // Ref per tracciare lo slug inviato al momento del submit
-  const submittedSlugRef = useRef<string>("");
+  const contentRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (state?.savedAt) {
       setSavedAt(new Date(state.savedAt).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" }));
-
-      // Se lo slug è cambiato, aggiorna la URL admin al nuovo slug
-      // così il browser non rimane sul vecchio path che ora è inesistente (404)
-      if (isEdit && submittedSlugRef.current && submittedSlugRef.current !== originalSlug) {
-        router.replace(`/admin/contenuti/${submittedSlugRef.current}`);
-        return;
-      }
-
-      // Nessun cambio slug: semplice refresh per aggiornare i dati server
+      // La route usa /[id]/edit: l'ID non cambia mai, router.refresh() è sufficiente
       router.refresh();
-
       const t = setTimeout(() => setSavedAt(null), 4000);
       return () => clearTimeout(t);
     }
   }, [state?.savedAt]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const contentRef = useRef<HTMLInputElement>(null);
   const editor = useEditor({
     extensions: [
       StarterKit.configure({ heading: { levels: [2, 3, 4] } }),
@@ -443,15 +429,7 @@ export default function PageEditor({
         .tiptap-editor .ProseMirror-focused { outline: none; }
       `}</style>
 
-      <form
-        action={action}
-        className="space-y-0"
-        onSubmit={() => {
-          // Salva lo slug corrente prima che la server action venga eseguita
-          submittedSlugRef.current = slug;
-        }}
-      >
-        {/* id nascosto: necessario per UPDATE WHERE id in edit mode (evita duplicati al cambio slug) */}
+      <form action={action} className="space-y-0">
         {isEdit && page?.id && <input type="hidden" name="id" value={page.id} />}
         {isEdit && <input type="hidden" name="originalSlug" value={originalSlug} />}
         <input type="hidden" name="content" ref={contentRef} />
@@ -519,7 +497,6 @@ export default function PageEditor({
                   style={{ ...inputStyle, borderRadius: "0 0.5rem 0.5rem 0", fontFamily: "monospace" }}
                 />
               </div>
-              {/* Banner avviso cambio slug */}
               {slugChanged ? (
                 <div className="flex items-start gap-2 mt-2 rounded-lg px-3 py-2"
                   style={{ background: "color-mix(in srgb, #f59e0b 8%, var(--admin-card-bg))", border: "1px solid color-mix(in srgb, #f59e0b 30%, transparent)" }}
@@ -541,7 +518,6 @@ export default function PageEditor({
           </div>
         </div>
 
-        {/* Campi custom — fuori dai tab */}
         {selectedTemplate && selectedTemplate.fields.length > 0 && (
           <CustomFieldsBlock
             template={selectedTemplate}
