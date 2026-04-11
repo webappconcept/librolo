@@ -1,74 +1,77 @@
+import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { getPageBySlug } from "@/lib/db/pages-queries";
 import { getTemplateById } from "@/lib/db/template-queries";
-import { getSeoPage } from "@/lib/db/seo-queries";
 import { getLayoutComponent } from "@/app/(frontend)/_templates/registry";
-import type { TemplateProps } from "@/app/(frontend)/_templates/types";
-import type { Metadata } from "next";
-import { notFound } from "next/navigation";
-import { parseStyleConfig, parseCustomFields } from "@/app/(frontend)/_templates/types";
+import type { TemplateStyleConfig } from "@/lib/db/schema";
 
-export const dynamic = "force-dynamic";
-
-type Props = {
+interface Props {
   params: Promise<{ slug: string[] }>;
-};
+}
 
-/** Ricostruisce lo slug completo dall'array dei segmenti */
-function buildPathname(slugSegments: string[]): string {
-  return "/" + slugSegments.join("/");
+function parseStyleConfig(raw: string | null | undefined): TemplateStyleConfig {
+  try {
+    return JSON.parse(raw ?? "{}");
+  } catch {
+    return {};
+  }
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const pathname = buildPathname(slug);
-  const seo = await getSeoPage(pathname);
-
-  if (!seo) return {};
-
+  const fullSlug = slug.join("/");
+  const page = await getPageBySlug(fullSlug);
+  if (!page) return {};
   return {
-    title: seo.title ?? undefined,
-    description: seo.description ?? undefined,
-    openGraph: {
-      title: seo.ogTitle ?? seo.title ?? undefined,
-      description: seo.ogDescription ?? seo.description ?? undefined,
-      images: seo.ogImage ? [{ url: seo.ogImage }] : undefined,
-    },
-    robots: seo.robots ?? undefined,
+    title: page.title,
   };
 }
 
 export default async function FrontendPage({ params }: Props) {
   const { slug } = await params;
-  const slugString = slug.join("/");
-  const pathname = buildPathname(slug);
+  const fullSlug = slug.join("/");
 
-  const page = await getPageBySlug(slugString);
+  const page = await getPageBySlug(fullSlug);
   if (!page) notFound();
 
-  // Carica il template se presente
+  if (page.status !== "published") notFound();
+
   const template = page.templateId
     ? await getTemplateById(page.templateId)
     : null;
 
-  const layoutBase = template?.layoutBase ?? "default";
-  const LayoutComponent = getLayoutComponent(layoutBase);
+  // Usa lo slug del template come chiave nel registry.
+  // Se nessun template è assegnato o lo slug non è registrato, cade su TemplateDefault.
+  const templateSlug = template?.slug ?? "default";
+  const LayoutComponent = getLayoutComponent(templateSlug);
 
   const styleConfig = parseStyleConfig(
-    template?.styleConfig ? JSON.stringify(template.styleConfig) : null
-  );
-  const fields = parseCustomFields(
-    page.customFields ? JSON.stringify(page.customFields) : null
+    template?.styleConfig
   );
 
-  const props: TemplateProps = {
-    page,
-    template: template
-      ? { ...template, fields: template.fields ?? [] }
-      : null,
-    fields,
-    styleConfig,
-    isPreview: false,
-  };
+  let customFields: Record<string, unknown> = {};
+  try {
+    customFields = JSON.parse(page.customFields ?? "{}");
+  } catch {
+    // noop
+  }
 
-  return <LayoutComponent {...props} />;
+  const isPreview = false;
+
+  return (
+    <LayoutComponent
+      page={{
+        id: page.id,
+        slug: page.slug,
+        title: page.title,
+        content: page.content,
+        status: page.status,
+        publishedAt: page.publishedAt?.toISOString() ?? null,
+        customFields,
+        templateFields: template?.fields ?? [],
+      }}
+      styleConfig={styleConfig}
+      isPreview={isPreview}
+    />
+  );
 }
