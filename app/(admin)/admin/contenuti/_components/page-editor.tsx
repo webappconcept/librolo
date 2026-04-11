@@ -65,7 +65,7 @@ function TabBtn({ active, onClick, children }: { active: boolean; onClick: () =>
   );
 }
 
-// ─── Custom Fields (inline nel tab Contenuto) ─────────────────────────────────
+// ─── Custom Fields (fuori dai tab, tra titolo e tab bar) ──────────────────────
 function CustomFieldsBlock({ template, customFields, setCustomFields }: {
   template: TemplateWithFields;
   customFields: Record<string, string>;
@@ -78,11 +78,11 @@ function CustomFieldsBlock({ template, customFields, setCustomFields }: {
   }
 
   return (
-    <div className="rounded-xl p-4 mb-0"
-      style={{ background: "var(--admin-page-bg)", border: "1px solid var(--admin-input-border)" }}
+    <div className="rounded-xl p-4 mb-5"
+      style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-card-border)" }}
     >
       <p className="text-xs font-semibold uppercase tracking-wide mb-4" style={{ color: "var(--admin-text-faint)" }}>
-        Campi — {template.name}
+        Campi custom — Template: {template.name}
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {[...template.fields]
@@ -334,7 +334,7 @@ function StrutturaTab({ pages, templates, parentId, setParentId, templateId, set
             {selectedTemplate && (
               <p style={hintStyle}>
                 {selectedTemplate.fields.length > 0
-                  ? <>I campi custom di questo template appariranno nel tab <strong>Contenuto</strong>, sotto il titolo.</>
+                  ? <>I campi custom di questo template appariranno <strong>sopra i tab</strong>, subito sotto il titolo pagina.</>
                   : "Questo template non ha campi custom."}
               </p>
             )}
@@ -524,6 +524,15 @@ export default function PageEditor({
           </div>
         </div>
 
+        {/* Campi custom — fuori dai tab, tra titolo e tab bar */}
+        {selectedTemplate && selectedTemplate.fields.length > 0 && (
+          <CustomFieldsBlock
+            template={selectedTemplate}
+            customFields={customFields}
+            setCustomFields={setCustomFields}
+          />
+        )}
+
         {/* Tabs */}
         <div className="rounded-xl overflow-hidden"
           style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-card-border)" }}
@@ -559,20 +568,9 @@ export default function PageEditor({
 
           {activeTab === "content" && (
             <>
-              {/* Campi custom del template — sopra l'editor, sotto il titolo */}
-              {selectedTemplate && selectedTemplate.fields.length > 0 && (
-                <div className="px-5 pt-5">
-                  <CustomFieldsBlock
-                    template={selectedTemplate}
-                    customFields={customFields}
-                    setCustomFields={setCustomFields}
-                  />
-                </div>
-              )}
-
               {/* Toolbar editor */}
               <div className="flex flex-wrap items-center gap-0.5 px-3 py-2"
-                style={{ borderTop: selectedTemplate && selectedTemplate.fields.length > 0 ? "1px solid var(--admin-divider)" : undefined, borderBottom: "1px solid var(--admin-divider)", background: "var(--admin-page-bg)" }}
+                style={{ borderBottom: "1px solid var(--admin-divider)", background: "var(--admin-page-bg)" }}
               >
                 <TBtn onClick={() => editor?.chain().focus().undo().run()} title="Annulla" disabled={!editor?.can().undo()}><RotateCcw size={15} /></TBtn>
                 <TBtn onClick={() => editor?.chain().focus().redo().run()} title="Ripeti" disabled={!editor?.can().redo()}><RotateCw size={15} /></TBtn>
