@@ -65,6 +65,74 @@ function TabBtn({ active, onClick, children }: { active: boolean; onClick: () =>
   );
 }
 
+// ─── Custom Fields (inline nel tab Contenuto) ─────────────────────────────────
+function CustomFieldsBlock({ template, customFields, setCustomFields }: {
+  template: TemplateWithFields;
+  customFields: Record<string, string>;
+  setCustomFields: (v: Record<string, string>) => void;
+}) {
+  if (template.fields.length === 0) return null;
+
+  function handleField(key: string, value: string) {
+    setCustomFields({ ...customFields, [key]: value });
+  }
+
+  return (
+    <div className="rounded-xl p-4 mb-0"
+      style={{ background: "var(--admin-page-bg)", border: "1px solid var(--admin-input-border)" }}
+    >
+      <p className="text-xs font-semibold uppercase tracking-wide mb-4" style={{ color: "var(--admin-text-faint)" }}>
+        Campi — {template.name}
+      </p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {[...template.fields]
+          .sort((a, b) => a.sortOrder - b.sortOrder)
+          .map((field) => (
+            <div key={field.id} className={field.fieldType === "textarea" || field.fieldType === "richtext" ? "sm:col-span-2" : ""}>
+              <label style={labelStyle}>
+                {field.label}
+                {field.required && <span style={{ color: "#ef4444" }}> *</span>}
+              </label>
+              {field.fieldType === "textarea" || field.fieldType === "richtext" ? (
+                <textarea
+                  value={customFields[field.fieldKey] ?? field.defaultValue ?? ""}
+                  onChange={(e) => handleField(field.fieldKey, e.target.value)}
+                  placeholder={field.placeholder ?? ""}
+                  rows={3}
+                  style={{ ...inputStyle, resize: "vertical" }}
+                />
+              ) : field.fieldType === "toggle" ? (
+                <div className="flex items-center gap-2 py-2">
+                  <input
+                    type="checkbox"
+                    id={`cf-${field.fieldKey}`}
+                    checked={(customFields[field.fieldKey] ?? field.defaultValue) === "true"}
+                    onChange={(e) => handleField(field.fieldKey, e.target.checked ? "true" : "false")}
+                    className="w-4 h-4 rounded"
+                  />
+                  <label htmlFor={`cf-${field.fieldKey}`} className="text-sm" style={{ color: "var(--admin-text)" }}>
+                    {field.label}
+                  </label>
+                </div>
+              ) : (
+                <input
+                  type={field.fieldType === "date" ? "date" : field.fieldType === "number" ? "number" : "text"}
+                  value={customFields[field.fieldKey] ?? field.defaultValue ?? ""}
+                  onChange={(e) => handleField(field.fieldKey, e.target.value)}
+                  placeholder={field.placeholder ?? ""}
+                  style={inputStyle}
+                />
+              )}
+              {field.placeholder && field.fieldType !== "toggle" && (
+                <p style={hintStyle}>{field.placeholder}</p>
+              )}
+            </div>
+          ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── SEO Tab ──────────────────────────────────────────────────────────────────
 function SeoTab({ seo, slug, domain, appName, pageTitle }: {
   seo?: SeoPage | null; slug: string; domain: string; appName: string; pageTitle: string;
@@ -189,24 +257,19 @@ function PubTab({ status, setStatus, publishedAt, setPublishedAt, expiresAt, set
 }
 
 // ─── Struttura Tab ────────────────────────────────────────────────────────────
-function StrutturaTab({ pages, templates, parentId, setParentId, templateId, setTemplateId, customFields, setCustomFields, pageType, setPageType, currentPageId }: {
+function StrutturaTab({ pages, templates, parentId, setParentId, templateId, setTemplateId, setCustomFields, pageType, setPageType, currentPageId }: {
   pages: Page[];
   templates: TemplateWithFields[];
   parentId: number | null;
   setParentId: (v: number | null) => void;
   templateId: number | null;
   setTemplateId: (v: number | null) => void;
-  customFields: Record<string, string>;
   setCustomFields: (v: Record<string, string>) => void;
   pageType: string;
   setPageType: (v: string) => void;
   currentPageId?: number;
 }) {
   const selectedTemplate = templates.find((t) => t.id === templateId) ?? null;
-
-  function handleCustomField(key: string, value: string) {
-    setCustomFields({ ...customFields, [key]: value });
-  }
 
   return (
     <div className="space-y-5">
@@ -243,14 +306,14 @@ function StrutturaTab({ pages, templates, parentId, setParentId, templateId, set
         <p style={hintStyle}>Assegnare una pagina padre costruisce la gerarchia del sito (es. /servizi/consulenza).</p>
       </div>
 
-      {/* Template grafico */}
+      {/* Template */}
       <div className="space-y-1.5">
-        <label style={labelStyle}>Template grafico (opzionale)</label>
+        <label style={labelStyle}>Template (opzionale)</label>
         {templates.length === 0 ? (
           <div className="rounded-lg px-4 py-3 text-sm"
             style={{ background: "var(--admin-page-bg)", border: "1px solid var(--admin-input-border)", color: "var(--admin-text-faint)" }}
           >
-            Nessun template creato. <a href="/admin/template" className="underline" style={{ color: "var(--admin-accent)" }}>Crea un template</a> per personalizzare il layout.
+            Nessun template creato. <a href="/admin/template" className="underline" style={{ color: "var(--admin-accent)" }}>Crea un template</a> per aggiungere campi custom alla pagina.
           </div>
         ) : (
           <>
@@ -259,77 +322,25 @@ function StrutturaTab({ pages, templates, parentId, setParentId, templateId, set
               onChange={(e) => {
                 const newId = e.target.value ? Number(e.target.value) : null;
                 setTemplateId(newId);
-                // Reset custom fields quando cambia template
                 setCustomFields({});
               }}
               style={inputStyle}
             >
-              <option value="">— Nessun template (layout default) —</option>
+              <option value="">— Nessun template —</option>
               {templates.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name} ({t.layoutBase})
-                </option>
+                <option key={t.id} value={t.id}>{t.name}</option>
               ))}
             </select>
             {selectedTemplate && (
               <p style={hintStyle}>
-                Layout: <strong>{selectedTemplate.layoutBase}</strong> — {selectedTemplate.description ?? ""}
+                {selectedTemplate.fields.length > 0
+                  ? <>I campi custom di questo template appariranno nel tab <strong>Contenuto</strong>, sotto il titolo.</>
+                  : "Questo template non ha campi custom."}
               </p>
             )}
           </>
         )}
       </div>
-
-      {/* Campi custom del template selezionato */}
-      {selectedTemplate && selectedTemplate.fields.length > 0 && (
-        <div className="rounded-xl p-4 space-y-4"
-          style={{ background: "var(--admin-page-bg)", border: "1px solid var(--admin-input-border)" }}
-        >
-          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--admin-text-faint)" }}>
-            Campi del template — {selectedTemplate.name}
-          </p>
-          {[...selectedTemplate.fields]
-            .sort((a, b) => a.sortOrder - b.sortOrder)
-            .map((field) => (
-              <div key={field.id} className="space-y-1.5">
-                <label style={labelStyle}>
-                  {field.label}
-                  {field.required && <span style={{ color: "#ef4444" }}> *</span>}
-                </label>
-                {field.fieldType === "textarea" ? (
-                  <textarea
-                    value={customFields[field.fieldKey] ?? field.defaultValue ?? ""}
-                    onChange={(e) => handleCustomField(field.fieldKey, e.target.value)}
-                    placeholder={field.placeholder ?? ""}
-                    rows={3}
-                    style={{ ...inputStyle, resize: "vertical" }}
-                  />
-                ) : field.fieldType === "toggle" ? (
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id={`cf-${field.fieldKey}`}
-                      checked={(customFields[field.fieldKey] ?? field.defaultValue) === "true"}
-                      onChange={(e) => handleCustomField(field.fieldKey, e.target.checked ? "true" : "false")}
-                      className="w-4 h-4 rounded"
-                    />
-                    <label htmlFor={`cf-${field.fieldKey}`} className="text-sm" style={{ color: "var(--admin-text)" }}>
-                      {field.label}
-                    </label>
-                  </div>
-                ) : (
-                  <input
-                    type={field.fieldType === "date" ? "date" : field.fieldType === "number" ? "number" : "text"}
-                    value={customFields[field.fieldKey] ?? field.defaultValue ?? ""}
-                    onChange={(e) => handleCustomField(field.fieldKey, e.target.value)}
-                    placeholder={field.placeholder ?? ""}
-                    style={inputStyle}
-                  />
-                )}
-              </div>
-            ))}
-        </div>
-      )}
     </div>
   );
 }
@@ -405,6 +416,9 @@ export default function PageEditor({
   function handleInsertPlaceholder(token: string) {
     editor?.chain().focus().insertContent(token).run();
   }
+
+  // Template selezionato con i suoi campi
+  const selectedTemplate = templates.find((t) => t.id === templateId) ?? null;
 
   return (
     <>
@@ -528,7 +542,7 @@ export default function PageEditor({
             <TabBtn active={activeTab === "struttura"} onClick={() => setActiveTab("struttura")}>
               <GitBranch size={14} />
               Struttura
-              {(parentId || templateId) && (
+              {parentId && (
                 <span className="w-1.5 h-1.5 rounded-full ml-0.5" style={{ background: "var(--admin-accent)" }} />
               )}
             </TabBtn>
@@ -545,8 +559,20 @@ export default function PageEditor({
 
           {activeTab === "content" && (
             <>
+              {/* Campi custom del template — sopra l'editor, sotto il titolo */}
+              {selectedTemplate && selectedTemplate.fields.length > 0 && (
+                <div className="px-5 pt-5">
+                  <CustomFieldsBlock
+                    template={selectedTemplate}
+                    customFields={customFields}
+                    setCustomFields={setCustomFields}
+                  />
+                </div>
+              )}
+
+              {/* Toolbar editor */}
               <div className="flex flex-wrap items-center gap-0.5 px-3 py-2"
-                style={{ borderBottom: "1px solid var(--admin-divider)", background: "var(--admin-page-bg)" }}
+                style={{ borderTop: selectedTemplate && selectedTemplate.fields.length > 0 ? "1px solid var(--admin-divider)" : undefined, borderBottom: "1px solid var(--admin-divider)", background: "var(--admin-page-bg)" }}
               >
                 <TBtn onClick={() => editor?.chain().focus().undo().run()} title="Annulla" disabled={!editor?.can().undo()}><RotateCcw size={15} /></TBtn>
                 <TBtn onClick={() => editor?.chain().focus().redo().run()} title="Ripeti" disabled={!editor?.can().redo()}><RotateCw size={15} /></TBtn>
@@ -585,7 +611,6 @@ export default function PageEditor({
                 setParentId={setParentId}
                 templateId={templateId}
                 setTemplateId={setTemplateId}
-                customFields={customFields}
                 setCustomFields={setCustomFields}
                 pageType={pageType}
                 setPageType={setPageType}

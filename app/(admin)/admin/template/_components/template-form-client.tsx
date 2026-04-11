@@ -29,24 +29,15 @@ interface FieldDraft {
   options: string;
 }
 
-interface LayoutBaseOption {
-  key: string;
-  label: string;
-  description: string;
-}
-
 interface TemplateFormClientProps {
   template?: {
     id: number;
     name: string;
     slug: string;
     description: string;
-    layoutBase: string;
-    styleConfig: Record<string, string>;
     fields: TemplateField[];
     isSystem: boolean;
   };
-  layoutBases: LayoutBaseOption[];
   saveAction: (formData: FormData) => Promise<void>;
 }
 
@@ -56,23 +47,12 @@ function uid() {
 
 export default function TemplateFormClient({
   template,
-  layoutBases,
   saveAction,
 }: TemplateFormClientProps) {
   const [name, setName] = useState(template?.name ?? "");
   const [slug, setSlug] = useState(template?.slug ?? "");
   const [slugManual, setSlugManual] = useState(!!template?.slug);
   const [description, setDescription] = useState(template?.description ?? "");
-  const [layoutBase, setLayoutBase] = useState(template?.layoutBase ?? "default");
-
-  const sc = template?.styleConfig ?? {};
-  const [colorPrimary, setColorPrimary] = useState(sc.colorPrimary ?? "#01696f");
-  const [colorBg, setColorBg] = useState(sc.colorBg ?? "#ffffff");
-  const [colorText, setColorText] = useState(sc.colorText ?? "#1a1a1a");
-  const [fontBody, setFontBody] = useState(sc.fontBody ?? "");
-  const [fontDisplay, setFontDisplay] = useState(sc.fontDisplay ?? "");
-  const [spacing, setSpacing] = useState(sc.spacing ?? "normal");
-  const [borderRadius, setBorderRadius] = useState(sc.borderRadius ?? "medium");
 
   const [fields, setFields] = useState<FieldDraft[]>(
     (template?.fields ?? []).map((f) => ({
@@ -90,7 +70,6 @@ export default function TemplateFormClient({
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
   const dismissToast = useCallback(() => setToast(null), []);
-
   const formRef = useRef<HTMLFormElement>(null);
 
   function autoSlug(val: string) {
@@ -135,11 +114,8 @@ export default function TemplateFormClient({
         }))
       ));
       await saveAction(fd);
-      // Se saveAction non fa redirect, mostra successo
       setToast({ message: "Template salvato con successo", type: "success" });
     } catch (err) {
-      // redirect() di Next.js lancia internamente un'eccezione:
-      // la lasciamo propagare normalmente senza mostrare errore
       if (isRedirectError(err)) throw err;
       console.error(err);
       setToast({ message: "Errore durante il salvataggio", type: "error" });
@@ -164,11 +140,7 @@ export default function TemplateFormClient({
   return (
     <>
       {toast && (
-        <AdminToast
-          message={toast.message}
-          type={toast.type}
-          onDismiss={dismissToast}
-        />
+        <AdminToast message={toast.message} type={toast.type} onDismiss={dismissToast} />
       )}
 
       <form ref={formRef} onSubmit={handleSubmit}>
@@ -200,86 +172,6 @@ export default function TemplateFormClient({
                 rows={2} className={inputCls} style={inputStyle}
                 placeholder="Breve descrizione dell'uso del template…"
               />
-            </div>
-          </div>
-        </section>
-
-        {/* Layout base */}
-        <section className="rounded-xl p-5 mb-5" style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-border)" }}>
-          <h2 className="text-sm font-semibold mb-4" style={{ color: "var(--admin-text)" }}>Layout base</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {layoutBases.map((lb) => (
-              <label key={lb.key} className="relative flex flex-col gap-1 rounded-lg p-3 cursor-pointer"
-                style={{
-                  background: layoutBase === lb.key ? "var(--admin-accent-light, #e0f2f1)" : "var(--admin-input-bg)",
-                  border: `2px solid ${layoutBase === lb.key ? "var(--admin-accent)" : "var(--admin-border)"}`,
-                }}
-              >
-                <input type="radio" name="layoutBase" value={lb.key}
-                  checked={layoutBase === lb.key} onChange={() => setLayoutBase(lb.key)}
-                  className="sr-only"
-                />
-                <span className="text-sm font-semibold" style={{ color: "var(--admin-text)" }}>{lb.label}</span>
-                <span className="text-xs" style={{ color: "var(--admin-text-muted)" }}>{lb.description}</span>
-              </label>
-            ))}
-          </div>
-        </section>
-
-        {/* Stile grafico */}
-        <section className="rounded-xl p-5 mb-5" style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-border)" }}>
-          <h2 className="text-sm font-semibold mb-4" style={{ color: "var(--admin-text)" }}>Stile grafico</h2>
-          <div className="grid grid-cols-3 gap-4">
-            {[
-              { name: "colorPrimary", label: "Colore primario", value: colorPrimary, set: setColorPrimary },
-              { name: "colorBg",      label: "Sfondo pagina",   value: colorBg,      set: setColorBg },
-              { name: "colorText",    label: "Testo",           value: colorText,    set: setColorText },
-            ].map(({ name: n, label, value, set }) => (
-              <div key={n}>
-                <label className={labelCls} style={{ color: "var(--admin-text-muted)" }}>{label}</label>
-                <div className="flex items-center gap-2">
-                  <input type="color" name={n} value={value} onChange={(e) => set(e.target.value)}
-                    className="w-10 h-9 rounded cursor-pointer border-0 p-0.5"
-                    style={{ background: "var(--admin-input-bg)", border: "1px solid var(--admin-border)" }}
-                  />
-                  <input type="text" value={value} onChange={(e) => set(e.target.value)}
-                    className={inputCls} style={{ ...inputStyle, flex: 1 }}
-                  />
-                </div>
-              </div>
-            ))}
-            <div>
-              <label className={labelCls} style={{ color: "var(--admin-text-muted)" }}>Font body</label>
-              <input name="fontBody" value={fontBody} onChange={(e) => setFontBody(e.target.value)}
-                className={inputCls} style={inputStyle} placeholder="'Inter', sans-serif"
-              />
-            </div>
-            <div>
-              <label className={labelCls} style={{ color: "var(--admin-text-muted)" }}>Font display</label>
-              <input name="fontDisplay" value={fontDisplay} onChange={(e) => setFontDisplay(e.target.value)}
-                className={inputCls} style={inputStyle} placeholder="'Playfair Display', serif"
-              />
-            </div>
-            <div>
-              <label className={labelCls} style={{ color: "var(--admin-text-muted)" }}>Spaziatura</label>
-              <select name="spacing" value={spacing} onChange={(e) => setSpacing(e.target.value)}
-                className={inputCls} style={inputStyle}
-              >
-                <option value="compact">Compatta</option>
-                <option value="normal">Normale</option>
-                <option value="spacious">Spaziosa</option>
-              </select>
-            </div>
-            <div>
-              <label className={labelCls} style={{ color: "var(--admin-text-muted)" }}>Border radius</label>
-              <select name="borderRadius" value={borderRadius} onChange={(e) => setBorderRadius(e.target.value)}
-                className={inputCls} style={inputStyle}
-              >
-                <option value="none">Nessuno</option>
-                <option value="small">Piccolo</option>
-                <option value="medium">Medio</option>
-                <option value="large">Grande</option>
-              </select>
             </div>
           </div>
         </section>
@@ -376,9 +268,7 @@ export default function TemplateFormClient({
 
         {/* Bottoni */}
         <div className="flex items-center gap-3">
-          <button
-            type="submit"
-            disabled={saving}
+          <button type="submit" disabled={saving}
             className="flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-70 transition-opacity"
             style={{ background: "var(--admin-accent)" }}
           >
