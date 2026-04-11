@@ -1,7 +1,7 @@
 "use client";
 
 import type { Page, PageTemplate } from "@/lib/db/schema";
-import { FileText, Globe, Layers, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { FileText, Globe, PanelTop, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { deletePageAction } from "../actions";
@@ -99,7 +99,7 @@ export default function PageManager({
                   )}
                   {tplName && (
                     <p className="flex items-center gap-1 text-xs truncate" style={{ color: "var(--admin-accent)" }}>
-                      <Layers size={11} />
+                      <PanelTop size={11} />
                       {tplName}
                     </p>
                   )}
@@ -121,7 +121,6 @@ export default function PageManager({
                   </span>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                  {/* Link basato su ID — invariante anche al cambio slug */}
                   <button onClick={() => router.push(`/admin/contenuti/${page.id}/edit`)}
                     className="p-2 rounded-lg transition-colors" style={{ color: "var(--admin-text-faint)" }}
                     title="Modifica"
