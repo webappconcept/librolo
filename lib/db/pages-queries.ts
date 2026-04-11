@@ -1,6 +1,6 @@
 import { db } from "@/lib/db/drizzle";
 import { pages, pageTemplates, templateFields, type NewPage, type Page, type PageTemplate, type TemplateField } from "@/lib/db/schema";
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, inArray } from "drizzle-orm";
 
 // ---------------------------------------------------------------------------
 // Pages
@@ -124,8 +124,60 @@ export async function upsertPage(data: NewPage & { id?: number }): Promise<numbe
   }
 }
 
+/**
+ * Raccoglie ricorsivamente tutti gli id discendenti di una pagina (figli, nipoti, …).
+ */
+async function collectDescendantIds(rootId: number): Promise<number[]> {
+  const all = await db.select({ id: pages.id, parentId: pages.parentId }).from(pages);
+  const ids: number[] = [];
+  const queue = [rootId];
+  while (queue.length) {
+    const current = queue.shift()!;
+    const children = all.filter((p) => p.parentId === current);
+    for (const child of children) {
+      ids.push(child.id);
+      queue.push(child.id);
+    }
+  }
+  return ids;
+}
+
+/**
+ * Elimina una pagina e TUTTI i suoi discendenti (cascade applicativo).
+ * Ritorna il numero totale di righe eliminate (inclusa la pagina radice).
+ */
+export async function deletePageCascade(slug: string): Promise<number> {
+  const [root] = await db.select().from(pages).where(eq(pages.slug, slug)).limit(1);
+  if (!root) return 0;
+
+  const descendantIds = await collectDescendantIds(root.id);
+  const allIds = [...descendantIds, root.id];
+
+  await db.delete(pages).where(inArray(pages.id, allIds));
+  return allIds.length;
+}
+
 export async function deletePage(slug: string): Promise<void> {
   await db.delete(pages).where(eq(pages.slug, slug));
+}
+
+/**
+ * Conta i discendenti diretti e totali di una pagina dato il suo id.
+ */
+export async function countDescendants(pageId: number): Promise<{ direct: number; total: number }> {
+  const all = await db.select({ id: pages.id, parentId: pages.parentId }).from(pages);
+  const direct = all.filter((p) => p.parentId === pageId).length;
+  const ids: number[] = [];
+  const queue = [pageId];
+  while (queue.length) {
+    const current = queue.shift()!;
+    const children = all.filter((p) => p.parentId === current);
+    for (const child of children) {
+      ids.push(child.id);
+      queue.push(child.id);
+    }
+  }
+  return { direct, total: ids.length };
 }
 
 /** Inverte lo status published <-> draft aggiornando publishedAt se necessario */

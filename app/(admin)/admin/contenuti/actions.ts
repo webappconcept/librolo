@@ -1,6 +1,6 @@
 "use server";
 
-import { deletePage, getPageBySlug, togglePageStatus, upsertPage } from "@/lib/db/pages-queries";
+import { deletePageCascade, getPageBySlug, togglePageStatus, upsertPage } from "@/lib/db/pages-queries";
 import { upsertRedirect } from "@/lib/db/redirects-queries";
 import { deleteSeoPage, getSeoPage, renameSeoPage } from "@/lib/db/seo-queries";
 import { revalidatePath } from "next/cache";
@@ -124,19 +124,19 @@ export async function upsertPageAction(
 
 export async function deletePageAction(
   slug: string,
-): Promise<{ error?: string; success?: boolean }> {
+): Promise<{ error?: string; success?: boolean; deleted?: number }> {
   if (!slug) return { error: "Slug mancante" };
   try {
-    await deletePage(slug);
+    const deleted = await deletePageCascade(slug);
     await deleteSeoPage(`/${slug}`);
     revalidatePath("/admin/contenuti");
     revalidatePath(`/${slug}`);
     revalidatePath("/admin/seo/meta-tags");
+    return { success: true, deleted };
   } catch (err) {
     console.error("[deletePageAction] error:", err);
     return { error: "Errore nell'eliminazione. Riprova." };
   }
-  return { success: true };
 }
 
 export async function getPageForEditAction(slug: string) {

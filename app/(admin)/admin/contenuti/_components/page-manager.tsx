@@ -1,5 +1,6 @@
 "use client";
 
+import ConfirmModal from "@/app/(admin)/admin/_components/confirm-modal";
 import Tooltip from "@/app/(admin)/admin/_components/tooltip";
 import type { Page, PageTemplate } from "@/lib/db/schema";
 import { ChevronRight, EyeOff, FileText, GitFork, Globe, PanelTop, Pencil, Plus, Search, Trash2 } from "lucide-react";
@@ -8,6 +9,13 @@ import { useState, useTransition } from "react";
 import { deletePageAction, togglePageStatusAction } from "../actions";
 
 type TemplateWithFields = PageTemplate & { fields: import("@/lib/db/schema").TemplateField[] };
+
+interface DeleteTarget {
+  slug: string;
+  title: string;
+  /** Numero totale di discendenti (figli + nipoti + …) */
+  descendants: number;
+}
 
 // ─── PageRow ──────────────────────────────────────────────────────────────────
 function PageRow({
@@ -18,7 +26,7 @@ function PageRow({
   expandedIds,
   toggleExpand,
   onEdit,
-  onDelete,
+  onDeleteRequest,
   onNewChild,
   onToggleStatus,
   pendingToggleId,
@@ -31,7 +39,7 @@ function PageRow({
   expandedIds: Set<number>;
   toggleExpand: (id: number) => void;
   onEdit: (id: number) => void;
-  onDelete: (slug: string, title: string) => void;
+  onDeleteRequest: (target: DeleteTarget) => void;
   onNewChild: (id: number) => void;
   onToggleStatus: (id: number, status: string) => void;
   pendingToggleId: number | null;
@@ -45,12 +53,16 @@ function PageRow({
   const isPendingToggle = pendingToggleId === page.id;
   const indent = depth * 20;
 
-  // Clicking the row body (not the action buttons) toggles expand when hasChildren
+  /** Conta ricorsivamente tutti i discendenti dalla lista già in memoria */
+  function countDescendants(id: number): number {
+    const direct = allPages.filter((p) => p.parentId === id);
+    return direct.reduce((acc, child) => acc + 1 + countDescendants(child.id), 0);
+  }
+
   function handleRowClick() {
     if (hasChildren) toggleExpand(page.id);
   }
 
-  // Prevent row click from firing when an action button is clicked
   function stopRow(e: React.MouseEvent) {
     e.stopPropagation();
   }
@@ -71,7 +83,7 @@ function PageRow({
         onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.borderColor = "var(--admin-input-border)")}
         onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.borderColor = "var(--admin-card-border)")}
       >
-        {/* Chevron — purely visual, click handled by row */}
+        {/* Chevron — visuale puro */}
         <span
           className="flex items-center justify-center w-6 h-6 rounded shrink-0"
           style={{ color: hasChildren ? "var(--admin-text-muted)" : "transparent" }}
@@ -154,7 +166,7 @@ function PageRow({
           {isPublished ? <><Globe size={10} /> Pubblicata</> : <>Bozza</>}
         </span>
 
-        {/* Actions — stopPropagation so row click doesn't fire */}
+        {/* Actions — stopPropagation evita toggle riga */}
         <div className="flex items-center gap-0.5 shrink-0" onClick={stopRow}>
 
           <Tooltip label="Nuova pagina figlia" side="top">
@@ -228,7 +240,13 @@ function PageRow({
 
           <Tooltip label="Elimina pagina" side="top">
             <button
-              onClick={() => onDelete(page.slug, page.title)}
+              onClick={() =>
+                onDeleteRequest({
+                  slug: page.slug,
+                  title: page.title,
+                  descendants: countDescendants(page.id),
+                })
+              }
               className="p-1.5 rounded-lg transition-colors"
               style={{ color: "var(--admin-text-faint)" }}
               onMouseEnter={(e) => {
@@ -247,7 +265,7 @@ function PageRow({
         </div>
       </div>
 
-      {/* Children — rendered only when expanded */}
+      {/* Children */}
       {(isExpanded || searchActive) &&
         children.map((child) => (
           <PageRow
@@ -259,7 +277,7 @@ function PageRow({
             expandedIds={expandedIds}
             toggleExpand={toggleExpand}
             onEdit={onEdit}
-            onDelete={onDelete}
+            onDeleteRequest={onDeleteRequest}
             onNewChild={onNewChild}
             onToggleStatus={onToggleStatus}
             pendingToggleId={pendingToggleId}
@@ -282,6 +300,8 @@ export default function PageManager({
   const [search, setSearch] = useState("");
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
   const [pendingToggleId, setPendingToggleId] = useState<number | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [, startTransition] = useTransition();
 
   const searchActive = search.trim().length > 0;
@@ -318,20 +338,13 @@ export default function PageManager({
     });
   }
 
-  function handleDelete(slug: string, title: string) {
-    const directChildren = initialPages.filter(
-      (p) => p.parentId === initialPages.find((x) => x.slug === slug)?.id,
-    ).length;
-    const childWarning =
-      directChildren > 0
-        ? `\n\nATTENZIONE: questa pagina ha ${directChildren} ${directChildren === 1 ? "pagina figlia" : "pagine figlie"} che rimarranno orfane.`
-        : "";
-    if (!confirm(`Eliminare la pagina "${title}"?\n\nL'URL /${slug} non sarà più disponibile.${childWarning}`))
-      return;
-    startTransition(async () => {
-      await deletePageAction(slug);
-      router.refresh();
-    });
+  async function handleConfirmDelete() {
+    if (!deleteTarget) return;
+    setDeleteLoading(true);
+    await deletePageAction(deleteTarget.slug);
+    setDeleteLoading(false);
+    setDeleteTarget(null);
+    startTransition(() => router.refresh());
   }
 
   function handleToggleStatus(id: number, currentStatus: string) {
@@ -341,6 +354,39 @@ export default function PageManager({
       router.refresh();
       setPendingToggleId(null);
     });
+  }
+
+  // Messaggio dinamico per la modale di eliminazione
+  function buildDeleteMessage(target: DeleteTarget): React.ReactNode {
+    return (
+      <span>
+        Stai per eliminare la pagina{" "}
+        <strong style={{ color: "var(--admin-text, #cdccca)" }}>{target.title}</strong>
+        {" "}(<code style={{ fontSize: "12px" }}>/{target.slug}</code>).
+        {target.descendants > 0 && (
+          <>
+            <br /><br />
+            <span style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "6px 10px",
+              borderRadius: "8px",
+              background: "rgba(220,38,38,0.1)",
+              color: "#f87171",
+              fontSize: "13px",
+              fontWeight: 500,
+            }}>
+              ⚠️ Verranno eliminate anche{" "}
+              <strong>{target.descendants}</strong>{" "}
+              {target.descendants === 1 ? "pagina figlia" : "pagine figlie"}.
+            </span>
+          </>
+        )}
+        <br /><br />
+        <span style={{ fontSize: "13px" }}>Questa operazione è <strong>irreversibile</strong>.</span>
+      </span>
+    );
   }
 
   return (
@@ -414,7 +460,7 @@ export default function PageManager({
               expandedIds={expandedIds}
               toggleExpand={toggleExpand}
               onEdit={(id) => router.push(`/admin/contenuti/${id}/edit`)}
-              onDelete={handleDelete}
+              onDeleteRequest={setDeleteTarget}
               onNewChild={(id) => router.push(`/admin/contenuti/new?parentId=${id}`)}
               onToggleStatus={handleToggleStatus}
               pendingToggleId={pendingToggleId}
@@ -422,6 +468,21 @@ export default function PageManager({
             />
           ))}
         </div>
+      )}
+
+      {/* Modale di conferma eliminazione */}
+      {deleteTarget && (
+        <ConfirmModal
+          open={!!deleteTarget}
+          title="Elimina pagina"
+          message={buildDeleteMessage(deleteTarget)}
+          confirmLabel="Elimina"
+          cancelLabel="Annulla"
+          variant="danger"
+          loading={deleteLoading}
+          onConfirm={handleConfirmDelete}
+          onCancel={() => setDeleteTarget(null)}
+        />
       )}
     </>
   );
