@@ -75,7 +75,7 @@ export default function PageManager({
             const tplName = templates.find((t) => t.id === page.templateId)?.name;
             const parentTitle = initialPages.find((p) => p.id === page.parentId)?.title;
             return (
-              <div key={page.slug}
+              <div key={page.id}
                 className="flex items-center gap-3 px-4 py-3 rounded-xl transition-colors"
                 style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-card-border)" }}
                 onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.borderColor = "var(--admin-input-border)")}
@@ -120,7 +120,8 @@ export default function PageManager({
                   </span>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                  <button onClick={() => router.push(`/admin/contenuti/${page.slug}/edit`)}
+                  {/* Link basato su ID — invariante anche al cambio slug */}
+                  <button onClick={() => router.push(`/admin/contenuti/${page.id}/edit`)}
                     className="p-2 rounded-lg transition-colors" style={{ color: "var(--admin-text-faint)" }}
                     title="Modifica"
                     onMouseEnter={(e) => { e.currentTarget.style.background = "var(--admin-hover-bg)"; e.currentTarget.style.color = "var(--admin-text-muted)"; }}
