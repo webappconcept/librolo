@@ -1,5 +1,8 @@
 // app/(admin)/admin/page.tsx
-import { getFullDashboardStats, getUserGrowthChart } from "@/lib/db/admin-queries";
+import {
+  getFullDashboardStats,
+  getUserGrowthChart,
+} from "@/lib/db/admin-queries";
 import { getAppSettings } from "@/lib/db/settings-queries";
 import {
   BookOpen,
@@ -12,8 +15,8 @@ import {
   Users,
 } from "lucide-react";
 import { DashboardCharts } from "./_components/dashboard-charts";
-import { RecentActivity } from "./_components/recent-activity";
 import KpiCard from "./_components/kpi-card";
+import { RecentActivity } from "./_components/recent-activity";
 
 export default async function AdminDashboardPage() {
   const [stats, growthData, settings] = await Promise.all([
@@ -24,19 +27,29 @@ export default async function AdminDashboardPage() {
 
   const now = new Date();
   const greeting =
-    now.getHours() < 12 ? "Buongiorno" : now.getHours() < 18 ? "Buon pomeriggio" : "Buonasera";
+    now.getHours() < 12
+      ? "Buongiorno"
+      : now.getHours() < 18
+        ? "Buon pomeriggio"
+        : "Buonasera";
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h2 className="text-xl font-bold" style={{ color: "var(--admin-text)" }}>
-            {greeting} 👋
+          <h2
+            className="text-xl font-bold"
+            style={{ color: "var(--admin-text)" }}>
+            {greeting}
           </h2>
-          <p className="text-sm mt-0.5" style={{ color: "var(--admin-text-muted)" }}>
+          <p
+            className="text-sm mt-0.5"
+            style={{ color: "var(--admin-text-muted)" }}>
             Panoramica in tempo reale di{" "}
-            <span className="font-semibold" style={{ color: "var(--admin-accent)" }}>
+            <span
+              className="font-semibold"
+              style={{ color: "var(--admin-accent)" }}>
               {settings.app_name}
             </span>
           </p>
@@ -47,8 +60,7 @@ export default async function AdminDashboardPage() {
             background: "var(--admin-card-bg)",
             border: "1px solid var(--admin-card-border)",
             color: "var(--admin-text-muted)",
-          }}
-        >
+          }}>
           <span
             className="w-1.5 h-1.5 rounded-full animate-pulse"
             style={{ background: "#22c55e" }}
@@ -61,8 +73,7 @@ export default async function AdminDashboardPage() {
       <section>
         <h3
           className="text-xs font-semibold uppercase tracking-widest mb-3"
-          style={{ color: "var(--admin-text-faint)" }}
-        >
+          style={{ color: "var(--admin-text-faint)" }}>
           Utenti
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -105,8 +116,7 @@ export default async function AdminDashboardPage() {
       <section>
         <h3
           className="text-xs font-semibold uppercase tracking-widest mb-3"
-          style={{ color: "var(--admin-text-faint)" }}
-        >
+          style={{ color: "var(--admin-text-faint)" }}>
           Contenuti & CMS
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
