@@ -14,7 +14,6 @@ export async function saveTemplateAction(formData: FormData) {
   const name = (formData.get("name") as string).trim();
   const slug = (formData.get("slug") as string).trim();
   const description = (formData.get("description") as string | null)?.trim() || null;
-  const layoutBase = (formData.get("layoutBase") as string) || "default";
 
   const styleConfig = {
     fontBody: formData.get("fontBody") as string | null,
@@ -41,7 +40,6 @@ export async function saveTemplateAction(formData: FormData) {
     name,
     slug,
     description,
-    layoutBase,
     styleConfig: JSON.stringify(styleConfig),
   };
 
