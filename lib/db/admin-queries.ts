@@ -1,6 +1,6 @@
 // lib/db/admin-queries.ts
 import { db } from "@/lib/db/drizzle";
-import { activityLogs, permissions, rolePermissions, roles, users } from "@/lib/db/schema";
+import { activityLogs, pageTemplates, pages, permissions, redirects, rolePermissions, roles, users } from "@/lib/db/schema";
 import { and, count, desc, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { unstable_noStore as noStore } from "next/cache";
 import "server-only";
@@ -71,6 +71,58 @@ export async function getDashboardStats() {
   const trendPercent = newLast > 0 ? Math.round(((newThis - newLast) / newLast) * 100) : newThis > 0 ? 100 : 0;
 
   return { totalUsers: total, newUsersThisMonth: newThis, trendPercent, premiumUsers: premium, freeUsers: free, verifiedUsers: verified, conversionRate: total > 0 ? Math.round((premium / total) * 100) : 0 };
+}
+
+/**
+ * Stats complete per la nuova dashboard — utenti, CMS, ruoli, redirect, attività recente.
+ * Tutti i conteggi vengono eseguiti in parallelo con Promise.all.
+ */
+export async function getFullDashboardStats() {
+  noStore();
+
+  const [
+    userStats,
+    pagesPublished,
+    pagesDraft,
+    templatesCount,
+    rolesCount,
+    staffCount,
+    redirectsCount,
+    recentActivity,
+  ] = await Promise.all([
+    getDashboardStats(),
+    db.select({ count: count() }).from(pages).where(eq(pages.status, "published")),
+    db.select({ count: count() }).from(pages).where(eq(pages.status, "draft")),
+    db.select({ count: count() }).from(pageTemplates),
+    db.select({ count: count() }).from(roles).where(eq(roles.isSystem, false)),
+    db
+      .select({ count: count() })
+      .from(users)
+      .where(and(isNull(users.deletedAt), hasAdminPermission(users))),
+    db.select({ count: count() }).from(redirects).where(eq(redirects.isActive, true)),
+    db
+      .select({
+        id: activityLogs.id,
+        action: activityLogs.action,
+        userEmail: users.email,
+        timestamp: activityLogs.timestamp,
+      })
+      .from(activityLogs)
+      .leftJoin(users, eq(activityLogs.userId, users.id))
+      .orderBy(desc(activityLogs.timestamp))
+      .limit(8),
+  ]);
+
+  return {
+    ...userStats,
+    pagesPublished: pagesPublished[0].count,
+    pagesDraft: pagesDraft[0].count,
+    templatesCount: templatesCount[0].count,
+    rolesCount: rolesCount[0].count,
+    staffCount: staffCount[0].count,
+    redirectsCount: redirectsCount[0].count,
+    recentActivity,
+  };
 }
 
 export async function getUserGrowthChart() {
