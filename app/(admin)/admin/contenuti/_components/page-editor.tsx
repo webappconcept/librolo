@@ -429,6 +429,8 @@ export default function PageEditor({
       `}</style>
 
       <form action={action} className="space-y-0">
+        {/* id nascosto: necessario per UPDATE WHERE id in edit mode (evita duplicati al cambio slug) */}
+        {isEdit && page?.id && <input type="hidden" name="id" value={page.id} />}
         {isEdit && <input type="hidden" name="originalSlug" value={originalSlug} />}
         <input type="hidden" name="content" ref={contentRef} />
         <input type="hidden" name="status" value={status} />
