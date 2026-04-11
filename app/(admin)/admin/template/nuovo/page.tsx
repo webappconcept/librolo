@@ -6,10 +6,7 @@ export const dynamic = "force-dynamic";
 
 export default function NuovoTemplatePage() {
   return (
-    <div className="p-6 max-w-3xl">
-      <h1 className="text-xl font-bold mb-6" style={{ color: "var(--admin-text)" }}>
-        Nuovo template
-      </h1>
+    <div className="p-4 sm:p-6 max-w-3xl">
       <TemplateFormClient saveAction={saveTemplateAction} />
     </div>
   );

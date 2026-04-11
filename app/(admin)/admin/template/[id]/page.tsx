@@ -23,10 +23,7 @@ export default async function EditTemplatePage({
   }
 
   return (
-    <div className="p-6 max-w-3xl">
-      <h1 className="text-xl font-bold mb-6" style={{ color: "var(--admin-text)" }}>
-        Modifica template: {template.name}
-      </h1>
+    <div className="p-4 sm:p-6 max-w-3xl">
       <TemplateFormClient
         template={{
           id: template.id,

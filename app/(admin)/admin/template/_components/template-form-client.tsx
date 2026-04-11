@@ -1,10 +1,12 @@
 "use client";
 
-import { useRef, useState, useCallback } from "react";
-import { GripVertical, Loader2, Plus, Trash2 } from "lucide-react";
+import { useRef, useState, useCallback, useEffect } from "react";
+import { GripVertical, Plus, Trash2 } from "lucide-react";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import type { TemplateField } from "@/lib/db/schema";
-import { AdminToast, type ToastType } from "../../_components/toast";
+import { EditorPageHeader } from "../../_components/editor-page-header";
+
+const FORM_ID = "template-editor-form";
 
 const FIELD_TYPES = [
   { value: "text",     label: "Testo breve" },
@@ -50,6 +52,7 @@ export default function TemplateFormClient({
   template,
   saveAction,
 }: TemplateFormClientProps) {
+  const isEdit = !!template;
   const [name, setName] = useState(template?.name ?? "");
   const [slug, setSlug] = useState(template?.slug ?? "");
   const [slugManual, setSlugManual] = useState(!!template?.slug);
@@ -69,17 +72,19 @@ export default function TemplateFormClient({
   );
 
   const [saving, setSaving] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
-  const dismissToast = useCallback(() => setToast(null), []);
+  const [savedAt, setSavedAt] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
+  // Auto-dismiss feedback dopo 4s
+  useEffect(() => {
+    if (!savedAt) return;
+    const t = setTimeout(() => setSavedAt(null), 4000);
+    return () => clearTimeout(t);
+  }, [savedAt]);
+
   function autoSlug(val: string) {
-    return val
-      .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, "")
-      .replace(/\s+/g, "-")
-      .replace(/-+/g, "-")
-      .slice(0, 100);
+    return val.toLowerCase().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-").slice(0, 100);
   }
 
   function addField() {
@@ -100,6 +105,7 @@ export default function TemplateFormClient({
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setSaving(true);
+    setError(null);
     try {
       const fd = new FormData(formRef.current!);
       fd.set("fieldsJson", JSON.stringify(
@@ -115,11 +121,11 @@ export default function TemplateFormClient({
         }))
       ));
       await saveAction(fd);
-      setToast({ message: "Template salvato con successo", type: "success" });
+      setSavedAt(new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" }));
     } catch (err) {
       if (isRedirectError(err)) throw err;
       console.error(err);
-      setToast({ message: "Errore durante il salvataggio", type: "error" });
+      setError("Errore durante il salvataggio. Riprova.");
     } finally {
       setSaving(false);
     }
@@ -138,151 +144,135 @@ export default function TemplateFormClient({
   };
   const labelCls = "block text-xs font-medium mb-1";
 
+  // Breadcrumb label corrente
+  const currentLabel = isEdit
+    ? (name || template?.name || "Modifica template")
+    : (name ? name : "Nuovo template");
+
   return (
-    <>
-      {toast && (
-        <AdminToast message={toast.message} type={toast.type} onDismiss={dismissToast} />
-      )}
+    <form id={FORM_ID} ref={formRef} onSubmit={handleSubmit}>
+      {template?.id && <input type="hidden" name="id" value={template.id} />}
 
-      <form ref={formRef} onSubmit={handleSubmit}>
-        {template?.id && <input type="hidden" name="id" value={template.id} />}
+      {/* Header unificato */}
+      <EditorPageHeader
+        breadcrumbs={[
+          { label: "Contenuti", href: "/admin/contenuti" },
+          { label: "Template", href: "/admin/template" },
+        ]}
+        currentLabel={currentLabel}
+        backHref="/admin/template"
+        saveLabel={isEdit ? "Salva modifiche" : "Crea template"}
+        formId={FORM_ID}
+        isPending={saving}
+        savedAt={savedAt}
+        error={error}
+      />
 
-        {/* Informazioni base */}
-        <section className="rounded-xl p-5 mb-5" style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-border)" }}>
-          <h2 className="text-sm font-semibold mb-4" style={{ color: "var(--admin-text)" }}>Informazioni base</h2>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className={labelCls} style={{ color: "var(--admin-text-muted)" }}>Nome *</label>
-              <input name="name" required value={name}
-                onChange={(e) => { setName(e.target.value); if (!slugManual) setSlug(autoSlug(e.target.value)); }}
-                className={inputCls} style={inputStyle} placeholder="Es. Articolo blog"
-              />
-            </div>
-            <div>
-              <label className={labelCls} style={{ color: "var(--admin-text-muted)" }}>Slug *</label>
-              <input name="slug" required value={slug}
-                onChange={(e) => { setSlug(e.target.value); setSlugManual(true); }}
-                className={inputCls} style={inputStyle} placeholder="articolo-blog"
-                disabled={template?.isSystem}
-              />
-            </div>
-            <div className="col-span-2">
-              <label className={labelCls} style={{ color: "var(--admin-text-muted)" }}>Descrizione</label>
-              <textarea name="description" value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={2} className={inputCls} style={inputStyle}
-                placeholder="Breve descrizione dell'uso del template…"
-              />
-            </div>
+      {/* Informazioni base */}
+      <section className="rounded-xl p-5 mb-5" style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-border)" }}>
+        <h2 className="text-sm font-semibold mb-4" style={{ color: "var(--admin-text)" }}>Informazioni base</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className={labelCls} style={{ color: "var(--admin-text-muted)" }}>Nome *</label>
+            <input name="name" required value={name}
+              onChange={(e) => { setName(e.target.value); if (!slugManual) setSlug(autoSlug(e.target.value)); }}
+              className={inputCls} style={inputStyle} placeholder="Es. Articolo blog" />
           </div>
-        </section>
-
-        {/* Campi custom */}
-        <section className="rounded-xl p-5 mb-6" style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-border)" }}>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold" style={{ color: "var(--admin-text)" }}>
-              Campi custom ({fields.length})
-            </h2>
-            <button type="button" onClick={addField}
-              className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg"
-              style={{ background: "var(--admin-accent)", color: "#fff" }}
-            >
-              <Plus size={13} /> Aggiungi campo
-            </button>
+          <div>
+            <label className={labelCls} style={{ color: "var(--admin-text-muted)" }}>Slug *</label>
+            <input name="slug" required value={slug}
+              onChange={(e) => { setSlug(e.target.value); setSlugManual(true); }}
+              className={inputCls} style={inputStyle} placeholder="articolo-blog"
+              disabled={template?.isSystem} />
           </div>
+          <div className="col-span-2">
+            <label className={labelCls} style={{ color: "var(--admin-text-muted)" }}>Descrizione</label>
+            <textarea name="description" value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={2} className={inputCls} style={inputStyle}
+              placeholder="Breve descrizione dell'uso del template…" />
+          </div>
+        </div>
+      </section>
 
-          {fields.length === 0 && (
-            <p className="text-sm text-center py-6" style={{ color: "var(--admin-text-muted)" }}>
-              Nessun campo — il template usa solo il contenuto principale
-            </p>
-          )}
+      {/* Campi custom */}
+      <section className="rounded-xl p-5 mb-6" style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-border)" }}>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm font-semibold" style={{ color: "var(--admin-text)" }}>
+            Campi custom ({fields.length})
+          </h2>
+          <button type="button" onClick={addField}
+            className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg"
+            style={{ background: "var(--admin-accent)", color: "#fff" }}>
+            <Plus size={13} /> Aggiungi campo
+          </button>
+        </div>
 
-          <div className="space-y-3">
-            {fields.map((field) => (
-              <div key={field._id} className="rounded-lg p-3"
-                style={{ background: "var(--admin-input-bg)", border: "1px solid var(--admin-border)" }}
-              >
-                <div className="flex items-center gap-2 mb-3">
-                  <GripVertical size={14} style={{ color: "var(--admin-text-faint)" }} />
-                  <span className="text-xs font-semibold" style={{ color: "var(--admin-text)" }}>Campo</span>
-                  <button type="button" onClick={() => removeField(field._id)}
-                    className="ml-auto p-1 rounded" style={{ color: "var(--admin-error, #dc2626)" }}
-                  >
-                    <Trash2 size={13} />
-                  </button>
+        {fields.length === 0 && (
+          <p className="text-sm text-center py-6" style={{ color: "var(--admin-text-muted)" }}>
+            Nessun campo — il template usa solo il contenuto principale
+          </p>
+        )}
+
+        <div className="space-y-3">
+          {fields.map((field) => (
+            <div key={field._id} className="rounded-lg p-3"
+              style={{ background: "var(--admin-input-bg)", border: "1px solid var(--admin-border)" }}>
+              <div className="flex items-center gap-2 mb-3">
+                <GripVertical size={14} style={{ color: "var(--admin-text-faint)" }} />
+                <span className="text-xs font-semibold" style={{ color: "var(--admin-text)" }}>Campo</span>
+                <button type="button" onClick={() => removeField(field._id)}
+                  className="ml-auto p-1 rounded" style={{ color: "var(--admin-error, #dc2626)" }}>
+                  <Trash2 size={13} />
+                </button>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className={labelCls} style={{ color: "var(--admin-text-muted)" }}>Chiave (key) *</label>
+                  <input value={field.fieldKey}
+                    onChange={(e) => updateField(field._id, "fieldKey", e.target.value)}
+                    placeholder="es. coverImage" className={inputCls} style={fieldInputStyle} required />
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className={labelCls} style={{ color: "var(--admin-text-muted)" }}>Chiave (key) *</label>
-                    <input value={field.fieldKey}
-                      onChange={(e) => updateField(field._id, "fieldKey", e.target.value)}
-                      placeholder="es. coverImage" className={inputCls} style={fieldInputStyle} required
-                    />
-                  </div>
-                  <div>
-                    <label className={labelCls} style={{ color: "var(--admin-text-muted)" }}>Etichetta *</label>
-                    <input value={field.label}
-                      onChange={(e) => updateField(field._id, "label", e.target.value)}
-                      placeholder="es. Immagine copertina" className={inputCls} style={fieldInputStyle} required
-                    />
-                  </div>
-                  <div>
-                    <label className={labelCls} style={{ color: "var(--admin-text-muted)" }}>Tipo</label>
-                    <select value={field.fieldType}
-                      onChange={(e) => updateField(field._id, "fieldType", e.target.value)}
-                      className={inputCls} style={fieldInputStyle}
-                    >
-                      {FIELD_TYPES.map((t) => (
-                        <option key={t.value} value={t.value}>{t.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className={labelCls} style={{ color: "var(--admin-text-muted)" }}>Placeholder</label>
-                    <input value={field.placeholder}
-                      onChange={(e) => updateField(field._id, "placeholder", e.target.value)}
-                      className={inputCls} style={fieldInputStyle}
-                    />
-                  </div>
-                  <div>
-                    <label className={labelCls} style={{ color: "var(--admin-text-muted)" }}>Valore default</label>
-                    <input value={field.defaultValue}
-                      onChange={(e) => updateField(field._id, "defaultValue", e.target.value)}
-                      className={inputCls} style={fieldInputStyle}
-                    />
-                  </div>
-                  <div className="flex items-center gap-2 pt-5">
-                    <input type="checkbox" id={`req-${field._id}`}
-                      checked={field.required}
-                      onChange={(e) => updateField(field._id, "required", e.target.checked)}
-                      className="w-4 h-4 rounded"
-                    />
-                    <label htmlFor={`req-${field._id}`} className="text-xs" style={{ color: "var(--admin-text)" }}>
-                      Obbligatorio
-                    </label>
-                  </div>
+                <div>
+                  <label className={labelCls} style={{ color: "var(--admin-text-muted)" }}>Etichetta *</label>
+                  <input value={field.label}
+                    onChange={(e) => updateField(field._id, "label", e.target.value)}
+                    placeholder="es. Immagine copertina" className={inputCls} style={fieldInputStyle} required />
+                </div>
+                <div>
+                  <label className={labelCls} style={{ color: "var(--admin-text-muted)" }}>Tipo</label>
+                  <select value={field.fieldType}
+                    onChange={(e) => updateField(field._id, "fieldType", e.target.value)}
+                    className={inputCls} style={fieldInputStyle}>
+                    {FIELD_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className={labelCls} style={{ color: "var(--admin-text-muted)" }}>Placeholder</label>
+                  <input value={field.placeholder}
+                    onChange={(e) => updateField(field._id, "placeholder", e.target.value)}
+                    className={inputCls} style={fieldInputStyle} />
+                </div>
+                <div>
+                  <label className={labelCls} style={{ color: "var(--admin-text-muted)" }}>Valore default</label>
+                  <input value={field.defaultValue}
+                    onChange={(e) => updateField(field._id, "defaultValue", e.target.value)}
+                    className={inputCls} style={fieldInputStyle} />
+                </div>
+                <div className="flex items-center gap-2 pt-5">
+                  <input type="checkbox" id={`req-${field._id}`}
+                    checked={field.required}
+                    onChange={(e) => updateField(field._id, "required", e.target.checked)}
+                    className="w-4 h-4 rounded" />
+                  <label htmlFor={`req-${field._id}`} className="text-xs" style={{ color: "var(--admin-text)" }}>
+                    Obbligatorio
+                  </label>
                 </div>
               </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Bottoni */}
-        <div className="flex items-center gap-3">
-          <button type="submit" disabled={saving}
-            className="flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-70 transition-opacity"
-            style={{ background: "var(--admin-accent)" }}
-          >
-            {saving && <Loader2 size={14} className="animate-spin" />}
-            {saving ? "Salvataggio…" : "Salva template"}
-          </button>
-          <a href="/admin/template" className="px-4 py-2 rounded-lg text-sm"
-            style={{ background: "var(--admin-input-bg)", color: "var(--admin-text)", border: "1px solid var(--admin-border)" }}
-          >
-            Annulla
-          </a>
+            </div>
+          ))}
         </div>
-      </form>
-    </>
+      </section>
+    </form>
   );
 }

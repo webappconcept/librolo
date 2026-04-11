@@ -8,31 +8,32 @@ import Link from "@tiptap/extension-link";
 import Underline from "@tiptap/extension-underline";
 import TextAlign from "@tiptap/extension-text-align";
 import {
-  AlignCenter, AlignLeft, AlignRight, ArrowLeft, Bold, Calendar,
-  Check, Code, Eye, EyeOff, Heading2, Heading3, Italic, Link2,
-  List, ListOrdered, Minus, Pencil, RotateCcw, RotateCw,
-  Search, UnderlineIcon, GitBranch, AlertTriangle,
+  AlignCenter, AlignLeft, AlignRight,
+  Bold, Calendar, Code, Eye, EyeOff,
+  Heading2, Heading3, Italic, Link2,
+  List, ListOrdered, Minus, Pencil,
+  RotateCcw, RotateCw, Search, UnderlineIcon,
+  GitBranch, AlertTriangle,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { upsertPageAction } from "../actions";
 import PlaceholderHint from "./placeholder-hint";
+import { EditorPageHeader } from "../../_components/editor-page-header";
 
 type TemplateWithFields = PageTemplate & { fields: TemplateField[] };
+
+const FORM_ID = "page-editor-form";
 
 function slugify(value: string): string {
   return value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9\s-]/g, "").trim().replace(/[\s_]+/g, "-").replace(/-+/g, "-");
 }
-
-/** Estrae l'ultimo segmento di uno slug (la "foglia"), ignorando il prefisso parent. */
 function leafSlug(slug: string): string {
   const parts = slug.split("/");
   return parts[parts.length - 1] ?? slug;
 }
-
-/** Costruisce lo slug completo concatenando prefisso + foglia. */
 function buildFullSlug(prefix: string, leaf: string): string {
   return prefix ? `${prefix}${leaf}` : leaf;
 }
@@ -54,8 +55,10 @@ function TBtn({ onClick, active, title, children, disabled }: {
   return (
     <button type="button" title={title} disabled={disabled} onClick={onClick}
       className="p-1.5 rounded transition-colors disabled:opacity-30"
-      style={{ color: active ? "var(--admin-accent)" : "var(--admin-text-muted)",
-        background: active ? "color-mix(in srgb, var(--admin-accent) 12%, var(--admin-card-bg))" : "transparent" }}
+      style={{
+        color: active ? "var(--admin-accent)" : "var(--admin-text-muted)",
+        background: active ? "color-mix(in srgb, var(--admin-accent) 12%, var(--admin-card-bg))" : "transparent",
+      }}
       onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = "var(--admin-hover-bg)"; }}
       onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = "transparent"; }}
     >{children}</button>
@@ -67,7 +70,7 @@ function TDivider() {
 function TabBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button type="button" onClick={onClick}
-      className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors relative"
+      className="flex items-center gap-1.5 px-3 sm:px-4 py-2.5 text-sm font-medium transition-colors relative"
       style={{ color: active ? "var(--admin-accent)" : "var(--admin-text-muted)" }}
     >
       {children}
@@ -76,18 +79,15 @@ function TabBtn({ active, onClick, children }: { active: boolean; onClick: () =>
   );
 }
 
-// ─── Custom Fields ───────────────────────────────────────────────────────────────────────────────────────
 function CustomFieldsBlock({ template, customFields, setCustomFields }: {
   template: TemplateWithFields;
   customFields: Record<string, string>;
   setCustomFields: (v: Record<string, string>) => void;
 }) {
   if (template.fields.length === 0) return null;
-
   function handleField(key: string, value: string) {
     setCustomFields({ ...customFields, [key]: value });
   }
-
   return (
     <div className="rounded-xl p-4 mb-5"
       style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-card-border)" }}
@@ -96,55 +96,44 @@ function CustomFieldsBlock({ template, customFields, setCustomFields }: {
         Campi custom — Template: {template.name}
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {[...template.fields]
-          .sort((a, b) => a.sortOrder - b.sortOrder)
-          .map((field) => (
-            <div key={field.id} className={field.fieldType === "textarea" || field.fieldType === "richtext" ? "sm:col-span-2" : ""}>
-              <label style={labelStyle}>
-                {field.label}
-                {field.required && <span style={{ color: "#ef4444" }}> *</span>}
-              </label>
-              {field.fieldType === "textarea" || field.fieldType === "richtext" ? (
-                <textarea
-                  value={customFields[field.fieldKey] ?? field.defaultValue ?? ""}
-                  onChange={(e) => handleField(field.fieldKey, e.target.value)}
-                  placeholder={field.placeholder ?? ""}
-                  rows={3}
-                  style={{ ...inputStyle, resize: "vertical" }}
-                />
-              ) : field.fieldType === "toggle" ? (
-                <div className="flex items-center gap-2 py-2">
-                  <input
-                    type="checkbox"
-                    id={`cf-${field.fieldKey}`}
-                    checked={(customFields[field.fieldKey] ?? field.defaultValue) === "true"}
-                    onChange={(e) => handleField(field.fieldKey, e.target.checked ? "true" : "false")}
-                    className="w-4 h-4 rounded"
-                  />
-                  <label htmlFor={`cf-${field.fieldKey}`} className="text-sm" style={{ color: "var(--admin-text)" }}>
-                    {field.label}
-                  </label>
-                </div>
-              ) : (
-                <input
-                  type={field.fieldType === "date" ? "date" : field.fieldType === "number" ? "number" : "text"}
-                  value={customFields[field.fieldKey] ?? field.defaultValue ?? ""}
-                  onChange={(e) => handleField(field.fieldKey, e.target.value)}
-                  placeholder={field.placeholder ?? ""}
-                  style={inputStyle}
-                />
-              )}
-              {field.placeholder && field.fieldType !== "toggle" && (
-                <p style={hintStyle}>{field.placeholder}</p>
-              )}
-            </div>
-          ))}
+        {[...template.fields].sort((a, b) => a.sortOrder - b.sortOrder).map((field) => (
+          <div key={field.id} className={field.fieldType === "textarea" || field.fieldType === "richtext" ? "sm:col-span-2" : ""}>
+            <label style={labelStyle}>
+              {field.label}
+              {field.required && <span style={{ color: "#ef4444" }}> *</span>}
+            </label>
+            {field.fieldType === "textarea" || field.fieldType === "richtext" ? (
+              <textarea value={customFields[field.fieldKey] ?? field.defaultValue ?? ""}
+                onChange={(e) => handleField(field.fieldKey, e.target.value)}
+                placeholder={field.placeholder ?? ""} rows={3}
+                style={{ ...inputStyle, resize: "vertical" }} />
+            ) : field.fieldType === "toggle" ? (
+              <div className="flex items-center gap-2 py-2">
+                <input type="checkbox" id={`cf-${field.fieldKey}`}
+                  checked={(customFields[field.fieldKey] ?? field.defaultValue) === "true"}
+                  onChange={(e) => handleField(field.fieldKey, e.target.checked ? "true" : "false")}
+                  className="w-4 h-4 rounded" />
+                <label htmlFor={`cf-${field.fieldKey}`} className="text-sm" style={{ color: "var(--admin-text)" }}>
+                  {field.label}
+                </label>
+              </div>
+            ) : (
+              <input
+                type={field.fieldType === "date" ? "date" : field.fieldType === "number" ? "number" : "text"}
+                value={customFields[field.fieldKey] ?? field.defaultValue ?? ""}
+                onChange={(e) => handleField(field.fieldKey, e.target.value)}
+                placeholder={field.placeholder ?? ""} style={inputStyle} />
+            )}
+            {field.placeholder && field.fieldType !== "toggle" && (
+              <p style={hintStyle}>{field.placeholder}</p>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );
 }
 
-// ─── SEO Tab ──────────────────────────────────────────────────────────────────────────────────
 function SeoTab({ seo, slug, domain, appName, pageTitle, onSeoSaved }: {
   seo?: SeoPage | null; slug: string; domain: string; appName: string; pageTitle: string;
   onSeoSaved?: () => void;
@@ -159,7 +148,6 @@ function SeoTab({ seo, slug, domain, appName, pageTitle, onSeoSaved }: {
     { label: "Robots", value: seo.robots },
     { label: "JSON-LD", value: seo.jsonLdEnabled ? `Abilitato (${seo.jsonLdType ?? "WebPage"})` : "Disabilitato" },
   ] : [];
-
   return (
     <>
       <div className="flex items-center justify-between mb-4">
@@ -174,8 +162,7 @@ function SeoTab({ seo, slug, domain, appName, pageTitle, onSeoSaved }: {
             border: seo ? "1px solid color-mix(in srgb, var(--admin-accent) 25%, transparent)" : "none",
           }}
           onMouseEnter={(e) => (e.currentTarget.style.filter = "brightness(0.9)")}
-          onMouseLeave={(e) => (e.currentTarget.style.filter = "none")}
-        >
+          onMouseLeave={(e) => (e.currentTarget.style.filter = "none")}>
           {seo ? <Pencil size={12} /> : <Search size={12} />}
           {seo ? "Modifica SEO" : "Configura SEO"}
         </button>
@@ -192,8 +179,7 @@ function SeoTab({ seo, slug, domain, appName, pageTitle, onSeoSaved }: {
         <div className="space-y-2">
           {rows.map((row) => (
             <div key={row.label} className="rounded-lg px-4 py-3"
-              style={{ background: "var(--admin-page-bg)", border: "1px solid var(--admin-input-border)" }}
-            >
+              style={{ background: "var(--admin-page-bg)", border: "1px solid var(--admin-input-border)" }}>
               <p style={{ ...labelStyle, marginBottom: "0.25rem" }}>{row.label}</p>
               {row.value
                 ? <p className="text-sm break-all" style={{ color: "var(--admin-text)" }}>{row.value}</p>
@@ -207,18 +193,13 @@ function SeoTab({ seo, slug, domain, appName, pageTitle, onSeoSaved }: {
         <SeoForm page={seo ?? null} domain={domain} appName={appName}
           unconfiguredRoutes={[]} lockedPathname={`/${slug}`}
           lockedLabel={pageTitle || slug} hidePathnameField={false}
-          onClose={() => {
-            setShowModal(false);
-            onSeoSaved?.();
-          }}
-        />,
-        document.body
+          onClose={() => { setShowModal(false); onSeoSaved?.(); }} />,
+        document.body,
       )}
     </>
   );
 }
 
-// ─── Pub Tab ───────────────────────────────────────────────────────────────────────────────────────
 function PubTab({ status, setStatus, publishedAt, setPublishedAt, expiresAt, setExpiresAt, slug }: {
   status: "draft" | "published"; setStatus: (v: "draft" | "published") => void;
   publishedAt: string; setPublishedAt: (v: string) => void;
@@ -227,8 +208,7 @@ function PubTab({ status, setStatus, publishedAt, setPublishedAt, expiresAt, set
   return (
     <div className="space-y-5">
       <div className="rounded-xl px-4 py-4 space-y-3"
-        style={{ background: "var(--admin-page-bg)", border: "1px solid var(--admin-input-border)" }}
-      >
+        style={{ background: "var(--admin-page-bg)", border: "1px solid var(--admin-input-border)" }}>
         <p style={labelStyle}>Stato pubblicazione</p>
         <div className="flex gap-3">
           {(["draft", "published"] as const).map((s) => (
@@ -238,8 +218,7 @@ function PubTab({ status, setStatus, publishedAt, setPublishedAt, expiresAt, set
                 background: status === s ? (s === "published" ? "color-mix(in srgb, #22c55e 15%, var(--admin-card-bg))" : "color-mix(in srgb, var(--admin-accent) 12%, var(--admin-card-bg))") : "var(--admin-card-bg)",
                 color: status === s ? (s === "published" ? "#22c55e" : "var(--admin-accent)") : "var(--admin-text-muted)",
                 border: status === s ? (s === "published" ? "1px solid color-mix(in srgb, #22c55e 30%, transparent)" : "1px solid color-mix(in srgb, var(--admin-accent) 30%, transparent)") : "1px solid var(--admin-card-border)",
-              }}
-            >
+              }}>
               {s === "published" ? <Eye size={15} /> : <EyeOff size={15} />}
               {s === "published" ? "Pubblicata" : "Bozza"}
             </button>
@@ -259,8 +238,7 @@ function PubTab({ status, setStatus, publishedAt, setPublishedAt, expiresAt, set
       </div>
       {expiresAt && (
         <div className="flex items-start gap-2 rounded-lg px-3 py-2.5"
-          style={{ background: "color-mix(in srgb, #f59e0b 8%, var(--admin-card-bg))", border: "1px solid color-mix(in srgb, #f59e0b 25%, transparent)" }}
-        >
+          style={{ background: "color-mix(in srgb, #f59e0b 8%, var(--admin-card-bg))", border: "1px solid color-mix(in srgb, #f59e0b 25%, transparent)" }}>
           <Calendar size={13} className="mt-0.5 shrink-0" style={{ color: "#f59e0b" }} />
           <p className="text-xs leading-relaxed" style={{ color: "var(--admin-text-muted)" }}>
             Contenuto temporaneo: scade il <strong>{new Date(expiresAt).toLocaleString("it-IT")}</strong>.
@@ -271,7 +249,6 @@ function PubTab({ status, setStatus, publishedAt, setPublishedAt, expiresAt, set
   );
 }
 
-// ─── Struttura Tab ────────────────────────────────────────────────────────────────────────────────
 function StrutturaTab({ pages, templates, parentId, onParentChange, templateId, setTemplateId, setCustomFields, currentPageId }: {
   pages: Page[];
   templates: TemplateWithFields[];
@@ -283,51 +260,34 @@ function StrutturaTab({ pages, templates, parentId, onParentChange, templateId, 
   currentPageId?: number;
 }) {
   const selectedTemplate = templates.find((t) => t.id === templateId) ?? null;
-
   return (
     <div className="space-y-5">
       <div className="space-y-1.5">
         <label style={labelStyle}>Pagina padre (opzionale)</label>
-        <select
-          value={parentId ?? ""}
+        <select value={parentId ?? ""}
           onChange={(e) => onParentChange(e.target.value ? Number(e.target.value) : null)}
-          style={inputStyle}
-        >
+          style={inputStyle}>
           <option value="">— Nessuna (pagina radice) —</option>
-          {pages
-            .filter((p) => !currentPageId || p.id !== currentPageId)
-            .map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.title} (/{p.slug})
-              </option>
-            ))}
+          {pages.filter((p) => !currentPageId || p.id !== currentPageId).map((p) => (
+            <option key={p.id} value={p.id}>{p.title} (/{p.slug})</option>
+          ))}
         </select>
         <p style={hintStyle}>Assegnare una pagina padre costruisce la gerarchia del sito (es. /servizi/consulenza).</p>
       </div>
-
       <div className="space-y-1.5">
         <label style={labelStyle}>Template (opzionale)</label>
         {templates.length === 0 ? (
           <div className="rounded-lg px-4 py-3 text-sm"
-            style={{ background: "var(--admin-page-bg)", border: "1px solid var(--admin-input-border)", color: "var(--admin-text-faint)" }}
-          >
+            style={{ background: "var(--admin-page-bg)", border: "1px solid var(--admin-input-border)", color: "var(--admin-text-faint)" }}>
             Nessun template creato. <a href="/admin/template" className="underline" style={{ color: "var(--admin-accent)" }}>Crea un template</a> per aggiungere campi custom alla pagina.
           </div>
         ) : (
           <>
-            <select
-              value={templateId ?? ""}
-              onChange={(e) => {
-                const newId = e.target.value ? Number(e.target.value) : null;
-                setTemplateId(newId);
-                setCustomFields({});
-              }}
-              style={inputStyle}
-            >
+            <select value={templateId ?? ""}
+              onChange={(e) => { const newId = e.target.value ? Number(e.target.value) : null; setTemplateId(newId); setCustomFields({}); }}
+              style={inputStyle}>
               <option value="">— Nessun template —</option>
-              {templates.map((t) => (
-                <option key={t.id} value={t.id}>{t.name}</option>
-              ))}
+              {templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
             </select>
             {selectedTemplate && (
               <p style={hintStyle}>
@@ -343,7 +303,6 @@ function StrutturaTab({ pages, templates, parentId, onParentChange, templateId, 
   );
 }
 
-// ─── Main PageEditor ──────────────────────────────────────────────────────────────────────────────────
 export default function PageEditor({
   page, seo, pages = [], templates = [], domain = "", appName = "", initialParentId = null,
 }: {
@@ -362,37 +321,28 @@ export default function PageEditor({
 
   const [state, action, isPending] = useActionState(upsertPageAction, {});
   const [title, setTitle] = useState(page?.title ?? "");
-  // slug state always stores the FULL path (e.g. "chi-siamo/il-team")
   const [slug, setSlug] = useState(page?.slug ?? "");
   const [status, setStatus] = useState<"draft" | "published">((page?.status as "draft" | "published") ?? "draft");
   const [publishedAt, setPublishedAt] = useState(page?.publishedAt ? toDatetimeLocal(page.publishedAt) : "");
   const [expiresAt, setExpiresAt] = useState(page?.expiresAt ? toDatetimeLocal(page.expiresAt) : "");
-
   const [parentId, setParentId] = useState<number | null>(page?.parentId ?? initialParentId ?? null);
   const [templateId, setTemplateId] = useState<number | null>(page?.templateId ?? null);
   const [customFields, setCustomFields] = useState<Record<string, string>>(() => {
     try { return JSON.parse(page?.customFields ?? "{}"); } catch { return {}; }
   });
-
   const [savedAt, setSavedAt] = useState<string | null>(null);
-
   const contentRef = useRef<HTMLInputElement>(null);
 
-  // Derived: parent page and its slug prefix (used in the readonly badge)
   const parentPage = pages.find((p) => p.id === parentId) ?? null;
   const slugPrefix = parentPage ? `${parentPage.slug}/` : "";
-
-  // What the editable input field shows: only the leaf segment
   const slugLeaf = leafSlug(slug) || slug;
 
   useEffect(() => {
     if (!state?.savedAt) return;
-
     if (!isEdit && state.createdId) {
       router.replace(`/admin/contenuti/${state.createdId}/edit`);
       return;
     }
-
     setSavedAt(new Date(state.savedAt).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" }));
     router.refresh();
     const t = setTimeout(() => setSavedAt(null), 4000);
@@ -423,12 +373,9 @@ export default function PageEditor({
       setSlug(buildFullSlug(slugPrefix, leaf));
     }
   }
-
-  // When the user manually edits the leaf in the input field
   function handleSlugLeafChange(leafVal: string) {
     setSlug(buildFullSlug(slugPrefix, leafVal));
   }
-
   function handleParentChange(newParentId: number | null) {
     setParentId(newParentId);
     const leaf = leafSlug(slug) || slugify(title);
@@ -439,7 +386,6 @@ export default function PageEditor({
       setSlug(leaf);
     }
   }
-
   function handleLinkInsert() {
     const url = window.prompt("URL del link:");
     if (url === null) return;
@@ -452,6 +398,11 @@ export default function PageEditor({
 
   const selectedTemplate = templates.find((t) => t.id === templateId) ?? null;
   const slugChanged = isEdit && slug !== originalSlug && slug.trim() !== "";
+
+  // Breadcrumb label corrente
+  const currentLabel = isEdit
+    ? (title || page?.title || "Modifica pagina")
+    : (title ? title : "Nuova pagina");
 
   return (
     <>
@@ -476,10 +427,9 @@ export default function PageEditor({
         .tiptap-editor .ProseMirror-focused { outline: none; }
       `}</style>
 
-      <form action={action} className="space-y-0">
+      <form id={FORM_ID} action={action} className="space-y-0">
         {isEdit && page?.id && <input type="hidden" name="id" value={page.id} />}
         {isEdit && <input type="hidden" name="originalSlug" value={originalSlug} />}
-        {/* Hidden input sends the FULL slug path to the server action */}
         <input type="hidden" name="slug" value={slug} />
         <input type="hidden" name="content" ref={contentRef} />
         <input type="hidden" name="status" value={status} />
@@ -489,40 +439,24 @@ export default function PageEditor({
         <input type="hidden" name="templateId" value={templateId ?? ""} />
         <input type="hidden" name="customFields" value={JSON.stringify(customFields)} />
 
-        {/* Header */}
-        <div className="flex items-center justify-between gap-4 mb-5">
-          <button type="button" onClick={() => router.push("/admin/contenuti")}
-            className="flex items-center gap-1.5 text-sm transition-colors"
-            style={{ color: "var(--admin-text-muted)" }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--admin-text)")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--admin-text-muted)")}
-          >
-            <ArrowLeft size={15} /> Contenuti
-          </button>
-          <div className="flex items-center gap-2">
-            {savedAt && (
-              <span className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg"
-                style={{ color: "#22c55e", background: "color-mix(in srgb, #22c55e 12%, var(--admin-card-bg))", border: "1px solid color-mix(in srgb, #22c55e 25%, transparent)" }}
-              >
-                <Check size={12} /> Salvato alle {savedAt}
-              </span>
-            )}
-            <button type="submit" disabled={isPending}
-              className="flex items-center gap-2 px-4 py-1.5 text-sm rounded-lg text-white font-medium transition-colors disabled:opacity-60"
-              style={{ background: "var(--admin-accent)" }}
-              onMouseEnter={(e) => (e.currentTarget.style.filter = "brightness(0.9)")}
-              onMouseLeave={(e) => (e.currentTarget.style.filter = "none")}
-            >
-              {isPending && <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />}
-              {isEdit ? "Salva modifiche" : "Crea pagina"}
-            </button>
-          </div>
-        </div>
+        {/* Header unificato */}
+        <EditorPageHeader
+          breadcrumbs={[
+            { label: "Contenuti", href: "/admin/contenuti" },
+            { label: "Pagine" },
+          ]}
+          currentLabel={currentLabel}
+          backHref="/admin/contenuti"
+          saveLabel={isEdit ? "Salva modifiche" : "Crea pagina"}
+          formId={FORM_ID}
+          isPending={isPending}
+          savedAt={savedAt}
+          error={state?.error}
+        />
 
         {/* Titolo + Slug */}
         <div className="rounded-xl p-5 mb-5 space-y-4"
-          style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-card-border)" }}
-        >
+          style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-card-border)" }}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label style={labelStyle}>Titolo pagina</label>
@@ -532,7 +466,6 @@ export default function PageEditor({
             <div>
               <label style={{ ...labelStyle, marginBottom: "0.375rem" }}>Slug (URL)</label>
               <div className="flex">
-                {/* Readonly prefix badge: shows "/" or "/parent-slug/" */}
                 <span className="px-3 py-2 text-sm rounded-l-lg shrink-0 select-none"
                   style={{
                     background: "var(--admin-hover-bg)",
@@ -546,31 +479,21 @@ export default function PageEditor({
                     textOverflow: "ellipsis",
                     whiteSpace: "nowrap",
                   }}
-                  title={`/${slugPrefix}`}
-                >
+                  title={`/${slugPrefix}`}>
                   /{slugPrefix}
                 </span>
-                {/*
-                  Display-only input — NO name attribute.
-                  Shows only the leaf segment (e.g. "il-team").
-                  The actual full slug is submitted via the hidden input above.
-                */}
-                <input
-                  value={slugLeaf}
+                <input value={slugLeaf}
                   onChange={(e) => handleSlugLeafChange(e.target.value)}
                   placeholder="nome-pagina"
-                  style={{ ...inputStyle, borderRadius: "0 0.5rem 0.5rem 0", fontFamily: "monospace" }}
-                />
+                  style={{ ...inputStyle, borderRadius: "0 0.5rem 0.5rem 0", fontFamily: "monospace" }} />
               </div>
               {slugChanged ? (
                 <div className="flex items-start gap-2 mt-2 rounded-lg px-3 py-2"
-                  style={{ background: "color-mix(in srgb, #f59e0b 8%, var(--admin-card-bg))", border: "1px solid color-mix(in srgb, #f59e0b 30%, transparent)" }}
-                >
+                  style={{ background: "color-mix(in srgb, #f59e0b 8%, var(--admin-card-bg))", border: "1px solid color-mix(in srgb, #f59e0b 30%, transparent)" }}>
                   <AlertTriangle size={13} className="mt-0.5 shrink-0" style={{ color: "#f59e0b" }} />
                   <p className="text-xs leading-relaxed" style={{ color: "var(--admin-text-muted)" }}>
                     Verrà creato un redirect 301 automatico da{" "}
-                    <code className="font-mono" style={{ color: "var(--admin-text)" }}>/{originalSlug}</code>{" "}
-                    a{" "}
+                    <code className="font-mono" style={{ color: "var(--admin-text)" }}>/{originalSlug}</code>{" "}a{" "}
                     <code className="font-mono" style={{ color: "var(--admin-text)" }}>/{slug}</code>.
                   </p>
                 </div>
@@ -584,34 +507,26 @@ export default function PageEditor({
         </div>
 
         {selectedTemplate && selectedTemplate.fields.length > 0 && (
-          <CustomFieldsBlock
-            template={selectedTemplate}
-            customFields={customFields}
-            setCustomFields={setCustomFields}
-          />
+          <CustomFieldsBlock template={selectedTemplate} customFields={customFields} setCustomFields={setCustomFields} />
         )}
 
         {/* Tabs */}
         <div className="rounded-xl overflow-hidden"
-          style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-card-border)" }}
-        >
-          <div className="flex" style={{ borderBottom: "1px solid var(--admin-divider)" }}>
+          style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-card-border)" }}>
+          <div className="flex overflow-x-auto" style={{ borderBottom: "1px solid var(--admin-divider)" }}>
             <TabBtn active={activeTab === "content"} onClick={() => setActiveTab("content")}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                <polyline points="14,2 14,8 20,8"/>
-                <line x1="16" y1="13" x2="8" y2="13"/>
-                <line x1="16" y1="17" x2="8" y2="17"/>
-                <polyline points="10,9 9,9 8,9"/>
+                <polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/><polyline points="10,9 9,9 8,9"/>
               </svg>
               Contenuto
             </TabBtn>
             <TabBtn active={activeTab === "struttura"} onClick={() => setActiveTab("struttura")}>
               <GitBranch size={14} />
-              Struttura
-              {parentId && (
-                <span className="w-1.5 h-1.5 rounded-full ml-0.5" style={{ background: "var(--admin-accent)" }} />
-              )}
+              <span className="hidden xs:inline">Struttura</span>
+              <span className="xs:hidden">Struttura</span>
+              {parentId && <span className="w-1.5 h-1.5 rounded-full ml-0.5" style={{ background: "var(--admin-accent)" }} />}
             </TabBtn>
             <TabBtn active={activeTab === "seo"} onClick={() => setActiveTab("seo")}>
               <Search size={14} />
@@ -620,15 +535,15 @@ export default function PageEditor({
             </TabBtn>
             <TabBtn active={activeTab === "pub"} onClick={() => setActiveTab("pub")}>
               <Calendar size={14} />
-              Pubblicazione
+              <span className="hidden sm:inline">Pubblicazione</span>
+              <span className="sm:hidden">Pub.</span>
             </TabBtn>
           </div>
 
           {activeTab === "content" && (
             <>
               <div className="flex flex-wrap items-center gap-0.5 px-3 py-2"
-                style={{ borderBottom: "1px solid var(--admin-divider)", background: "var(--admin-page-bg)" }}
-              >
+                style={{ borderBottom: "1px solid var(--admin-divider)", background: "var(--admin-page-bg)" }}>
                 <TBtn onClick={() => editor?.chain().focus().undo().run()} title="Annulla" disabled={!editor?.can().undo()}><RotateCcw size={15} /></TBtn>
                 <TBtn onClick={() => editor?.chain().focus().redo().run()} title="Ripeti" disabled={!editor?.can().redo()}><RotateCw size={15} /></TBtn>
                 <TDivider />
@@ -656,53 +571,27 @@ export default function PageEditor({
               <EditorContent editor={editor} />
             </>
           )}
-
           {activeTab === "struttura" && (
             <div className="p-5">
-              <StrutturaTab
-                pages={pages}
-                templates={templates}
-                parentId={parentId}
-                onParentChange={handleParentChange}
-                templateId={templateId}
-                setTemplateId={setTemplateId}
-                setCustomFields={setCustomFields}
-                currentPageId={page?.id}
-              />
+              <StrutturaTab pages={pages} templates={templates} parentId={parentId}
+                onParentChange={handleParentChange} templateId={templateId}
+                setTemplateId={setTemplateId} setCustomFields={setCustomFields} currentPageId={page?.id} />
             </div>
           )}
-
           {activeTab === "seo" && (
             <div className="p-5">
-              <SeoTab
-                seo={seo}
-                slug={slug}
-                domain={domain}
-                appName={appName}
-                pageTitle={title}
-                onSeoSaved={() => router.refresh()}
-              />
+              <SeoTab seo={seo} slug={slug} domain={domain} appName={appName}
+                pageTitle={title} onSeoSaved={() => router.refresh()} />
             </div>
           )}
-
           {activeTab === "pub" && (
             <div className="p-5">
               <PubTab status={status} setStatus={setStatus}
                 publishedAt={publishedAt} setPublishedAt={setPublishedAt}
-                expiresAt={expiresAt} setExpiresAt={setExpiresAt}
-                slug={slug}
-              />
+                expiresAt={expiresAt} setExpiresAt={setExpiresAt} slug={slug} />
             </div>
           )}
         </div>
-
-        {state?.error && (
-          <p className="text-sm rounded-lg px-3 py-2 mt-4"
-            style={{ color: "#ef4444", background: "color-mix(in srgb, #ef4444 10%, var(--admin-card-bg))", border: "1px solid color-mix(in srgb, #ef4444 20%, transparent)" }}
-          >
-            {state.error}
-          </p>
-        )}
       </form>
     </>
   );
