@@ -1,7 +1,7 @@
 "use client";
 
 import type { Page, PageTemplate } from "@/lib/db/schema";
-import { FileText, Globe, PanelTop, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { FileText, GitFork, Globe, PanelTop, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { deletePageAction } from "../actions";
@@ -34,6 +34,10 @@ export default function PageManager({
 
   function handleNew() {
     router.push("/admin/contenuti/new");
+  }
+
+  function handleNewChild(parentId: number) {
+    router.push(`/admin/contenuti/new?parentId=${parentId}`);
   }
 
   return (
@@ -121,6 +125,14 @@ export default function PageManager({
                   </span>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
+                  <button onClick={() => handleNewChild(page.id)}
+                    className="p-2 rounded-lg transition-colors" style={{ color: "var(--admin-text-faint)" }}
+                    title="Nuova Pagina Figlia"
+                    onMouseEnter={(e) => { e.currentTarget.style.background = "color-mix(in srgb, var(--admin-accent) 10%, var(--admin-card-bg))"; e.currentTarget.style.color = "var(--admin-accent)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--admin-text-faint)"; }}
+                  >
+                    <GitFork size={14} />
+                  </button>
                   <button onClick={() => router.push(`/admin/contenuti/${page.id}/edit`)}
                     className="p-2 rounded-lg transition-colors" style={{ color: "var(--admin-text-faint)" }}
                     title="Modifica"
