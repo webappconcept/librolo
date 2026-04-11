@@ -37,8 +37,7 @@ export default function ContenutiPage() {
           <p
             className="text-sm mt-0.5"
             style={{ color: "var(--admin-text-muted)" }}>
-            Gestisci le pagine statiche del sito (privacy, condizioni, cookie,
-            ecc.).
+            Gestisci i contenuti statici del sito.
           </p>
         </div>
       </div>
