@@ -1,4 +1,4 @@
-import { db } from "./index";
+import { db } from "./drizzle";
 import { redirects } from "./schema";
 import { eq } from "drizzle-orm";
 
