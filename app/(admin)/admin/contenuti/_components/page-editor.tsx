@@ -347,7 +347,6 @@ export default function PageEditor({
   const [state, action, isPending] = useActionState(upsertPageAction, {});
   const [title, setTitle] = useState(page?.title ?? "");
   const [slug, setSlug] = useState(page?.slug ?? "");
-  const [slugManual, setSlugManual] = useState(isEdit);
   const [status, setStatus] = useState<"draft" | "published">((page?.status as "draft" | "published") ?? "draft");
   const [publishedAt, setPublishedAt] = useState(page?.publishedAt ? toDatetimeLocal(page.publishedAt) : "");
   const [expiresAt, setExpiresAt] = useState(page?.expiresAt ? toDatetimeLocal(page.expiresAt) : "");
@@ -391,7 +390,8 @@ export default function PageEditor({
 
   function handleTitleChange(val: string) {
     setTitle(val);
-    if (!slugManual) setSlug(slugify(val));
+    // Auto-genera lo slug solo in creazione nuova pagina
+    if (!isEdit) setSlug(slugify(val));
   }
   function handleLinkInsert() {
     const url = window.prompt("URL del link:");
@@ -481,18 +481,13 @@ export default function PageEditor({
                 placeholder="Es. Chi siamo" required style={inputStyle} />
             </div>
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label style={{ ...labelStyle, marginBottom: 0 }}>Slug (URL)</label>
-                <button type="button" onClick={() => setSlugManual((v) => !v)}
-                  className="text-xs" style={{ color: "var(--admin-accent)" }}
-                >{slugManual ? "Auto" : "Modifica"}</button>
-              </div>
+              <label style={{ ...labelStyle, marginBottom: "0.375rem" }}>Slug (URL)</label>
               <div className="flex">
                 <span className="px-3 py-2 text-sm rounded-l-lg shrink-0"
                   style={{ background: "var(--admin-hover-bg)", border: "1px solid var(--admin-input-border)", borderRight: "none", color: "var(--admin-text-faint)", fontSize: "0.875rem" }}
                 >/</span>
                 <input name="slug" value={slug}
-                  onChange={(e) => { setSlug(e.target.value); setSlugManual(true); }}
+                  onChange={(e) => setSlug(e.target.value)}
                   placeholder="chi-siamo"
                   style={{ ...inputStyle, borderRadius: "0 0.5rem 0.5rem 0", fontFamily: "monospace" }}
                 />
