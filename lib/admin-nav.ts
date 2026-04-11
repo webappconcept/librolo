@@ -68,11 +68,10 @@ export const ADMIN_NAV: NavItem[] = [
     label: "Contenuti",
     icon: "Layers",
     permission: "admin:content",
-    childrenMaxHeight: "160px",
+    childrenMaxHeight: "120px",
     children: [
-      { href: "/admin/contenuti", label: "Pagine",    icon: "FileText",   permission: "admin:content" },
-      { href: "/admin/template",  label: "Template",  icon: "PanelTop",   permission: "admin:content" },
-      { href: "/admin/redirect",  label: "Redirect",  icon: "ArrowRight", permission: "admin:content" },
+      { href: "/admin/contenuti", label: "Pagine",   icon: "FileText", permission: "admin:content" },
+      { href: "/admin/template",  label: "Template", icon: "PanelTop", permission: "admin:content" },
     ],
   },
   {
@@ -97,11 +96,11 @@ export const ADMIN_NAV: NavItem[] = [
     comingSoon: true,
     childrenMaxHeight: "220px",
     children: [
-      { href: "/admin/billing",              label: "Panoramica",        icon: "LayoutDashboard", permission: "admin:billing",           comingSoon: true },
-      { href: "/admin/billing/plans",        label: "Piani",             icon: "PackageCheck",    permission: "billing:manage_plans",    comingSoon: true },
-      { href: "/admin/billing/transactions", label: "Transazioni",       icon: "ArrowLeftRight",  permission: "billing:view_transactions", comingSoon: true },
-      { href: "/admin/billing/subscriptions",label: "Abbonamenti",       icon: "RefreshCcw",      permission: "subscriptions:manage",    comingSoon: true },
-      { href: "/admin/billing/gateways",     label: "Gateway (Stripe…)", icon: "Plug",            permission: "billing:manage_gateways", comingSoon: true },
+      { href: "/admin/billing",               label: "Panoramica",        icon: "LayoutDashboard",  permission: "admin:billing",            comingSoon: true },
+      { href: "/admin/billing/plans",         label: "Piani",             icon: "PackageCheck",     permission: "billing:manage_plans",     comingSoon: true },
+      { href: "/admin/billing/transactions",  label: "Transazioni",       icon: "ArrowLeftRight",   permission: "billing:view_transactions", comingSoon: true },
+      { href: "/admin/billing/subscriptions", label: "Abbonamenti",       icon: "RefreshCcw",       permission: "subscriptions:manage",     comingSoon: true },
+      { href: "/admin/billing/gateways",      label: "Gateway (Stripe…)", icon: "Plug",             permission: "billing:manage_gateways",  comingSoon: true },
     ],
   },
   {
@@ -109,11 +108,12 @@ export const ADMIN_NAV: NavItem[] = [
     label: "SEO",
     icon: "Search",
     permission: "admin:seo",
-    childrenMaxHeight: "160px",
+    childrenMaxHeight: "200px",
     children: [
-      { href: "/admin/seo/meta-tags", label: "Meta Tags", icon: "FileText", permission: "admin:seo" },
-      { href: "/admin/seo/robots",    label: "Robots",    icon: "Globe",    permission: "admin:seo" },
-      { href: "/admin/seo/sitemap",   label: "Sitemap",   icon: "Map",      permission: "admin:seo" },
+      { href: "/admin/seo/meta-tags", label: "Meta Tags", icon: "FileText",  permission: "admin:seo" },
+      { href: "/admin/seo/robots",    label: "Robots",    icon: "Globe",     permission: "admin:seo" },
+      { href: "/admin/seo/sitemap",   label: "Sitemap",   icon: "Map",       permission: "admin:seo" },
+      { href: "/admin/redirect",      label: "Redirect",  icon: "ArrowRight", permission: "admin:seo" },
     ],
   },
   {
