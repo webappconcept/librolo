@@ -1,4 +1,3 @@
-import { LAYOUT_BASES } from "@/app/(frontend)/_templates/registry";
 import { saveTemplateAction } from "../actions";
 import TemplateFormClient from "../_components/template-form-client";
 
@@ -11,14 +10,7 @@ export default function NuovoTemplatePage() {
       <h1 className="text-xl font-bold mb-6" style={{ color: "var(--admin-text)" }}>
         Nuovo template
       </h1>
-      <TemplateFormClient
-        layoutBases={Object.entries(LAYOUT_BASES).map(([key, v]) => ({
-          key,
-          label: v.label,
-          description: v.description,
-        }))}
-        saveAction={saveTemplateAction}
-      />
+      <TemplateFormClient saveAction={saveTemplateAction} />
     </div>
   );
 }
