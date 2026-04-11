@@ -257,7 +257,7 @@ function PubTab({ status, setStatus, publishedAt, setPublishedAt, expiresAt, set
 }
 
 // ─── Struttura Tab ────────────────────────────────────────────────────────────
-function StrutturaTab({ pages, templates, parentId, setParentId, templateId, setTemplateId, setCustomFields, pageType, setPageType, currentPageId }: {
+function StrutturaTab({ pages, templates, parentId, setParentId, templateId, setTemplateId, setCustomFields, currentPageId }: {
   pages: Page[];
   templates: TemplateWithFields[];
   parentId: number | null;
@@ -265,27 +265,12 @@ function StrutturaTab({ pages, templates, parentId, setParentId, templateId, set
   templateId: number | null;
   setTemplateId: (v: number | null) => void;
   setCustomFields: (v: Record<string, string>) => void;
-  pageType: string;
-  setPageType: (v: string) => void;
   currentPageId?: number;
 }) {
   const selectedTemplate = templates.find((t) => t.id === templateId) ?? null;
 
   return (
     <div className="space-y-5">
-      {/* Tipo pagina */}
-      <div className="space-y-1.5">
-        <label style={labelStyle}>Tipo pagina</label>
-        <select value={pageType} onChange={(e) => setPageType(e.target.value)} style={inputStyle}>
-          <option value="page">Pagina generica</option>
-          <option value="article">Articolo</option>
-          <option value="service">Servizio</option>
-          <option value="landing">Landing page</option>
-          <option value="faq">FAQ</option>
-        </select>
-        <p style={hintStyle}>Classifica la pagina per uso futuro nelle query e nei sitemap.</p>
-      </div>
-
       {/* Pagina parent */}
       <div className="space-y-1.5">
         <label style={labelStyle}>Pagina padre (opzionale)</label>
@@ -371,7 +356,6 @@ export default function PageEditor({
   // Struttura
   const [parentId, setParentId] = useState<number | null>(page?.parentId ?? null);
   const [templateId, setTemplateId] = useState<number | null>(page?.templateId ?? null);
-  const [pageType, setPageType] = useState(page?.pageType ?? "page");
   const [customFields, setCustomFields] = useState<Record<string, string>>(() => {
     try { return JSON.parse(page?.customFields ?? "{}"); } catch { return {}; }
   });
@@ -452,7 +436,6 @@ export default function PageEditor({
         <input type="hidden" name="parentId" value={parentId ?? ""} />
         <input type="hidden" name="templateId" value={templateId ?? ""} />
         <input type="hidden" name="customFields" value={JSON.stringify(customFields)} />
-        <input type="hidden" name="pageType" value={pageType} />
 
         {/* Header */}
         <div className="flex items-center justify-between gap-4 mb-5">
@@ -610,8 +593,6 @@ export default function PageEditor({
                 templateId={templateId}
                 setTemplateId={setTemplateId}
                 setCustomFields={setCustomFields}
-                pageType={pageType}
-                setPageType={setPageType}
                 currentPageId={page?.id}
               />
             </div>
