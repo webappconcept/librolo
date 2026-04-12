@@ -1,83 +1,65 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { getPageBySlug } from "@/lib/db/pages-queries";
-import { getSeoPage } from "@/lib/db/seo-queries";
-import { getAppSettings } from "@/lib/db/settings-queries";
-import { getTemplateById } from "@/lib/db/template-queries";
-import { getLayoutComponent } from "@/app/(frontend)/_templates/registry";
-import { parseStyleConfig, parseCustomFields } from "@/app/(frontend)/_templates/types";
+import { getPageWithTemplate, getPublishedPages } from "@/lib/db/pages-queries";
+import { getLayoutComponent } from "../_templates/registry";
+import { parseStyleConfig, parseCustomFields } from "../_templates/types";
 
+// ---------------------------------------------------------------------------
+// Tipi
+// ---------------------------------------------------------------------------
 interface Props {
   params: Promise<{ slug: string[] }>;
 }
 
-/** Risolve i placeholder {token} usando i valori delle settings */
-function resolveMeta(value: string | null | undefined, appName: string, appDomain: string): string | undefined {
-  if (!value) return undefined;
-  return value
-    .replace(/\{appName\}/g, appName)
-    .replace(/\{appDomain\}/g, appDomain)
-    .replace(/\{currentYear\}/g, String(new Date().getFullYear()));
+// ---------------------------------------------------------------------------
+// generateStaticParams — pre-genera tutte le pagine pubblicate in build
+// ---------------------------------------------------------------------------
+export async function generateStaticParams() {
+  const published = await getPublishedPages();
+  return published.map((p) => ({
+    slug: p.slug.split("/").filter(Boolean),
+  }));
 }
 
-function isPubliclyVisible(page: Awaited<ReturnType<typeof getPageBySlug>>): page is NonNullable<typeof page> {
-  if (!page || page.status !== "published") return false;
-  if (page.expiresAt && new Date(page.expiresAt) <= new Date()) return false;
-  return true;
-}
-
+// ---------------------------------------------------------------------------
+// generateMetadata — SEO automatico dalla pagina
+// ---------------------------------------------------------------------------
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const fullSlug = slug.join("/");
-
-  const [page, seo, settings] = await Promise.all([
-    getPageBySlug(fullSlug),
-    getSeoPage(`/${fullSlug}`),
-    getAppSettings(),
-  ]);
-
-  if (!isPubliclyVisible(page)) return {};
-
-  const appName = settings.app_name ?? "";
-  const appDomain = settings.app_domain ?? "";
-
-  const metaTitle = resolveMeta(seo?.title, appName, appDomain) ?? page.title;
-  const metaDesc = resolveMeta(seo?.description, appName, appDomain);
-  const ogTitle = resolveMeta(seo?.ogTitle ?? seo?.title, appName, appDomain) ?? page.title;
-  const ogDesc = resolveMeta(seo?.ogDescription ?? seo?.description, appName, appDomain);
-
+  const slugPath = slug.join("/");
+  const page = await getPageWithTemplate(slugPath);
+  if (!page) return {};
   return {
-    title: metaTitle,
-    description: metaDesc,
-    robots: seo?.robots ?? undefined,
-    openGraph: {
-      title: ogTitle,
-      description: ogDesc,
-      images: seo?.ogImage ? [seo.ogImage] : undefined,
-    },
+    title: page.title,
   };
 }
 
+// ---------------------------------------------------------------------------
+// Page component
+// ---------------------------------------------------------------------------
 export default async function FrontendPage({ params }: Props) {
   const { slug } = await params;
-  const page = await getPageBySlug(slug.join("/"));
+  const slugPath = slug.join("/");
 
-  if (!isPubliclyVisible(page)) notFound();
+  // Recupera pagina + template + campi dal DB
+  const page = await getPageWithTemplate(slugPath);
 
-  const template = page.templateId
-    ? await getTemplateById(page.templateId)
-    : null;
+  // 404 se non esiste o non è pubblicata
+  if (!page || page.status !== "published") return notFound();
 
-  const templateSlug = template?.slug ?? "default";
-  const LayoutComponent = getLayoutComponent(templateSlug);
+  // Risolve il componente template dal registry
+  // Usa template.slug (es. "articolo", "faq") oppure "default" come fallback
+  const templateSlug = page.template?.slug ?? "default";
+  const TemplateComponent = getLayoutComponent(templateSlug);
 
-  const styleConfig = parseStyleConfig(template?.styleConfig);
+  // Parsa i dati custom dalla pagina
   const fields = parseCustomFields(page.customFields);
+  const styleConfig = parseStyleConfig(page.template?.styleConfig);
 
   return (
-    <LayoutComponent
+    <TemplateComponent
       page={page}
-      template={template ?? null}
+      template={page.template ?? null}
       fields={fields}
       styleConfig={styleConfig}
       isPreview={false}
