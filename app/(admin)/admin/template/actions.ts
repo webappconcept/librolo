@@ -11,15 +11,18 @@ import { logContentActivity } from "@/lib/db/content-activity";
 import { ActivityType } from "@/lib/db/schema";
 import { getUser } from "@/lib/db/queries";
 import type { NewPageTemplate, NewTemplateField } from "@/lib/db/schema";
+import { slugify } from "@/lib/utils/slugify";
 
 export async function saveTemplateAction(formData: FormData) {
   const id = formData.get("id") ? Number(formData.get("id")) : undefined;
   const name = (formData.get("name") as string).trim();
-  const slug = (formData.get("slug") as string).trim();
+  // Re-sanitizzazione server-side: anche se il client invia già lo slug corretto,
+  // ri-applichiamo slugify come difesa contro manipolazioni dirette della request.
+  const rawSlug = (formData.get("slug") as string).trim();
+  const slug = slugify(rawSlug);
   const description = (formData.get("description") as string | null)?.trim() || null;
   const isCreating = !id;
 
-  // Leggi allowedChildTemplateIds dal campo dedicato
   let allowedChildTemplateIds: number[] = [];
   const allowedJson = formData.get("allowedChildTemplateIdsJson") as string | null;
   if (allowedJson) {
@@ -37,7 +40,6 @@ export async function saveTemplateAction(formData: FormData) {
     colorText: formData.get("colorText") as string | null,
     spacing: (formData.get("spacing") as string | null) ?? "normal",
     borderRadius: (formData.get("borderRadius") as string | null) ?? "medium",
-    // Regola pagine figlie (stile ProcessWire)
     allowedChildTemplateIds,
   };
 
@@ -61,7 +63,6 @@ export async function saveTemplateAction(formData: FormData) {
 
   await upsertTemplate(templateData, fields);
 
-  // ── Activity log ─────────────────────────────────────────────────────────────────────────────
   const user = await getUser();
   const detail = `slug: ${slug} | nome: ${name}`;
   await logContentActivity(
@@ -69,7 +70,6 @@ export async function saveTemplateAction(formData: FormData) {
     detail,
     user?.id ?? null,
   );
-  // ────────────────────────────────────────────────────────────────────────────
 
   revalidatePath("/admin/template");
   redirect("/admin/template");
@@ -81,7 +81,6 @@ export async function deleteTemplateAction(formData: FormData) {
   const result = await deleteTemplate(id);
   if (!result.error) {
     revalidatePath("/admin/template");
-
     const user = await getUser();
     await logContentActivity(
       ActivityType.TEMPLATE_DELETED,
@@ -96,7 +95,6 @@ export async function duplicateTemplateAction(formData: FormData) {
   if (!id) return;
   await duplicateTemplate(id);
   revalidatePath("/admin/template");
-
   const user = await getUser();
   await logContentActivity(
     ActivityType.TEMPLATE_CREATED,

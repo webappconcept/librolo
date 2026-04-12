@@ -5,6 +5,7 @@ import { GripVertical, Plus, Trash2, Settings, ShieldCheck, Code2, Copy, Check, 
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import type { TemplateField } from "@/lib/db/schema";
 import { EditorPageHeader } from "../../_components/editor-page-header";
+import { slugify, slugToPascalCase } from "@/lib/utils/slugify";
 
 const FORM_ID = "template-editor-form";
 
@@ -75,14 +76,12 @@ function ImplementationGuide({ slug, fields }: { slug: string; fields: FieldDraf
   const [copiedBlock, setCopiedBlock] = useState<string | null>(null);
 
   const componentName = slug
-    ? "Template" + slug.charAt(0).toUpperCase() + slug.slice(1).replace(/-([a-z])/g, (_, c) => c.toUpperCase())
+    ? "Template" + slugToPascalCase(slug)
     : "TemplateNome";
 
   const slugLabel = slug || "nome-template";
   const filePath = `app/(frontend)/_templates/${componentName}.tsx`;
-  const registryPath = `app/(frontend)/_templates/registry.ts`;
 
-  // Genera le righe dei campi custom nel tipo Fields
   const fieldsTypeLines = fields.length > 0
     ? fields.map((f) => {
         const tsType = ["number"].includes(f.fieldType)
@@ -95,7 +94,6 @@ function ImplementationGuide({ slug, fields }: { slug: string; fields: FieldDraf
       }).join("\n")
     : "  // nessun campo custom definito";
 
-  // Genera l'uso dei campi nel JSX
   const fieldsUsageLines = fields.length > 0
     ? fields.map((f) => {
         if (f.fieldType === "image") {
@@ -110,7 +108,7 @@ function ImplementationGuide({ slug, fields }: { slug: string; fields: FieldDraf
       }).join("\n")
     : "        {/* nessun campo custom — usa solo page.title e page.content */}";
 
-  const componentCode = `import type { TemplateProps } from "./_types";
+  const componentCode = `import type { TemplateProps } from "./types";
 
 // Campi custom definiti in questo template
 interface Fields {
@@ -132,14 +130,6 @@ ${fieldsUsageLines}
     </main>
   );
 }`;
-
-  const registrySnippet = `// ${registryPath}
-import ${componentName} from "./${componentName}";
-
-export const TEMPLATE_REGISTRY = {
-  // ... altri template
-  ${slugLabel}: ${componentName},
-};`;
 
   function copyToClipboard(text: string, key: string) {
     navigator.clipboard.writeText(text).then(() => {
@@ -228,11 +218,11 @@ export const TEMPLATE_REGISTRY = {
       {!slug && (
         <div style={noticeStyle}>
           <Info size={14} style={{ color: "var(--admin-accent)", marginTop: "1px", flexShrink: 0 }} />
-          <span>Inserisci uno <strong style={{ color: "var(--admin-text)" }}>Slug</strong> nel tab Generale per vedere il percorso e il nome del componente personalizzati.</span>
+          <span>Inserisci un <strong style={{ color: "var(--admin-text)" }}>Nome</strong> nel tab Generale per generare automaticamente lo slug e vedere il percorso del componente.</span>
         </div>
       )}
 
-      {/* Step 1 — Crea il componente */}
+      {/* Step unico — Crea il componente */}
       <div className="mb-6">
         <p style={sectionTitle}>
           <span style={stepBadge}>1</span>
@@ -266,38 +256,18 @@ export const TEMPLATE_REGISTRY = {
         </div>
       </div>
 
-      {/* Step 2 — Registra nel registry */}
-      <div className="mb-6">
-        <p style={sectionTitle}>
-          <span style={stepBadge}>2</span>
-          Registra nel registry dei template
+      {/* Nota: nessun registry da aggiornare */}
+      <div className="rounded-lg px-4 py-3 flex items-start gap-2 mb-4"
+        style={{
+          background: "color-mix(in srgb, #22c55e 6%, var(--admin-card-bg))",
+          border: "1px solid color-mix(in srgb, #22c55e 22%, transparent)",
+        }}>
+        <Check size={14} className="mt-0.5 shrink-0" style={{ color: "#22c55e" }} />
+        <p className="text-xs leading-relaxed" style={{ color: "var(--admin-text-muted)" }}>
+          <strong style={{ color: "var(--admin-text)" }}>Nessun registry da aggiornare.</strong>{" "}
+          Il sistema carica automaticamente <code style={{ fontFamily: "monospace", fontSize: "0.75rem" }}>{componentName}.tsx</code> in base allo slug <code style={{ fontFamily: "monospace", fontSize: "0.75rem" }}>&#34;{slugLabel}&#34;</code>.
+          Basta creare il file con il nome corretto.
         </p>
-        <div style={pathPill}>
-          <FileCode2 size={13} />
-          {registryPath}
-        </div>
-        <div style={{ position: "relative" }}>
-          <div style={codeBlockStyle}>{registrySnippet}</div>
-          <button
-            type="button"
-            title="Copia codice"
-            onClick={() => copyToClipboard(registrySnippet, "registry")}
-            style={{
-              position: "absolute",
-              top: "0.5rem",
-              right: "0.5rem",
-              padding: "0.3rem",
-              borderRadius: "0.375rem",
-              background: "var(--admin-card-bg)",
-              border: "1px solid var(--admin-border)",
-              color: copiedBlock === "registry" ? "#22c55e" : "var(--admin-text-faint)",
-              cursor: "pointer",
-              transition: "color 150ms",
-            }}
-          >
-            {copiedBlock === "registry" ? <Check size={13} /> : <Copy size={13} />}
-          </button>
-        </div>
       </div>
 
       {/* Nota campi */}
@@ -349,8 +319,8 @@ export default function TemplateFormClient({
   const isEdit = !!template;
   const [activeTab, setActiveTab] = useState<"generale" | "regole" | "implementazione">("generale");
   const [name, setName] = useState(template?.name ?? "");
+  // In creazione lo slug è sempre derivato dal nome; in modifica è bloccato.
   const [slug, setSlug] = useState(template?.slug ?? "");
-  const [slugManual, setSlugManual] = useState(!!template?.slug);
   const [description, setDescription] = useState(template?.description ?? "");
 
   const [allowedChildIds, setAllowedChildIds] = useState<number[]>(() => {
@@ -377,15 +347,18 @@ export default function TemplateFormClient({
   const [error, setError] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
+  // Auto-genera slug dal nome solo in modalità creazione
+  useEffect(() => {
+    if (!isEdit) {
+      setSlug(slugify(name));
+    }
+  }, [name, isEdit]);
+
   useEffect(() => {
     if (!savedAt) return;
     const t = setTimeout(() => setSavedAt(null), 4000);
     return () => clearTimeout(t);
   }, [savedAt]);
-
-  function autoSlug(val: string) {
-    return val.toLowerCase().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-").slice(0, 100);
-  }
 
   function addField() {
     setFields((prev) => [
@@ -459,6 +432,14 @@ export default function TemplateFormClient({
     border: "1px solid var(--admin-border)",
     color: "var(--admin-text)",
   };
+  const inputReadonlyStyle: React.CSSProperties = {
+    background: "var(--admin-input-bg)",
+    border: "1px solid var(--admin-border)",
+    color: "var(--admin-text-faint)",
+    cursor: "not-allowed",
+    fontFamily: "monospace",
+    fontSize: "0.8rem",
+  };
   const fieldInputStyle: React.CSSProperties = {
     background: "var(--admin-card-bg)",
     border: "1px solid var(--admin-border)",
@@ -471,6 +452,8 @@ export default function TemplateFormClient({
   const currentLabel = isEdit
     ? (name || template?.name || "Modifica template")
     : (name ? name : "Nuovo template");
+
+  const componentName = slug ? "Template" + slugToPascalCase(slug) : null;
 
   return (
     <form id={FORM_ID} ref={formRef} onSubmit={handleSubmit}>
@@ -541,23 +524,58 @@ export default function TemplateFormClient({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className={labelCls} style={{ color: "var(--admin-text-muted)" }}>Nome *</label>
-                <input name="name" required value={name}
-                  onChange={(e) => { setName(e.target.value); if (!slugManual) setSlug(autoSlug(e.target.value)); }}
-                  className={inputCls} style={inputStyle} placeholder="Es. Articolo blog" />
+                <input
+                  name="name"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className={inputCls}
+                  style={inputStyle}
+                  placeholder="Es. Articolo Blog"
+                />
               </div>
               <div>
-                <label className={labelCls} style={{ color: "var(--admin-text-muted)" }}>Slug *</label>
-                <input name="slug" required value={slug}
-                  onChange={(e) => { setSlug(e.target.value); setSlugManual(true); }}
-                  className={inputCls} style={inputStyle} placeholder="articolo-blog"
-                  disabled={template?.isSystem} />
+                <label className={labelCls} style={{ color: "var(--admin-text-muted)" }}>
+                  Slug
+                  {!isEdit && (
+                    <span className="ml-1.5 text-xs font-normal" style={{ color: "var(--admin-text-faint)" }}>
+                      — generato automaticamente dal nome
+                    </span>
+                  )}
+                  {isEdit && (
+                    <span className="ml-1.5 text-xs font-normal" style={{ color: "var(--admin-text-faint)" }}>
+                      — non modificabile dopo la creazione
+                    </span>
+                  )}
+                </label>
+                <input
+                  name="slug"
+                  value={slug}
+                  readOnly
+                  className={inputCls}
+                  style={inputReadonlyStyle}
+                  placeholder="generato dal nome…"
+                />
+                {componentName && (
+                  <p className="mt-1 text-xs" style={{ color: "var(--admin-text-faint)" }}>
+                    File:{" "}
+                    <code style={{ fontFamily: "monospace" }}>
+                      {componentName}.tsx
+                    </code>
+                  </p>
+                )}
               </div>
               <div className="col-span-2">
                 <label className={labelCls} style={{ color: "var(--admin-text-muted)" }}>Descrizione</label>
-                <textarea name="description" value={description}
+                <textarea
+                  name="description"
+                  value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  rows={2} className={inputCls} style={inputStyle}
-                  placeholder="Breve descrizione dell'uso del template…" />
+                  rows={2}
+                  className={inputCls}
+                  style={inputStyle}
+                  placeholder="Breve descrizione dell'uso del template…"
+                />
               </div>
             </div>
           </section>

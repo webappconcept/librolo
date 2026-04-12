@@ -1,46 +1,23 @@
 /**
- * Registry dei template frontend.
+ * DEPRECATO — non aggiungere nuove voci qui.
  *
- * La chiave è il `slug` del template in DB (es. "articolo", "faq").
- * Il developer crea qui la mappatura slug → componente React.
+ * Il sistema ora usa il dynamic loader basato su convenzione del nome file.
+ * Vedi: app/(frontend)/_templates/loader.tsx
  *
- * Per aggiungere un nuovo template:
- *   1. Crea il file TSX in questa cartella (es. TemplateArticolo.tsx)
- *   2. Registralo qui con la chiave uguale allo slug scelto in admin
- *
- * Se uno slug non è registrato, viene usato TemplateDefault come fallback.
+ * Come aggiungere un nuovo template:
+ *   1. Crea il file TSX: Template{PascalCase(slug)}.tsx in questa cartella
+ *      Es. slug "articolo-blog" → TemplateArticoloBlog.tsx
+ *   2. Nessun registry da aggiornare — il loader lo trova automaticamente.
  */
+
 import type { ComponentType } from "react";
 import type { TemplateProps } from "./types";
-
 import { TemplateDefault } from "./TemplateDefault";
-import { TemplateArticle } from "./TemplateArticle";
-import { TemplateService } from "./TemplateService";
-import { TemplateLanding } from "./TemplateLanding";
-import { TemplateFaq } from "./TemplateFaq";
+import { getDynamicTemplate } from "./loader";
 
-export const TEMPLATE_REGISTRY: Record<
-  string,
-  ComponentType<TemplateProps>
-> = {
-  // slug "default" → usato come fallback generico
-  default: TemplateDefault,
-
-  // Slug italiani (usati nel CMS admin)
-  articolo: TemplateArticle,
-  servizio: TemplateService,
-  landing: TemplateLanding,
-  faq: TemplateFaq,
-
-  // Alias slug inglesi (retrocompatibilità)
-  article: TemplateArticle,
-  service: TemplateService,
-};
-
-/**
- * Restituisce il componente React per il dato slug del template.
- * Se lo slug non è nel registry, cade su TemplateDefault.
- */
-export function getLayoutComponent(templateSlug: string): ComponentType<TemplateProps> {
-  return TEMPLATE_REGISTRY[templateSlug] ?? TemplateDefault;
+/** @deprecated Usa getDynamicTemplate() da loader.tsx */
+export function getLayoutComponent(
+  templateSlug: string
+): ComponentType<TemplateProps> {
+  return getDynamicTemplate(templateSlug) ?? TemplateDefault;
 }
