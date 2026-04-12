@@ -1,7 +1,7 @@
 // app/(preview)/admin/preview/[id]/page.tsx
 // Anteprima pagina CMS — accessibile solo agli admin.
 // Vive nel route group (preview) isolato: niente sidebar/topbar admin.
-// Mostra la pagina con isPreview=true indipendentemente dallo status (draft/published).
+// Il banner "Anteprima" è gestito da PreviewBar, non dai template.
 import { notFound } from "next/navigation";
 import { getPageById } from "@/lib/db/pages-queries";
 import { db } from "@/lib/db/drizzle";
@@ -44,7 +44,7 @@ export default async function PreviewPage({ params }: Props) {
   }
 
   const templateSlug = template?.slug ?? "default";
-  const TemplateComponent = getDynamicTemplate(templateSlug);
+  const TemplateComponent = await getDynamicTemplate(templateSlug);
   const fields = parseCustomFields(page.customFields);
   const styleConfig = parseStyleConfig(template?.styleConfig);
 
@@ -62,7 +62,6 @@ export default async function PreviewPage({ params }: Props) {
           template={template}
           fields={fields}
           styleConfig={styleConfig}
-          isPreview={true}
         />
       </div>
     </>
