@@ -1,9 +1,9 @@
 "use server";
 
-import { updateAppSetting } from "@/lib/db/settings-queries";
 import { db } from "@/lib/db/drizzle";
-import { siteSnippets } from "@/lib/db/schema";
 import type { SiteSnippet } from "@/lib/db/schema";
+import { siteSnippets } from "@/lib/db/schema";
+import { updateAppSetting } from "@/lib/db/settings-queries";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -23,13 +23,16 @@ export async function saveAppSettings(
   formData: FormData,
 ): Promise<ActionState> {
   try {
-    const domain = (formData.get("app_domain") as string ?? "")
+    const domain = ((formData.get("app_domain") as string) ?? "")
       .trim()
       .replace(/^https?:\/\//i, "")
       .replace(/\/$/, "");
 
     await updateAppSetting("app_name", formData.get("app_name") as string);
-    await updateAppSetting("app_description", formData.get("app_description") as string);
+    await updateAppSetting(
+      "app_description",
+      formData.get("app_description") as string,
+    );
     await updateAppSetting("app_domain", domain ? `https://${domain}` : "");
     return { success: "Impostazioni salvate.", timestamp: Date.now() };
   } catch {
@@ -45,10 +48,41 @@ export async function saveEmailSettings(
   formData: FormData,
 ): Promise<ActionState> {
   try {
-    await updateAppSetting("resend_api_key", formData.get("resend_api_key") as string);
-    await updateAppSetting("email_from_name", formData.get("email_from_name") as string);
-    await updateAppSetting("email_from_address", formData.get("email_from_address") as string);
+    await updateAppSetting(
+      "resend_api_key",
+      formData.get("resend_api_key") as string,
+    );
+    await updateAppSetting(
+      "email_from_name",
+      formData.get("email_from_name") as string,
+    );
+    await updateAppSetting(
+      "email_from_address",
+      formData.get("email_from_address") as string,
+    );
     return { success: "Impostazioni email salvate.", timestamp: Date.now() };
+  } catch {
+    return { error: "Errore durante il salvataggio.", timestamp: Date.now() };
+  }
+}
+
+export async function saveBehaviourSettings(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  try {
+    await updateAppSetting(
+      "registrations_enabled",
+      formData.get("registrations_enabled") as string,
+    );
+    await updateAppSetting(
+      "maintenance_mode",
+      formData.get("maintenance_mode") as string,
+    );
+    return {
+      success: "Impostazioni comportamento salvate.",
+      timestamp: Date.now(),
+    };
   } catch {
     return { error: "Errore durante il salvataggio.", timestamp: Date.now() };
   }
@@ -58,7 +92,7 @@ export async function saveEmailSettings(
 // Alias con suffisso Action (per compatibilità futura / snippets-tab.tsx)
 // ---------------------------------------------------------------------------
 export const saveGeneralSettingsAction = saveAppSettings;
-export const saveBehaviourSettingsAction = saveAppSettings;
+export const saveBehaviourSettingsAction = saveBehaviourSettings;
 export const saveEmailSettingsAction = saveEmailSettings;
 
 // ---------------------------------------------------------------------------

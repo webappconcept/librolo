@@ -6,7 +6,7 @@ import type { AppSettings } from "@/lib/db/settings-queries";
 import { Loader2, Save } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useActionState, useEffect, useRef, useState } from "react";
-import { saveAppSettings, type ActionState } from "../actions";
+import { saveBehaviourSettings, type ActionState } from "../actions";
 import { SettingToggle } from "../toggles";
 
 export function BehaviourTab({ settings }: { settings: AppSettings }) {
@@ -16,7 +16,7 @@ export function BehaviourTab({ settings }: { settings: AppSettings }) {
 
 function BehaviourTabInner({ settings }: { settings: AppSettings }) {
   const [state, formAction, isPending] = useActionState<ActionState, FormData>(
-    saveAppSettings,
+    saveBehaviourSettings,
     {},
   );
   const [toast, setToast] = useState<{
