@@ -3,7 +3,7 @@
 import ConfirmModal from "@/app/(admin)/admin/_components/confirm-modal";
 import Tooltip from "@/app/(admin)/admin/_components/tooltip";
 import type { Page, PageTemplate } from "@/lib/db/schema";
-import { ChevronRight, EyeOff, FileText, GitFork, Globe, PanelTop, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { ChevronRight, ExternalLink, EyeOff, FileText, GitFork, Globe, PanelTop, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { deletePageAction, togglePageStatusAction } from "../actions";
@@ -31,6 +31,7 @@ function PageRow({
   onToggleStatus,
   pendingToggleId,
   searchActive,
+  appDomain,
 }: {
   page: Page;
   allPages: Page[];
@@ -44,6 +45,7 @@ function PageRow({
   onToggleStatus: (id: number, status: string) => void;
   pendingToggleId: number | null;
   searchActive: boolean;
+  appDomain: string;
 }) {
   const children = allPages.filter((p) => p.parentId === page.id);
   const hasChildren = children.length > 0;
@@ -52,6 +54,10 @@ function PageRow({
   const tplName = templates.find((t) => t.id === page.templateId)?.name;
   const isPendingToggle = pendingToggleId === page.id;
   const indent = depth * 20;
+
+  // URL del front: dominio + /slug
+  // Lo slug in DB non ha lo slash iniziale, lo aggiungiamo noi
+  const frontUrl = appDomain ? `${appDomain}/${page.slug}` : null;
 
   /** Conta ricorsivamente tutti i discendenti dalla lista già in memoria */
   function countDescendants(id: number): number {
@@ -169,24 +175,7 @@ function PageRow({
         {/* Actions — stopPropagation evita toggle riga */}
         <div className="flex items-center gap-0.5 shrink-0" onClick={stopRow}>
 
-          <Tooltip label="Nuova pagina figlia" side="top">
-            <button
-              onClick={() => onNewChild(page.id)}
-              className="p-1.5 rounded-lg transition-colors"
-              style={{ color: "var(--admin-text-faint)" }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = "color-mix(in srgb, var(--admin-accent) 10%, var(--admin-card-bg))";
-                e.currentTarget.style.color = "var(--admin-accent)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "transparent";
-                e.currentTarget.style.color = "var(--admin-text-faint)";
-              }}
-            >
-              <GitFork size={13} />
-            </button>
-          </Tooltip>
-
+          {/* 1. Modifica — sempre visibile, prima di tutto */}
           <Tooltip label="Modifica pagina" side="top">
             <button
               onClick={() => onEdit(page.id)}
@@ -205,6 +194,49 @@ function PageRow({
             </button>
           </Tooltip>
 
+          {/* 2. Anteprima — solo se pubblicata e appDomain impostato */}
+          {isPublished && frontUrl && (
+            <Tooltip label="Anteprima sul sito" side="top">
+              <a
+                href={frontUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-1.5 rounded-lg transition-colors inline-flex items-center"
+                style={{ color: "var(--admin-text-faint)" }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLAnchorElement).style.background = "color-mix(in srgb, var(--admin-accent) 10%, var(--admin-card-bg))";
+                  (e.currentTarget as HTMLAnchorElement).style.color = "var(--admin-accent)";
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLAnchorElement).style.background = "transparent";
+                  (e.currentTarget as HTMLAnchorElement).style.color = "var(--admin-text-faint)";
+                }}
+              >
+                <ExternalLink size={13} />
+              </a>
+            </Tooltip>
+          )}
+
+          {/* 3. Nuova pagina figlia */}
+          <Tooltip label="Nuova pagina figlia" side="top">
+            <button
+              onClick={() => onNewChild(page.id)}
+              className="p-1.5 rounded-lg transition-colors"
+              style={{ color: "var(--admin-text-faint)" }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "color-mix(in srgb, var(--admin-accent) 10%, var(--admin-card-bg))";
+                e.currentTarget.style.color = "var(--admin-accent)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "transparent";
+                e.currentTarget.style.color = "var(--admin-text-faint)";
+              }}
+            >
+              <GitFork size={13} />
+            </button>
+          </Tooltip>
+
+          {/* 4. Pubblica / Depubblica */}
           <Tooltip label={isPublished ? "Depubblica" : "Pubblica"} side="top">
             <button
               onClick={() => onToggleStatus(page.id, page.status)}
@@ -238,6 +270,7 @@ function PageRow({
             </button>
           </Tooltip>
 
+          {/* 5. Elimina */}
           <Tooltip label="Elimina pagina" side="top">
             <button
               onClick={() =>
@@ -282,6 +315,7 @@ function PageRow({
             onToggleStatus={onToggleStatus}
             pendingToggleId={pendingToggleId}
             searchActive={searchActive}
+            appDomain={appDomain}
           />
         ))}
     </>
@@ -292,9 +326,11 @@ function PageRow({
 export default function PageManager({
   initialPages,
   templates,
+  appDomain,
 }: {
   initialPages: Page[];
   templates: TemplateWithFields[];
+  appDomain: string;
 }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
@@ -465,6 +501,7 @@ export default function PageManager({
               onToggleStatus={handleToggleStatus}
               pendingToggleId={pendingToggleId}
               searchActive={searchActive}
+              appDomain={appDomain}
             />
           ))}
         </div>

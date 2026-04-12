@@ -1,3 +1,4 @@
+import { getAppSettings } from "@/lib/db/settings-queries";
 import { getAllPages } from "@/lib/db/pages-queries";
 import { getAllTemplates } from "@/lib/db/template-queries";
 import { FileText } from "lucide-react";
@@ -7,11 +8,26 @@ import PageManager from "./_components/page-manager";
 export const dynamic = "force-dynamic";
 
 async function ContenutiContent() {
-  const [pages, templates] = await Promise.all([
+  const [pages, templates, settings] = await Promise.all([
     getAllPages(),
     getAllTemplates(),
+    getAppSettings(),
   ]);
-  return <PageManager initialPages={pages} templates={templates} />;
+
+  // Normalizza il dominio: assicura https:// e rimuove slash finale
+  let appDomain = settings.app_domain ?? "";
+  if (appDomain && !appDomain.startsWith("http")) {
+    appDomain = `https://${appDomain}`;
+  }
+  appDomain = appDomain.replace(/\/+$/, "");
+
+  return (
+    <PageManager
+      initialPages={pages}
+      templates={templates}
+      appDomain={appDomain}
+    />
+  );
 }
 
 export default function ContenutiPage() {
