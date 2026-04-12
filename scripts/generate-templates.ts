@@ -5,10 +5,14 @@
  * Scansiona app/(frontend)/_templates/Template*.tsx e genera
  * app/(frontend)/_templates/index.generated.ts con:
  *   - import statici (richiesti da Turbopack/webpack)
- *   - mappa slug → componente derivata dal nome file
+ *   - mappa slug -> componente derivata dal nome file
+ *
+ * Conversione nome file -> slug:
+ *   TemplateArticolo    -> articolo
+ *   TemplateBlogPost    -> blog-post
+ *   TemplateDefault     -> ESCLUSO (è il fallback hardcoded)
  *
  * Eseguito automaticamente da prebuild e predev.
- * Il file generato NON va committato (.gitignore).
  */
 
 import { readdirSync, writeFileSync } from "fs";
@@ -19,7 +23,10 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const TEMPLATES_DIR = join(__dirname, "../app/(frontend)/_templates");
 const OUTPUT_FILE = join(TEMPLATES_DIR, "index.generated.ts");
 
-/** TemplateArticoloBlog → articolo-blog */
+/**
+ * TemplateArticoloBlog -> articolo-blog
+ * Rimuove il prefisso "Template", poi converte CamelCase in kebab-case.
+ */
 function componentNameToSlug(name: string): string {
   return name
     .replace(/^Template/, "")
@@ -28,21 +35,17 @@ function componentNameToSlug(name: string): string {
     .replace(/^-/, "");
 }
 
-// Trova tutti i file Template*.tsx escludendo TemplateDefault
+const EXCLUDED = ["TemplateDefault.tsx"];
+
 const files = readdirSync(TEMPLATES_DIR)
   .filter(
     (f) =>
       f.startsWith("Template") &&
       f.endsWith(".tsx") &&
-      f !== "TemplateDefault.tsx"
+      !EXCLUDED.includes(f)
   )
   .sort();
 
-if (files.length === 0) {
-  console.log("[generate-templates] Nessun template trovato oltre a TemplateDefault.");
-}
-
-// Costruisce le righe del file generato
 const componentNames = files.map((f) => f.replace(".tsx", ""));
 
 const importLines = componentNames
@@ -72,6 +75,8 @@ ${mapEntries}
 
 writeFileSync(OUTPUT_FILE, output, "utf-8");
 console.log(
-  `[generate-templates] Generati ${files.length} template:\n` +
-  componentNames.map((n) => `  ${n} → slug: ${componentNameToSlug(n)}`).join("\n")
+  `[generate-templates] ${files.length} template trovati:\n` +
+    componentNames
+      .map((n) => `  ${n} -> slug: "${componentNameToSlug(n)}"`)
+      .join("\n")
 );
