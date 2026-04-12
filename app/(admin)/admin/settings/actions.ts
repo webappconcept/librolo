@@ -7,25 +7,69 @@ import type { SiteSnippet } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidateTag } from "next/cache";
 
-// ─── AppSettings ─────────────────────────────────────────────────────────────
-export async function saveGeneralSettingsAction(formData: FormData) {
-  await updateAppSetting("app_name", formData.get("app_name") as string);
-  await updateAppSetting("app_description", formData.get("app_description") as string);
-  await updateAppSetting("app_domain", formData.get("app_domain") as string);
+// ---------------------------------------------------------------------------
+// ActionState (usato dai tab esistenti con useActionState)
+// ---------------------------------------------------------------------------
+export type ActionState =
+  | {}
+  | { success: string; timestamp: number }
+  | { error: string; timestamp: number };
+
+// ---------------------------------------------------------------------------
+// Generale  (general-tab.tsx → saveAppSettings)
+// ---------------------------------------------------------------------------
+export async function saveAppSettings(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  try {
+    const domain = (formData.get("app_domain") as string ?? "")
+      .trim()
+      .replace(/^https?:\/\//i, "")
+      .replace(/\/$/, "");
+
+    await updateAppSetting("app_name", formData.get("app_name") as string);
+    await updateAppSetting("app_description", formData.get("app_description") as string);
+    await updateAppSetting("app_domain", domain ? `https://${domain}` : "");
+    return { success: "Impostazioni salvate.", timestamp: Date.now() };
+  } catch {
+    return { error: "Errore durante il salvataggio.", timestamp: Date.now() };
+  }
 }
 
-export async function saveBehaviourSettingsAction(formData: FormData) {
-  await updateAppSetting("maintenance_mode", formData.get("maintenance_mode") as string);
-  await updateAppSetting("registrations_enabled", formData.get("registrations_enabled") as string);
+// ---------------------------------------------------------------------------
+// Comportamento  (behaviour-tab.tsx → saveAppSettings  ← stesso export)
+// ---------------------------------------------------------------------------
+// I toggle inviano maintenance_mode / registrations_enabled nello stesso form.
+// behaviour-tab.tsx usa già saveAppSettings, nessun alias extra necessario.
+
+// ---------------------------------------------------------------------------
+// Email  (email-tab.tsx → saveEmailSettings)
+// ---------------------------------------------------------------------------
+export async function saveEmailSettings(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  try {
+    await updateAppSetting("resend_api_key", formData.get("resend_api_key") as string);
+    await updateAppSetting("email_from_name", formData.get("email_from_name") as string);
+    await updateAppSetting("email_from_address", formData.get("email_from_address") as string);
+    return { success: "Impostazioni email salvate.", timestamp: Date.now() };
+  } catch {
+    return { error: "Errore durante il salvataggio.", timestamp: Date.now() };
+  }
 }
 
-export async function saveEmailSettingsAction(formData: FormData) {
-  await updateAppSetting("resend_api_key", formData.get("resend_api_key") as string);
-  await updateAppSetting("email_from_name", formData.get("email_from_name") as string);
-  await updateAppSetting("email_from_address", formData.get("email_from_address") as string);
-}
+// ---------------------------------------------------------------------------
+// Alias con suffisso Action (per compatibilità futura / snippets-tab.tsx)
+// ---------------------------------------------------------------------------
+export const saveGeneralSettingsAction = saveAppSettings;
+export const saveBehaviourSettingsAction = saveAppSettings;
+export const saveEmailSettingsAction = saveEmailSettings;
 
-// ─── Snippets ─────────────────────────────────────────────────────────────────
+// ---------------------------------------------------------------------------
+// Snippets CRUD
+// ---------------------------------------------------------------------------
 function invalidateSnippets() {
   revalidateTag("snippets");
 }
