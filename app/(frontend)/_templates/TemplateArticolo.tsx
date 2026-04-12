@@ -14,7 +14,6 @@ export function TemplateArticolo({
   page,
   fields,
   styleConfig,
-  isPreview,
 }: TemplateProps) {
   const cssVars = styleConfigToCssVars(styleConfig);
 
@@ -27,21 +26,6 @@ export function TemplateArticolo({
         color: styleConfig.colorText ?? "var(--color-text, #1a1a1a)",
         minHeight: "100vh",
       }}>
-      {isPreview && (
-        <div
-          style={{
-            background: "#fbbf24",
-            color: "#1a1a1a",
-            textAlign: "center",
-            padding: "0.5rem",
-            fontSize: "0.75rem",
-            fontWeight: 600,
-            letterSpacing: "0.05em",
-            textTransform: "uppercase",
-          }}>
-          ⚠️ Anteprima — non pubblicata
-        </div>
-      )}
 
       {/* Hero immagine */}
       {fields.coverImage && (

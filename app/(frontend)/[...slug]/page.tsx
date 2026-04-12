@@ -35,6 +35,28 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 // ---------------------------------------------------------------------------
+// Banner preview — mostrato solo per pagine non pubblicate in anteprima
+// Tenuto qui e non nei template: ogni template deve occuparsi solo del layout.
+// ---------------------------------------------------------------------------
+function PreviewBanner() {
+  return (
+    <div
+      style={{
+        background: "#fbbf24",
+        color: "#1a1a1a",
+        textAlign: "center",
+        padding: "0.5rem",
+        fontSize: "0.75rem",
+        fontWeight: 600,
+        letterSpacing: "0.05em",
+        textTransform: "uppercase",
+      }}>
+      ⚠️ Anteprima — non pubblicata
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Page component
 // ---------------------------------------------------------------------------
 export default async function FrontendPage({ params }: Props) {
@@ -44,11 +66,16 @@ export default async function FrontendPage({ params }: Props) {
   // Recupera pagina + template + campi dal DB
   const page = await getPageWithTemplate(slugPath);
 
-  // 404 se non esiste o non è pubblicata
-  if (!page || page.status !== "published") return notFound();
+  // La pagina deve esistere (le bozze sono accessibili solo in preview)
+  if (!page) return notFound();
+
+  const isPreview = page.status !== "published";
+
+  // In produzione le pagine non pubblicate restituiscono 404
+  // (il parametro ?preview=1 potrà bypassare questo controllo in futuro)
+  if (isPreview) return notFound();
 
   // Risolve il componente template tramite loader (async, import dinamico)
-  // Usa template.slug (es. "articolo", "blog") oppure "default" come fallback
   const templateSlug = page.template?.slug ?? "default";
   const TemplateComponent = await getDynamicTemplate(templateSlug);
 
@@ -57,12 +84,14 @@ export default async function FrontendPage({ params }: Props) {
   const styleConfig = parseStyleConfig(page.template?.styleConfig);
 
   return (
-    <TemplateComponent
-      page={page}
-      template={page.template ?? null}
-      fields={fields}
-      styleConfig={styleConfig}
-      isPreview={false}
-    />
+    <>
+      {isPreview && <PreviewBanner />}
+      <TemplateComponent
+        page={page}
+        template={page.template ?? null}
+        fields={fields}
+        styleConfig={styleConfig}
+      />
+    </>
   );
 }

@@ -16,8 +16,6 @@ export interface TemplateProps {
   /** Valori dei campi custom: { fieldKey: value } */
   fields: Record<string, string>;
   styleConfig: TemplateStyleConfig;
-  /** true quando la pagina è caricata in iframe di anteprima */
-  isPreview?: boolean;
 }
 
 /** Helper: parsa styleConfig in modo sicuro */

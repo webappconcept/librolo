@@ -5,7 +5,7 @@ import type { TemplateProps } from "./types";
  * Usato quando nessun template corrisponde allo slug della pagina.
  * Layout minimale: titolo + contenuto HTML grezzo.
  */
-export function TemplateDefault({ page, isPreview }: TemplateProps) {
+export function TemplateDefault({ page }: TemplateProps) {
   return (
     <div
       style={{
@@ -14,21 +14,6 @@ export function TemplateDefault({ page, isPreview }: TemplateProps) {
         color: "#1a1a1a",
         minHeight: "100vh",
       }}>
-      {isPreview && (
-        <div
-          style={{
-            background: "#fbbf24",
-            color: "#1a1a1a",
-            textAlign: "center",
-            padding: "0.5rem",
-            fontSize: "0.75rem",
-            fontWeight: 600,
-            letterSpacing: "0.05em",
-            textTransform: "uppercase",
-          }}>
-          ⚠️ Anteprima — non pubblicata
-        </div>
-      )}
       <main
         style={{ maxWidth: "720px", margin: "0 auto", padding: "3rem 1.5rem" }}>
         <h1
