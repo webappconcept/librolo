@@ -3,10 +3,28 @@
 import ConfirmModal from "@/app/(admin)/admin/_components/confirm-modal";
 import Tooltip from "@/app/(admin)/admin/_components/tooltip";
 import type { Page, PageTemplate } from "@/lib/db/schema";
-import { ChevronRight, ExternalLink, Eye, EyeOff, FileText, GitFork, Globe, PanelTop, Pencil, Plus, Search, Trash2, ShieldCheck } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  ExternalLink,
+  Eye,
+  EyeOff,
+  FileText,
+  GitFork,
+  Globe,
+  PanelTop,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+  ShieldCheck,
+  X,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useState, useTransition, useRef, useEffect } from "react";
 import { deletePageAction, togglePageStatusAction } from "../actions";
+
+const PAGE_SIZE = 15;
 
 type TemplateWithFields = PageTemplate & { fields: import("@/lib/db/schema").TemplateField[] };
 
@@ -27,6 +45,163 @@ function getAllowedChildIds(template: TemplateWithFields | undefined): number[] 
   const ids = cfg.allowedChildTemplateIds;
   if (Array.isArray(ids)) return ids.map(Number).filter(Boolean);
   return [];
+}
+
+// ─── ChildPaginator — barra di paginazione + ricerca contestuale ─────────────
+function ChildPaginator({
+  total,
+  page,
+  totalPages,
+  search,
+  searchResults,
+  onSearch,
+  onPrev,
+  onNext,
+}: {
+  total: number;
+  page: number;
+  totalPages: number;
+  search: string;
+  searchResults: number | null; // null = nessuna ricerca attiva
+  onSearch: (v: string) => void;
+  onPrev: () => void;
+  onNext: () => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const isSearching = search.trim().length > 0;
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "6px",
+        marginTop: "4px",
+        padding: "5px 8px",
+        borderRadius: "10px",
+        background: "color-mix(in srgb, var(--admin-text-faint) 6%, var(--admin-page-bg))",
+        border: "1px dashed color-mix(in srgb, var(--admin-text-faint) 20%, transparent)",
+      }}
+    >
+      {/* Search input */}
+      <div style={{ position: "relative", flex: 1, minWidth: 0 }}>
+        <Search
+          size={11}
+          style={{
+            position: "absolute",
+            left: "7px",
+            top: "50%",
+            transform: "translateY(-50%)",
+            color: "var(--admin-text-faint)",
+            pointerEvents: "none",
+          }}
+        />
+        <input
+          ref={inputRef}
+          value={search}
+          onChange={(e) => onSearch(e.target.value)}
+          placeholder="Cerca tra i figli…"
+          style={{
+            width: "100%",
+            paddingLeft: "22px",
+            paddingRight: isSearching ? "22px" : "6px",
+            paddingTop: "3px",
+            paddingBottom: "3px",
+            fontSize: "11px",
+            background: "transparent",
+            border: "none",
+            outline: "none",
+            color: "var(--admin-text)",
+          }}
+        />
+        {isSearching && (
+          <button
+            type="button"
+            onClick={() => { onSearch(""); inputRef.current?.focus(); }}
+            style={{
+              position: "absolute",
+              right: "4px",
+              top: "50%",
+              transform: "translateY(-50%)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "16px",
+              height: "16px",
+              borderRadius: "50%",
+              background: "var(--admin-text-faint)",
+              border: "none",
+              cursor: "pointer",
+              color: "var(--admin-card-bg)",
+              padding: 0,
+            }}
+          >
+            <X size={9} />
+          </button>
+        )}
+      </div>
+
+      {/* Divider */}
+      <div style={{ width: "1px", height: "14px", background: "var(--admin-border)", flexShrink: 0 }} />
+
+      {/* Pagination controls o contatore risultati */}
+      {isSearching ? (
+        <span style={{ fontSize: "11px", color: "var(--admin-text-faint)", whiteSpace: "nowrap", flexShrink: 0 }}>
+          {searchResults ?? 0} risultati
+        </span>
+      ) : (
+        <div style={{ display: "flex", alignItems: "center", gap: "4px", flexShrink: 0 }}>
+          <button
+            type="button"
+            onClick={onPrev}
+            disabled={page === 1}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "20px",
+              height: "20px",
+              borderRadius: "5px",
+              border: "1px solid var(--admin-border)",
+              background: "transparent",
+              cursor: page === 1 ? "not-allowed" : "pointer",
+              color: page === 1 ? "var(--admin-text-faint)" : "var(--admin-text-muted)",
+              opacity: page === 1 ? 0.4 : 1,
+              padding: 0,
+            }}
+          >
+            <ChevronLeft size={11} />
+          </button>
+
+          <span style={{ fontSize: "11px", color: "var(--admin-text-muted)", whiteSpace: "nowrap", minWidth: "36px", textAlign: "center" }}>
+            {page} / {totalPages}
+          </span>
+
+          <button
+            type="button"
+            onClick={onNext}
+            disabled={page === totalPages}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "20px",
+              height: "20px",
+              borderRadius: "5px",
+              border: "1px solid var(--admin-border)",
+              background: "transparent",
+              cursor: page === totalPages ? "not-allowed" : "pointer",
+              color: page === totalPages ? "var(--admin-text-faint)" : "var(--admin-text-muted)",
+              opacity: page === totalPages ? 0.4 : 1,
+              padding: 0,
+            }}
+          >
+            <ChevronRight size={11} />
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ─── ChildTemplatePicker modale ─────────────────────────────────────────────
@@ -143,29 +318,53 @@ function PageRow({
   searchActive: boolean;
   appDomain: string;
 }) {
-  const children = allPages.filter((p) => p.parentId === page.id);
-  const hasChildren = children.length > 0;
+  const allChildren = allPages.filter((p) => p.parentId === page.id);
+  const hasChildren = allChildren.length > 0;
   const isExpanded = expandedIds.has(page.id);
   const isPublished = page.status === "published";
   const tplName = templates.find((t) => t.id === page.templateId)?.name;
   const isPendingToggle = pendingToggleId === page.id;
   const indent = depth * 20;
 
-  // URL pubblico — solo se domain configurato e pagina pubblicata
-  const frontUrl = isPublished && appDomain
-    ? `${appDomain.replace(/\/+$/, "")}/${page.slug}`
-    : null;
+  // Paginazione locale — attiva solo se > PAGE_SIZE figli e nodo aperto
+  const needsPagination = allChildren.length > PAGE_SIZE;
+  const [childPage, setChildPage] = useState(1);
+  const [childSearch, setChildSearch] = useState("");
 
-  // URL anteprima admin — sempre disponibile in modifica
+  // Reset a pag.1 quando il nodo viene aperto
+  useEffect(() => {
+    if (!isExpanded) {
+      setChildPage(1);
+      setChildSearch("");
+    }
+  }, [isExpanded]);
+
+  const isChildSearching = childSearch.trim().length > 0;
+
+  // Figli filtrati per la ricerca contestuale
+  const filteredChildren = isChildSearching
+    ? allChildren.filter(
+        (c) =>
+          c.title.toLowerCase().includes(childSearch.toLowerCase()) ||
+          c.slug.toLowerCase().includes(childSearch.toLowerCase()),
+      )
+    : allChildren;
+
+  // Finestra di 15 elementi (solo se non stiamo cercando)
+  const totalPages = Math.ceil(allChildren.length / PAGE_SIZE);
+  const pagedChildren = isChildSearching
+    ? filteredChildren
+    : filteredChildren.slice((childPage - 1) * PAGE_SIZE, childPage * PAGE_SIZE);
+
+  const frontUrl =
+    isPublished && appDomain
+      ? `${appDomain.replace(/\/+$/, "")}/${page.slug}`
+      : null;
   const previewUrl = `/admin/preview/${page.id}`;
 
   function countDescendants(id: number): number {
     const direct = allPages.filter((p) => p.parentId === id);
     return direct.reduce((acc, child) => acc + 1 + countDescendants(child.id), 0);
-  }
-
-  function handleRowClick() {
-    if (hasChildren) toggleExpand(page.id);
   }
 
   function stopRow(e: React.MouseEvent) {
@@ -175,7 +374,7 @@ function PageRow({
   return (
     <>
       <div
-        onClick={handleRowClick}
+        onClick={() => { if (hasChildren) toggleExpand(page.id); }}
         className="flex items-center gap-2 px-3 py-2.5 rounded-xl transition-colors group"
         style={{
           background: "var(--admin-card-bg)",
@@ -185,19 +384,29 @@ function PageRow({
           transition: "opacity 160ms ease, border-color 160ms ease",
           cursor: hasChildren ? "pointer" : "default",
         }}
-        onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.borderColor = "var(--admin-input-border)")}
-        onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.borderColor = "var(--admin-card-border)")}
+        onMouseEnter={(e) =>
+          ((e.currentTarget as HTMLDivElement).style.borderColor = "var(--admin-input-border)")
+        }
+        onMouseLeave={(e) =>
+          ((e.currentTarget as HTMLDivElement).style.borderColor = "var(--admin-card-border)")
+        }
       >
-        <span className="flex items-center justify-center w-6 h-6 rounded shrink-0"
-          style={{ color: hasChildren ? "var(--admin-text-muted)" : "transparent" }}>
-          <ChevronRight size={14} style={{
-            transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
-            transition: "transform 160ms ease",
-          }} />
+        <span
+          className="flex items-center justify-center w-6 h-6 rounded shrink-0"
+          style={{ color: hasChildren ? "var(--admin-text-muted)" : "transparent" }}
+        >
+          <ChevronRight
+            size={14}
+            style={{
+              transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
+              transition: "transform 160ms ease",
+            }}
+          />
         </span>
 
         {hasChildren ? (
-          <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-semibold shrink-0 transition-colors"
+          <span
+            className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-semibold shrink-0 transition-colors"
             style={{
               background: isExpanded
                 ? "color-mix(in srgb, var(--admin-accent) 14%, var(--admin-card-bg))"
@@ -208,15 +417,18 @@ function PageRow({
                 : "1px solid color-mix(in srgb, var(--admin-text-faint) 22%, transparent)",
               minWidth: "28px",
               justifyContent: "center",
-            }}>
-            +{children.length}
+            }}
+          >
+            +{allChildren.length}
           </span>
         ) : (
           <span className="w-7 shrink-0" />
         )}
 
-        <span className="w-2 h-2 rounded-full shrink-0 transition-colors"
-          style={{ background: isPublished ? "#22c55e" : "var(--admin-text-faint)" }} />
+        <span
+          className="w-2 h-2 rounded-full shrink-0 transition-colors"
+          style={{ background: isPublished ? "#22c55e" : "var(--admin-text-faint)" }}
+        />
 
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium truncate" style={{ color: "var(--admin-text)" }}>
@@ -228,18 +440,21 @@ function PageRow({
         </div>
 
         {tplName && (
-          <span className="hidden sm:flex items-center gap-1 text-xs px-2 py-0.5 rounded-full shrink-0"
+          <span
+            className="hidden sm:flex items-center gap-1 text-xs px-2 py-0.5 rounded-full shrink-0"
             style={{
               background: "color-mix(in srgb, var(--admin-accent) 10%, var(--admin-card-bg))",
               color: "var(--admin-accent)",
               border: "1px solid color-mix(in srgb, var(--admin-accent) 20%, transparent)",
-            }}>
+            }}
+          >
             <PanelTop size={10} />
             {tplName}
           </span>
         )}
 
-        <span className="hidden sm:flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium shrink-0 whitespace-nowrap transition-all"
+        <span
+          className="hidden sm:flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium shrink-0 whitespace-nowrap transition-all"
           style={{
             background: isPublished
               ? "color-mix(in srgb, #22c55e 12%, var(--admin-card-bg))"
@@ -248,43 +463,58 @@ function PageRow({
             border: isPublished
               ? "1px solid color-mix(in srgb, #22c55e 25%, transparent)"
               : "1px solid color-mix(in srgb, var(--admin-text-faint) 25%, transparent)",
-          }}>
-          {isPublished ? <><Globe size={10} /> Pubblicata</> : <>Bozza</>}
+          }}
+        >
+          {isPublished ? (
+            <><Globe size={10} /> Pubblicata</>
+          ) : (
+            <>Bozza</>
+          )}
         </span>
 
         <div className="flex items-center gap-0.5 shrink-0" onClick={stopRow}>
           {/* Modifica */}
           <Tooltip label="Modifica pagina" side="top">
-            <button onClick={() => onEdit(page.id)}
+            <button
+              onClick={() => onEdit(page.id)}
               className="p-1.5 rounded-lg transition-colors"
               style={{ color: "var(--admin-text-faint)" }}
               onMouseEnter={(e) => { e.currentTarget.style.background = "var(--admin-hover-bg)"; e.currentTarget.style.color = "var(--admin-text-muted)"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--admin-text-faint)"; }}>
+              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--admin-text-faint)"; }}
+            >
               <Pencil size={13} />
             </button>
           </Tooltip>
 
-          {/* Vedi online (pubblicata) — apre il sito reale */}
+          {/* Vedi online */}
           {isPublished && frontUrl && (
             <Tooltip label="Vedi online" side="top">
-              <a href={frontUrl} target="_blank" rel="noopener noreferrer"
+              <a
+                href={frontUrl}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="p-1.5 rounded-lg transition-colors inline-flex items-center"
                 style={{ color: "#22c55e" }}
                 onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "color-mix(in srgb, #22c55e 12%, var(--admin-card-bg))"; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; }}>
+                onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; }}
+              >
                 <ExternalLink size={13} />
               </a>
             </Tooltip>
           )}
 
-          {/* Anteprima (bozza) — apre /admin/preview/[id] */}
+          {/* Anteprima bozza */}
           {!isPublished && (
             <Tooltip label="Anteprima bozza" side="top">
-              <a href={previewUrl} target="_blank" rel="noopener noreferrer"
+              <a
+                href={previewUrl}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="p-1.5 rounded-lg transition-colors inline-flex items-center"
                 style={{ color: "var(--admin-text-faint)" }}
                 onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "color-mix(in srgb, var(--admin-accent) 10%, var(--admin-card-bg))"; (e.currentTarget as HTMLAnchorElement).style.color = "var(--admin-accent)"; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; (e.currentTarget as HTMLAnchorElement).style.color = "var(--admin-text-faint)"; }}>
+                onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; (e.currentTarget as HTMLAnchorElement).style.color = "var(--admin-text-faint)"; }}
+              >
                 <Eye size={13} />
               </a>
             </Tooltip>
@@ -292,29 +522,43 @@ function PageRow({
 
           {/* Nuova pagina figlia */}
           <Tooltip label="Nuova pagina figlia" side="top">
-            <button onClick={() => onNewChild(page.id)}
+            <button
+              onClick={() => onNewChild(page.id)}
               className="p-1.5 rounded-lg transition-colors"
               style={{ color: "var(--admin-text-faint)" }}
               onMouseEnter={(e) => { e.currentTarget.style.background = "color-mix(in srgb, var(--admin-accent) 10%, var(--admin-card-bg))"; e.currentTarget.style.color = "var(--admin-accent)"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--admin-text-faint)"; }}>
+              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--admin-text-faint)"; }}
+            >
               <GitFork size={13} />
             </button>
           </Tooltip>
 
           {/* Pubblica / Depubblica */}
           <Tooltip label={isPublished ? "Depubblica" : "Pubblica"} side="top">
-            <button onClick={() => onToggleStatus(page.id, page.status)}
+            <button
+              onClick={() => onToggleStatus(page.id, page.status)}
               disabled={isPendingToggle}
               className="p-1.5 rounded-lg transition-colors"
               style={{ color: isPublished ? "#22c55e" : "var(--admin-text-faint)" }}
               onMouseEnter={(e) => {
-                if (isPublished) { e.currentTarget.style.background = "color-mix(in srgb, #ef4444 10%, var(--admin-card-bg))"; e.currentTarget.style.color = "#ef4444"; }
-                else { e.currentTarget.style.background = "color-mix(in srgb, #22c55e 10%, var(--admin-card-bg))"; e.currentTarget.style.color = "#22c55e"; }
+                if (isPublished) {
+                  e.currentTarget.style.background = "color-mix(in srgb, #ef4444 10%, var(--admin-card-bg))";
+                  e.currentTarget.style.color = "#ef4444";
+                } else {
+                  e.currentTarget.style.background = "color-mix(in srgb, #22c55e 10%, var(--admin-card-bg))";
+                  e.currentTarget.style.color = "#22c55e";
+                }
               }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = isPublished ? "#22c55e" : "var(--admin-text-faint)"; }}>
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "transparent";
+                e.currentTarget.style.color = isPublished ? "#22c55e" : "var(--admin-text-faint)";
+              }}
+            >
               {isPendingToggle ? (
-                <span className="block w-3 h-3 border border-t-transparent rounded-full animate-spin"
-                  style={{ borderColor: "var(--admin-accent)", borderTopColor: "transparent" }} />
+                <span
+                  className="block w-3 h-3 border border-t-transparent rounded-full animate-spin"
+                  style={{ borderColor: "var(--admin-accent)", borderTopColor: "transparent" }}
+                />
               ) : isPublished ? (
                 <EyeOff size={13} />
               ) : (
@@ -326,36 +570,64 @@ function PageRow({
           {/* Elimina */}
           <Tooltip label="Elimina pagina" side="top">
             <button
-              onClick={() => onDeleteRequest({ slug: page.slug, title: page.title, descendants: countDescendants(page.id) })}
+              onClick={() =>
+                onDeleteRequest({
+                  slug: page.slug,
+                  title: page.title,
+                  descendants: countDescendants(page.id),
+                })
+              }
               className="p-1.5 rounded-lg transition-colors"
               style={{ color: "var(--admin-text-faint)" }}
               onMouseEnter={(e) => { e.currentTarget.style.background = "color-mix(in srgb, #ef4444 10%, var(--admin-card-bg))"; e.currentTarget.style.color = "#ef4444"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--admin-text-faint)"; }}>
+              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--admin-text-faint)"; }}
+            >
               <Trash2 size={13} />
             </button>
           </Tooltip>
         </div>
       </div>
 
-      {(isExpanded || searchActive) &&
-        children.map((child) => (
-          <PageRow
-            key={child.id}
-            page={child}
-            allPages={allPages}
-            templates={templates}
-            depth={depth + 1}
-            expandedIds={expandedIds}
-            toggleExpand={toggleExpand}
-            onEdit={onEdit}
-            onDeleteRequest={onDeleteRequest}
-            onNewChild={onNewChild}
-            onToggleStatus={onToggleStatus}
-            pendingToggleId={pendingToggleId}
-            searchActive={searchActive}
-            appDomain={appDomain}
-          />
-        ))}
+      {/* Figli espansi */}
+      {(isExpanded || searchActive) && (
+        <div style={{ marginLeft: `${indent + 20}px` }}>
+          {/* Riga figli visibili nella finestra corrente */}
+          <div className="space-y-1.5 mt-1.5">
+            {pagedChildren.map((child) => (
+              <PageRow
+                key={child.id}
+                page={child}
+                allPages={allPages}
+                templates={templates}
+                depth={0} // depth già gestita dal marginLeft del wrapper
+                expandedIds={expandedIds}
+                toggleExpand={toggleExpand}
+                onEdit={onEdit}
+                onDeleteRequest={onDeleteRequest}
+                onNewChild={onNewChild}
+                onToggleStatus={onToggleStatus}
+                pendingToggleId={pendingToggleId}
+                searchActive={searchActive}
+                appDomain={appDomain}
+              />
+            ))}
+          </div>
+
+          {/* Paginatore — solo se > PAGE_SIZE figli */}
+          {needsPagination && !searchActive && (
+            <ChildPaginator
+              total={allChildren.length}
+              page={childPage}
+              totalPages={totalPages}
+              search={childSearch}
+              searchResults={isChildSearching ? filteredChildren.length : null}
+              onSearch={(v) => { setChildSearch(v); setChildPage(1); }}
+              onPrev={() => setChildPage((p) => Math.max(1, p - 1))}
+              onNext={() => setChildPage((p) => Math.min(totalPages, p + 1))}
+            />
+          )}
+        </div>
+      )}
     </>
   );
 }
@@ -440,7 +712,6 @@ export default function PageManager({
     const parentTemplate = parent.templateId
       ? templates.find((t) => t.id === parent.templateId)
       : undefined;
-
     const allowedIds = getAllowedChildIds(parentTemplate);
 
     if (allowedIds.length === 0) {
@@ -491,7 +762,7 @@ export default function PageManager({
 
   return (
     <>
-      {/* Toolbar */}
+      {/* Toolbar globale */}
       <div className="flex items-center gap-3 mb-4">
         <div className="relative flex-1">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--admin-text-faint)" }} />
