@@ -17,11 +17,12 @@ export const viewport: Viewport = {
 const manrope = Manrope({ subsets: ["latin"] });
 
 // ---------------------------------------------------------------------------
-// Snippet HEAD — tag nativi, NON next/script.
+// Snippet HEAD — tag nativi, NON next/script, NON Suspense.
 //
-// next/script strategy="beforeInteractive" in un Server Component asinco
-// viene sempre streamato via $RC fuori dall'<head> reale (div hidden S:x).
-// L'unico modo per finire nel primo byte dell'<head> è usare tag nativi.
+// RootLayout è async: recupera gli snippet prima del render e li passa
+// come prop a HeadSnippets. In questo modo non c'è Suspense nell'<head>
+// e Next.js non streama i tag in un <template> placeholder — finiscono
+// direttamente nell'<head> statico del primo byte HTML.
 // ---------------------------------------------------------------------------
 
 function HeadSnippetTag({ s }: { s: SiteSnippet }) {
@@ -50,12 +51,10 @@ function HeadSnippetTag({ s }: { s: SiteSnippet }) {
   }
 }
 
-async function HeadSnippets() {
-  const snippets = await getActiveSnippets();
-  const headSnippets = snippets.filter((s) => s.position === "head");
+function HeadSnippets({ snippets }: { snippets: SiteSnippet[] }) {
   return (
     <>
-      {headSnippets.map((s) => (
+      {snippets.map((s) => (
         <HeadSnippetTag key={s.id} s={s} />
       ))}
     </>
@@ -91,12 +90,10 @@ function BodySnippetTag({ s }: { s: SiteSnippet }) {
   }
 }
 
-async function BodyEndSnippets() {
-  const snippets = await getActiveSnippets();
-  const bodySnippets = snippets.filter((s) => s.position === "body_end");
+function BodyEndSnippets({ snippets }: { snippets: SiteSnippet[] }) {
   return (
     <>
-      {bodySnippets.map((s) => (
+      {snippets.map((s) => (
         <BodySnippetTag key={s.id} s={s} />
       ))}
     </>
@@ -169,41 +166,41 @@ async function MaintenanceOverlay() {
 }
 
 // ---------------------------------------------------------------------------
-// Root layout
+// Root layout — async per risolvere gli snippet prima del render
 // ---------------------------------------------------------------------------
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // Fetch unico: suddividiamo per position dopo
+  const allSnippets = await getActiveSnippets();
+  const headSnippets = allSnippets.filter((s) => s.position === "head");
+  const bodySnippets = allSnippets.filter((s) => s.position === "body_end");
+
   return (
     <html
       lang="en"
       className={`bg-white dark:bg-gray-950 text-black dark:text-white ${manrope.className}`}>
       <head>
+        {/*
+         * JsonLdScript rimane in Suspense: è opzionale e non urgente.
+         * HeadSnippets NON usa Suspense: i dati sono già risolti sopra,
+         * così i tag entrano nell'<head> statico del primo byte HTML.
+         */}
         <Suspense fallback={null}>
           <JsonLdScript />
         </Suspense>
-        {/*
-         * Snippet position="head" come tag nativi.
-         * Suspense è necessario perché HeadSnippets è async;
-         * il fallback null non blocca il rendering dell'<head>.
-         * I tag vengono inclusi nell'HTML statico iniziale.
-         */}
-        <Suspense fallback={null}>
-          <HeadSnippets />
-        </Suspense>
+        <HeadSnippets snippets={headSnippets} />
       </head>
       <body className="min-h-[100dvh] bg-gray-50">
         <Suspense>
           <DynamicWrapper>{children}</DynamicWrapper>
           <MaintenanceOverlay />
         </Suspense>
-        {/* Snippet position="body_end" — afterInteractive, va bene fuori dall'head */}
-        <Suspense fallback={null}>
-          <BodyEndSnippets />
-        </Suspense>
+        {/* Snippet position="body_end" — afterInteractive, va bene nel body */}
+        <BodyEndSnippets snippets={bodySnippets} />
       </body>
     </html>
   );
