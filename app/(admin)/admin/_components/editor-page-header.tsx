@@ -1,7 +1,7 @@
 // app/(admin)/admin/_components/editor-page-header.tsx
 "use client";
 
-import { ArrowLeft, Check, ExternalLink } from "lucide-react";
+import { ArrowLeft, Check, ExternalLink, Eye } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 export interface BreadcrumbSegment {
@@ -18,8 +18,20 @@ interface EditorPageHeaderProps {
   isPending?: boolean;
   savedAt?: string | null;
   error?: string | null;
-  /** URL di anteprima front-end (es. https://miosito.it/blog/articolo).
-   *  Se fornito, mostra il bottone anteprima accanto a Salva. */
+  /**
+   * ID numerico della pagina (solo in modifica).
+   * Usato per costruire il link /admin/preview/[id].
+   */
+  pageId?: number | null;
+  /**
+   * Stato della pagina: "published" | "draft".
+   * Determina se mostrare "Vedi online" o "Anteprima".
+   */
+  pageStatus?: "published" | "draft" | null;
+  /**
+   * URL pubblico della pagina (es. https://miosito.it/blog/articolo).
+   * Usato solo quando pageStatus === "published".
+   */
   previewUrl?: string | null;
 }
 
@@ -32,10 +44,19 @@ export function EditorPageHeader({
   isPending = false,
   savedAt,
   error,
+  pageId,
+  pageStatus,
   previewUrl,
 }: EditorPageHeaderProps) {
   const router = useRouter();
   const lastIdx = breadcrumbs.length - 1;
+
+  // --- Bottone preview ---
+  // pubblicata → "Vedi online"  apre il sito reale in nuova tab
+  // bozza      → "Anteprima"   apre /admin/preview/[id] in nuova tab
+  const isPublished = pageStatus === "published";
+  const showOnlineBtn = isPublished && !!previewUrl;
+  const showPreviewBtn = !isPublished && !!pageId;
 
   return (
     <div className="mb-5 space-y-2">
@@ -65,7 +86,9 @@ export function EditorPageHeader({
             return (
               <span
                 key={i}
-                className={`flex items-center gap-1 shrink-0 ${hiddenOnMobile ? "hidden sm:flex" : "flex"}`}
+                className={`flex items-center gap-1 shrink-0 ${
+                  hiddenOnMobile ? "hidden sm:flex" : "flex"
+                }`}
               >
                 {seg.href ? (
                   <a
@@ -101,7 +124,7 @@ export function EditorPageHeader({
           </span>
         </nav>
 
-        {/* Destra: feedback + anteprima + bottone Salva */}
+        {/* Destra: feedback + bottone view/preview + bottone Salva */}
         <div className="flex items-center gap-2 shrink-0">
           {savedAt && (
             <>
@@ -128,13 +151,34 @@ export function EditorPageHeader({
             </>
           )}
 
-          {/* Bottone Anteprima — visibile solo se previewUrl è fornito */}
-          {previewUrl && (
+          {/* "Vedi online" — pagina PUBBLICATA */}
+          {showOnlineBtn && (
             <a
-              href={previewUrl}
+              href={previewUrl!}
               target="_blank"
               rel="noopener noreferrer"
-              title="Anteprima pagina"
+              title="Apri la pagina pubblica"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg font-medium transition-colors"
+              style={{
+                color: "#16a34a",
+                background: "color-mix(in srgb, #22c55e 10%, var(--admin-card-bg))",
+                border: "1px solid color-mix(in srgb, #22c55e 30%, transparent)",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.filter = "brightness(0.92)")}
+              onMouseLeave={(e) => (e.currentTarget.style.filter = "none")}
+            >
+              <ExternalLink size={14} />
+              <span className="hidden sm:inline">Vedi online</span>
+            </a>
+          )}
+
+          {/* "Anteprima" — pagina BOZZA */}
+          {showPreviewBtn && (
+            <a
+              href={`/admin/preview/${pageId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Anteprima bozza (non pubblica)"
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg font-medium transition-colors"
               style={{
                 color: "var(--admin-text-muted)",
@@ -147,10 +191,11 @@ export function EditorPageHeader({
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.color = "var(--admin-text-muted)";
-                e.currentTarget.style.borderColor = "var(--admin-card-border, var(--admin-border))";
+                e.currentTarget.style.borderColor =
+                  "var(--admin-card-border, var(--admin-border))";
               }}
             >
-              <ExternalLink size={14} />
+              <Eye size={14} />
               <span className="hidden sm:inline">Anteprima</span>
             </a>
           )}

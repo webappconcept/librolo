@@ -381,7 +381,7 @@ export default function PageEditor({
   const slugPrefix = parentPage ? `${parentPage.slug}/` : "";
   const slugLeaf = leafSlug(slug) || slug;
 
-  // URL anteprima: disponibile solo per pagine pubblicate in modifica
+  // URL pubblico: solo per pagine pubblicate già salvate
   const previewUrl = isEdit && status === "published"
     ? buildPreviewUrl(domain, slug)
     : null;
@@ -499,6 +499,8 @@ export default function PageEditor({
           isPending={isPending}
           savedAt={savedAt}
           error={state?.error}
+          pageId={isEdit ? page?.id : null}
+          pageStatus={status}
           previewUrl={previewUrl}
         />
 
