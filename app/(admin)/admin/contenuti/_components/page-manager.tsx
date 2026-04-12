@@ -16,17 +16,19 @@ import {
   Pencil,
   Plus,
   Search,
-  Trash2,
   ShieldCheck,
+  Trash2,
   X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, useTransition, useRef, useEffect } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { deletePageAction, togglePageStatusAction } from "../actions";
 
-const PAGE_SIZE = 15;
+const PAGE_SIZE = 10;
 
-type TemplateWithFields = PageTemplate & { fields: import("@/lib/db/schema").TemplateField[] };
+type TemplateWithFields = PageTemplate & {
+  fields: import("@/lib/db/schema").TemplateField[];
+};
 
 interface DeleteTarget {
   slug: string;
@@ -35,11 +37,19 @@ interface DeleteTarget {
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
-function parseStyleConfig(raw: string | null | undefined): Record<string, unknown> {
-  try { return JSON.parse(raw ?? "{}"); } catch { return {}; }
+function parseStyleConfig(
+  raw: string | null | undefined,
+): Record<string, unknown> {
+  try {
+    return JSON.parse(raw ?? "{}");
+  } catch {
+    return {};
+  }
 }
 
-function getAllowedChildIds(template: TemplateWithFields | undefined): number[] {
+function getAllowedChildIds(
+  template: TemplateWithFields | undefined,
+): number[] {
   if (!template) return [];
   const cfg = parseStyleConfig(template.styleConfig);
   const ids = cfg.allowedChildTemplateIds;
@@ -79,10 +89,11 @@ function ChildPaginator({
         marginTop: "4px",
         padding: "5px 8px",
         borderRadius: "10px",
-        background: "color-mix(in srgb, var(--admin-text-faint) 6%, var(--admin-page-bg))",
-        border: "1px dashed color-mix(in srgb, var(--admin-text-faint) 20%, transparent)",
-      }}
-    >
+        background:
+          "color-mix(in srgb, var(--admin-text-faint) 6%, var(--admin-page-bg))",
+        border:
+          "1px dashed color-mix(in srgb, var(--admin-text-faint) 20%, transparent)",
+      }}>
       {/* Search input */}
       <div style={{ position: "relative", flex: 1, minWidth: 0 }}>
         <Search
@@ -117,7 +128,10 @@ function ChildPaginator({
         {isSearching && (
           <button
             type="button"
-            onClick={() => { onSearch(""); inputRef.current?.focus(); }}
+            onClick={() => {
+              onSearch("");
+              inputRef.current?.focus();
+            }}
             style={{
               position: "absolute",
               right: "4px",
@@ -134,23 +148,41 @@ function ChildPaginator({
               cursor: "pointer",
               color: "var(--admin-card-bg)",
               padding: 0,
-            }}
-          >
+            }}>
             <X size={9} />
           </button>
         )}
       </div>
 
       {/* Divider */}
-      <div style={{ width: "1px", height: "14px", background: "var(--admin-border)", flexShrink: 0 }} />
+      <div
+        style={{
+          width: "1px",
+          height: "14px",
+          background: "var(--admin-border)",
+          flexShrink: 0,
+        }}
+      />
 
       {/* Pagination controls o contatore risultati */}
       {isSearching ? (
-        <span style={{ fontSize: "11px", color: "var(--admin-text-faint)", whiteSpace: "nowrap", flexShrink: 0 }}>
+        <span
+          style={{
+            fontSize: "11px",
+            color: "var(--admin-text-faint)",
+            whiteSpace: "nowrap",
+            flexShrink: 0,
+          }}>
           {searchResults ?? 0} risultati
         </span>
       ) : (
-        <div style={{ display: "flex", alignItems: "center", gap: "4px", flexShrink: 0 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "4px",
+            flexShrink: 0,
+          }}>
           <button
             type="button"
             onClick={onPrev}
@@ -165,15 +197,24 @@ function ChildPaginator({
               border: "1px solid var(--admin-border)",
               background: "transparent",
               cursor: page === 1 ? "not-allowed" : "pointer",
-              color: page === 1 ? "var(--admin-text-faint)" : "var(--admin-text-muted)",
+              color:
+                page === 1
+                  ? "var(--admin-text-faint)"
+                  : "var(--admin-text-muted)",
               opacity: page === 1 ? 0.4 : 1,
               padding: 0,
-            }}
-          >
+            }}>
             <ChevronLeft size={11} />
           </button>
 
-          <span style={{ fontSize: "11px", color: "var(--admin-text-muted)", whiteSpace: "nowrap", minWidth: "36px", textAlign: "center" }}>
+          <span
+            style={{
+              fontSize: "11px",
+              color: "var(--admin-text-muted)",
+              whiteSpace: "nowrap",
+              minWidth: "36px",
+              textAlign: "center",
+            }}>
             {page} / {totalPages}
           </span>
 
@@ -191,11 +232,13 @@ function ChildPaginator({
               border: "1px solid var(--admin-border)",
               background: "transparent",
               cursor: page === totalPages ? "not-allowed" : "pointer",
-              color: page === totalPages ? "var(--admin-text-faint)" : "var(--admin-text-muted)",
+              color:
+                page === totalPages
+                  ? "var(--admin-text-faint)"
+                  : "var(--admin-text-muted)",
               opacity: page === totalPages ? 0.4 : 1,
               padding: 0,
-            }}
-          >
+            }}>
             <ChevronRight size={11} />
           </button>
         </div>
@@ -220,8 +263,7 @@ function ChildTemplatePicker({
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: "rgba(0,0,0,0.55)" }}
-      onClick={onCancel}
-    >
+      onClick={onCancel}>
       <div
         className="rounded-2xl p-6 w-full max-w-sm"
         style={{
@@ -229,16 +271,20 @@ function ChildTemplatePicker({
           border: "1px solid var(--admin-card-border)",
           boxShadow: "0 20px 60px rgba(0,0,0,0.35)",
         }}
-        onClick={(e) => e.stopPropagation()}
-      >
+        onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-2 mb-1">
           <ShieldCheck size={15} style={{ color: "var(--admin-accent)" }} />
-          <h3 className="text-sm font-semibold" style={{ color: "var(--admin-text)" }}>
+          <h3
+            className="text-sm font-semibold"
+            style={{ color: "var(--admin-text)" }}>
             Scegli il template
           </h3>
         </div>
-        <p className="text-xs mb-5" style={{ color: "var(--admin-text-muted)" }}>
-          Nuova pagina figlia di <strong style={{ color: "var(--admin-text)" }}>{parentTitle}</strong>.
+        <p
+          className="text-xs mb-5"
+          style={{ color: "var(--admin-text-muted)" }}>
+          Nuova pagina figlia di{" "}
+          <strong style={{ color: "var(--admin-text)" }}>{parentTitle}</strong>.
           Seleziona il template da usare:
         </p>
         <div className="space-y-2 mb-5">
@@ -254,17 +300,28 @@ function ChildTemplatePicker({
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.borderColor = "var(--admin-accent)";
-                e.currentTarget.style.background = "color-mix(in srgb, var(--admin-accent) 8%, var(--admin-input-bg))";
+                e.currentTarget.style.background =
+                  "color-mix(in srgb, var(--admin-accent) 8%, var(--admin-input-bg))";
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.borderColor = "var(--admin-border)";
                 e.currentTarget.style.background = "var(--admin-input-bg)";
-              }}
-            >
-              <PanelTop size={15} style={{ color: "var(--admin-accent)", flexShrink: 0 }} />
+              }}>
+              <PanelTop
+                size={15}
+                style={{ color: "var(--admin-accent)", flexShrink: 0 }}
+              />
               <div className="min-w-0">
-                <p className="text-sm font-medium truncate" style={{ color: "var(--admin-text)" }}>{t.name}</p>
-                <p className="text-xs font-mono truncate" style={{ color: "var(--admin-text-faint)" }}>{t.slug}</p>
+                <p
+                  className="text-sm font-medium truncate"
+                  style={{ color: "var(--admin-text)" }}>
+                  {t.name}
+                </p>
+                <p
+                  className="text-xs font-mono truncate"
+                  style={{ color: "var(--admin-text-faint)" }}>
+                  {t.slug}
+                </p>
               </div>
             </button>
           ))}
@@ -278,9 +335,12 @@ function ChildTemplatePicker({
             border: "1px solid var(--admin-border)",
             color: "var(--admin-text-muted)",
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--admin-input-border)")}
-          onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--admin-border))")}
-        >
+          onMouseEnter={(e) =>
+            (e.currentTarget.style.borderColor = "var(--admin-input-border)")
+          }
+          onMouseLeave={(e) =>
+            (e.currentTarget.style.borderColor = "var(--admin-border))")
+          }>
           Annulla
         </button>
       </div>
@@ -354,7 +414,10 @@ function PageRow({
   const totalPages = Math.ceil(allChildren.length / PAGE_SIZE);
   const pagedChildren = isChildSearching
     ? filteredChildren
-    : filteredChildren.slice((childPage - 1) * PAGE_SIZE, childPage * PAGE_SIZE);
+    : filteredChildren.slice(
+        (childPage - 1) * PAGE_SIZE,
+        childPage * PAGE_SIZE,
+      );
 
   const frontUrl =
     isPublished && appDomain
@@ -364,7 +427,10 @@ function PageRow({
 
   function countDescendants(id: number): number {
     const direct = allPages.filter((p) => p.parentId === id);
-    return direct.reduce((acc, child) => acc + 1 + countDescendants(child.id), 0);
+    return direct.reduce(
+      (acc, child) => acc + 1 + countDescendants(child.id),
+      0,
+    );
   }
 
   function stopRow(e: React.MouseEvent) {
@@ -374,7 +440,9 @@ function PageRow({
   return (
     <>
       <div
-        onClick={() => { if (hasChildren) toggleExpand(page.id); }}
+        onClick={() => {
+          if (hasChildren) toggleExpand(page.id);
+        }}
         className="flex items-center gap-2 px-3 py-2.5 rounded-xl transition-colors group"
         style={{
           background: "var(--admin-card-bg)",
@@ -385,16 +453,18 @@ function PageRow({
           cursor: hasChildren ? "pointer" : "default",
         }}
         onMouseEnter={(e) =>
-          ((e.currentTarget as HTMLDivElement).style.borderColor = "var(--admin-input-border)")
+          ((e.currentTarget as HTMLDivElement).style.borderColor =
+            "var(--admin-input-border)")
         }
         onMouseLeave={(e) =>
-          ((e.currentTarget as HTMLDivElement).style.borderColor = "var(--admin-card-border)")
-        }
-      >
+          ((e.currentTarget as HTMLDivElement).style.borderColor =
+            "var(--admin-card-border)")
+        }>
         <span
           className="flex items-center justify-center w-6 h-6 rounded shrink-0"
-          style={{ color: hasChildren ? "var(--admin-text-muted)" : "transparent" }}
-        >
+          style={{
+            color: hasChildren ? "var(--admin-text-muted)" : "transparent",
+          }}>
           <ChevronRight
             size={14}
             style={{
@@ -411,14 +481,15 @@ function PageRow({
               background: isExpanded
                 ? "color-mix(in srgb, var(--admin-accent) 14%, var(--admin-card-bg))"
                 : "color-mix(in srgb, var(--admin-text-faint) 14%, var(--admin-card-bg))",
-              color: isExpanded ? "var(--admin-accent)" : "var(--admin-text-muted)",
+              color: isExpanded
+                ? "var(--admin-accent)"
+                : "var(--admin-text-muted)",
               border: isExpanded
                 ? "1px solid color-mix(in srgb, var(--admin-accent) 28%, transparent)"
                 : "1px solid color-mix(in srgb, var(--admin-text-faint) 22%, transparent)",
               minWidth: "28px",
               justifyContent: "center",
-            }}
-          >
+            }}>
             +{allChildren.length}
           </span>
         ) : (
@@ -427,14 +498,20 @@ function PageRow({
 
         <span
           className="w-2 h-2 rounded-full shrink-0 transition-colors"
-          style={{ background: isPublished ? "#22c55e" : "var(--admin-text-faint)" }}
+          style={{
+            background: isPublished ? "#22c55e" : "var(--admin-text-faint)",
+          }}
         />
 
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium truncate" style={{ color: "var(--admin-text)" }}>
+          <p
+            className="text-sm font-medium truncate"
+            style={{ color: "var(--admin-text)" }}>
             {page.title}
           </p>
-          <p className="text-xs font-mono truncate" style={{ color: "var(--admin-text-faint)" }}>
+          <p
+            className="text-xs font-mono truncate"
+            style={{ color: "var(--admin-text-faint)" }}>
             /{page.slug}
           </p>
         </div>
@@ -443,11 +520,12 @@ function PageRow({
           <span
             className="hidden sm:flex items-center gap-1 text-xs px-2 py-0.5 rounded-full shrink-0"
             style={{
-              background: "color-mix(in srgb, var(--admin-accent) 10%, var(--admin-card-bg))",
+              background:
+                "color-mix(in srgb, var(--admin-accent) 10%, var(--admin-card-bg))",
               color: "var(--admin-accent)",
-              border: "1px solid color-mix(in srgb, var(--admin-accent) 20%, transparent)",
-            }}
-          >
+              border:
+                "1px solid color-mix(in srgb, var(--admin-accent) 20%, transparent)",
+            }}>
             <PanelTop size={10} />
             {tplName}
           </span>
@@ -463,10 +541,11 @@ function PageRow({
             border: isPublished
               ? "1px solid color-mix(in srgb, #22c55e 25%, transparent)"
               : "1px solid color-mix(in srgb, var(--admin-text-faint) 25%, transparent)",
-          }}
-        >
+          }}>
           {isPublished ? (
-            <><Globe size={10} /> Pubblicata</>
+            <>
+              <Globe size={10} /> Pubblicata
+            </>
           ) : (
             <>Bozza</>
           )}
@@ -479,9 +558,14 @@ function PageRow({
               onClick={() => onEdit(page.id)}
               className="p-1.5 rounded-lg transition-colors"
               style={{ color: "var(--admin-text-faint)" }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = "var(--admin-hover-bg)"; e.currentTarget.style.color = "var(--admin-text-muted)"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--admin-text-faint)"; }}
-            >
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "var(--admin-hover-bg)";
+                e.currentTarget.style.color = "var(--admin-text-muted)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "transparent";
+                e.currentTarget.style.color = "var(--admin-text-faint)";
+              }}>
               <Pencil size={13} />
             </button>
           </Tooltip>
@@ -495,9 +579,14 @@ function PageRow({
                 rel="noopener noreferrer"
                 className="p-1.5 rounded-lg transition-colors inline-flex items-center"
                 style={{ color: "#22c55e" }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "color-mix(in srgb, #22c55e 12%, var(--admin-card-bg))"; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; }}
-              >
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLAnchorElement).style.background =
+                    "color-mix(in srgb, #22c55e 12%, var(--admin-card-bg))";
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLAnchorElement).style.background =
+                    "transparent";
+                }}>
                 <ExternalLink size={13} />
               </a>
             </Tooltip>
@@ -512,9 +601,18 @@ function PageRow({
                 rel="noopener noreferrer"
                 className="p-1.5 rounded-lg transition-colors inline-flex items-center"
                 style={{ color: "var(--admin-text-faint)" }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "color-mix(in srgb, var(--admin-accent) 10%, var(--admin-card-bg))"; (e.currentTarget as HTMLAnchorElement).style.color = "var(--admin-accent)"; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; (e.currentTarget as HTMLAnchorElement).style.color = "var(--admin-text-faint)"; }}
-              >
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLAnchorElement).style.background =
+                    "color-mix(in srgb, var(--admin-accent) 10%, var(--admin-card-bg))";
+                  (e.currentTarget as HTMLAnchorElement).style.color =
+                    "var(--admin-accent)";
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLAnchorElement).style.background =
+                    "transparent";
+                  (e.currentTarget as HTMLAnchorElement).style.color =
+                    "var(--admin-text-faint)";
+                }}>
                 <Eye size={13} />
               </a>
             </Tooltip>
@@ -526,9 +624,15 @@ function PageRow({
               onClick={() => onNewChild(page.id)}
               className="p-1.5 rounded-lg transition-colors"
               style={{ color: "var(--admin-text-faint)" }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = "color-mix(in srgb, var(--admin-accent) 10%, var(--admin-card-bg))"; e.currentTarget.style.color = "var(--admin-accent)"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--admin-text-faint)"; }}
-            >
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background =
+                  "color-mix(in srgb, var(--admin-accent) 10%, var(--admin-card-bg))";
+                e.currentTarget.style.color = "var(--admin-accent)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "transparent";
+                e.currentTarget.style.color = "var(--admin-text-faint)";
+              }}>
               <GitFork size={13} />
             </button>
           </Tooltip>
@@ -539,25 +643,33 @@ function PageRow({
               onClick={() => onToggleStatus(page.id, page.status)}
               disabled={isPendingToggle}
               className="p-1.5 rounded-lg transition-colors"
-              style={{ color: isPublished ? "#22c55e" : "var(--admin-text-faint)" }}
+              style={{
+                color: isPublished ? "#22c55e" : "var(--admin-text-faint)",
+              }}
               onMouseEnter={(e) => {
                 if (isPublished) {
-                  e.currentTarget.style.background = "color-mix(in srgb, #ef4444 10%, var(--admin-card-bg))";
+                  e.currentTarget.style.background =
+                    "color-mix(in srgb, #ef4444 10%, var(--admin-card-bg))";
                   e.currentTarget.style.color = "#ef4444";
                 } else {
-                  e.currentTarget.style.background = "color-mix(in srgb, #22c55e 10%, var(--admin-card-bg))";
+                  e.currentTarget.style.background =
+                    "color-mix(in srgb, #22c55e 10%, var(--admin-card-bg))";
                   e.currentTarget.style.color = "#22c55e";
                 }
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.background = "transparent";
-                e.currentTarget.style.color = isPublished ? "#22c55e" : "var(--admin-text-faint)";
-              }}
-            >
+                e.currentTarget.style.color = isPublished
+                  ? "#22c55e"
+                  : "var(--admin-text-faint)";
+              }}>
               {isPendingToggle ? (
                 <span
                   className="block w-3 h-3 border border-t-transparent rounded-full animate-spin"
-                  style={{ borderColor: "var(--admin-accent)", borderTopColor: "transparent" }}
+                  style={{
+                    borderColor: "var(--admin-accent)",
+                    borderTopColor: "transparent",
+                  }}
                 />
               ) : isPublished ? (
                 <EyeOff size={13} />
@@ -579,9 +691,15 @@ function PageRow({
               }
               className="p-1.5 rounded-lg transition-colors"
               style={{ color: "var(--admin-text-faint)" }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = "color-mix(in srgb, #ef4444 10%, var(--admin-card-bg))"; e.currentTarget.style.color = "#ef4444"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--admin-text-faint)"; }}
-            >
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background =
+                  "color-mix(in srgb, #ef4444 10%, var(--admin-card-bg))";
+                e.currentTarget.style.color = "#ef4444";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "transparent";
+                e.currentTarget.style.color = "var(--admin-text-faint)";
+              }}>
               <Trash2 size={13} />
             </button>
           </Tooltip>
@@ -621,7 +739,10 @@ function PageRow({
               totalPages={totalPages}
               search={childSearch}
               searchResults={isChildSearching ? filteredChildren.length : null}
-              onSearch={(v) => { setChildSearch(v); setChildPage(1); }}
+              onSearch={(v) => {
+                setChildSearch(v);
+                setChildPage(1);
+              }}
               onPrev={() => setChildPage((p) => Math.max(1, p - 1))}
               onNext={() => setChildPage((p) => Math.min(totalPages, p + 1))}
             />
@@ -660,7 +781,9 @@ export default function PageManager({
         const q = search.toLowerCase();
         const matched = new Set(
           initialPages
-            .filter((p) => p.title.toLowerCase().includes(q) || p.slug.includes(q))
+            .filter(
+              (p) => p.title.toLowerCase().includes(q) || p.slug.includes(q),
+            )
             .map((p) => p.id),
         );
         const toShow = new Set(matched);
@@ -677,7 +800,9 @@ export default function PageManager({
     : initialPages;
 
   const visibleIds = new Set(visiblePages.map((p) => p.id));
-  const rootPages = visiblePages.filter((p) => !p.parentId || !visibleIds.has(p.parentId));
+  const rootPages = visiblePages.filter(
+    (p) => !p.parentId || !visibleIds.has(p.parentId),
+  );
 
   function toggleExpand(id: number) {
     setExpandedIds((prev) => {
@@ -707,7 +832,10 @@ export default function PageManager({
 
   function handleNewChild(parentId: number) {
     const parent = initialPages.find((p) => p.id === parentId);
-    if (!parent) { router.push(`/admin/contenuti/new?parentId=${parentId}`); return; }
+    if (!parent) {
+      router.push(`/admin/contenuti/new?parentId=${parentId}`);
+      return;
+    }
 
     const parentTemplate = parent.templateId
       ? templates.find((t) => t.id === parent.templateId)
@@ -719,7 +847,9 @@ export default function PageManager({
       return;
     }
     if (allowedIds.length === 1) {
-      router.push(`/admin/contenuti/new?parentId=${parentId}&templateId=${allowedIds[0]}&templateLocked=1`);
+      router.push(
+        `/admin/contenuti/new?parentId=${parentId}&templateId=${allowedIds[0]}&templateLocked=1`,
+      );
       return;
     }
     const options = templates.filter((t) => allowedIds.includes(t.id));
@@ -730,32 +860,45 @@ export default function PageManager({
   function handlePickerSelect(templateId: number) {
     if (!pickerParent) return;
     setPickerParent(null);
-    router.push(`/admin/contenuti/new?parentId=${pickerParent.id}&templateId=${templateId}&templateLocked=1`);
+    router.push(
+      `/admin/contenuti/new?parentId=${pickerParent.id}&templateId=${templateId}&templateLocked=1`,
+    );
   }
 
   function buildDeleteMessage(target: DeleteTarget): React.ReactNode {
     return (
       <span>
         Stai per eliminare la pagina{" "}
-        <strong style={{ color: "var(--admin-text, #cdccca)" }}>{target.title}</strong>
-        {" "}(<code style={{ fontSize: "12px" }}>/{target.slug}</code>).
+        <strong style={{ color: "var(--admin-text, #cdccca)" }}>
+          {target.title}
+        </strong>{" "}
+        (<code style={{ fontSize: "12px" }}>/{target.slug}</code>).
         {target.descendants > 0 && (
           <>
-            <br /><br />
-            <span style={{
-              display: "inline-flex", alignItems: "center", gap: "6px",
-              padding: "6px 10px", borderRadius: "8px",
-              background: "rgba(220,38,38,0.1)", color: "#f87171",
-              fontSize: "13px", fontWeight: 500,
-            }}>
-              ⚠️ Verranno eliminate anche{" "}
-              <strong>{target.descendants}</strong>{" "}
+            <br />
+            <br />
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "6px 10px",
+                borderRadius: "8px",
+                background: "rgba(220,38,38,0.1)",
+                color: "#f87171",
+                fontSize: "13px",
+                fontWeight: 500,
+              }}>
+              ⚠️ Verranno eliminate anche <strong>{target.descendants}</strong>{" "}
               {target.descendants === 1 ? "pagina figlia" : "pagine figlie"}.
             </span>
           </>
         )}
-        <br /><br />
-        <span style={{ fontSize: "13px" }}>Questa operazione è <strong>irreversibile</strong>.</span>
+        <br />
+        <br />
+        <span style={{ fontSize: "13px" }}>
+          Questa operazione è <strong>irreversibile</strong>.
+        </span>
       </span>
     );
   }
@@ -765,7 +908,11 @@ export default function PageManager({
       {/* Toolbar globale */}
       <div className="flex items-center gap-3 mb-4">
         <div className="relative flex-1">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--admin-text-faint)" }} />
+          <Search
+            size={14}
+            className="absolute left-3 top-1/2 -translate-y-1/2"
+            style={{ color: "var(--admin-text-faint)" }}
+          />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -787,9 +934,12 @@ export default function PageManager({
               border: "1px solid var(--admin-card-border)",
               background: "var(--admin-card-bg)",
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--admin-input-border)")}
-            onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--admin-card-border)")}
-          >
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.borderColor = "var(--admin-input-border)")
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.borderColor = "var(--admin-card-border)")
+            }>
             Comprimi tutto
           </button>
         )}
@@ -797,9 +947,10 @@ export default function PageManager({
           onClick={() => router.push("/admin/contenuti/new")}
           className="flex items-center gap-2 px-4 py-2 text-sm text-white rounded-lg font-medium transition-colors"
           style={{ background: "var(--admin-accent)" }}
-          onMouseEnter={(e) => (e.currentTarget.style.filter = "brightness(0.9)")}
-          onMouseLeave={(e) => (e.currentTarget.style.filter = "none")}
-        >
+          onMouseEnter={(e) =>
+            (e.currentTarget.style.filter = "brightness(0.9)")
+          }
+          onMouseLeave={(e) => (e.currentTarget.style.filter = "none")}>
           <Plus size={15} /> Nuova pagina
         </button>
       </div>
@@ -807,11 +958,19 @@ export default function PageManager({
       {/* Empty state */}
       {rootPages.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
-          <FileText size={36} className="mb-3" style={{ color: "var(--admin-text-faint)" }} />
-          <p className="text-sm font-medium" style={{ color: "var(--admin-text-muted)" }}>
+          <FileText
+            size={36}
+            className="mb-3"
+            style={{ color: "var(--admin-text-faint)" }}
+          />
+          <p
+            className="text-sm font-medium"
+            style={{ color: "var(--admin-text-muted)" }}>
             {searchActive ? "Nessuna pagina trovata" : "Nessuna pagina creata"}
           </p>
-          <p className="text-xs mt-1" style={{ color: "var(--admin-text-faint)" }}>
+          <p
+            className="text-xs mt-1"
+            style={{ color: "var(--admin-text-faint)" }}>
             {!searchActive && 'Clicca "Nuova pagina" per iniziare.'}
           </p>
         </div>
