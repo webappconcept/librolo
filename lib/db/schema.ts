@@ -196,6 +196,45 @@ export const redirects = pgTable("redirects", {
 });
 
 // ---------------------------------------------------------------------------
+// CMS — Snippet globali frontend (head / body)
+// ---------------------------------------------------------------------------
+
+/**
+ * Tipo dello snippet:
+ *  - link_css   → <link rel="stylesheet" href="...">
+ *  - style      → <style>...</style>
+ *  - script_src → <script src="..."></script>
+ *  - script     → <script>...</script>
+ *  - raw        → markup arbitrario inserito as-is
+ */
+export type SnippetType = "link_css" | "style" | "script_src" | "script" | "raw";
+
+/**
+ * Posizione di iniezione:
+ *  - head      → dentro <head>, prima della chiusura
+ *  - body_end  → subito prima di </body>
+ */
+export type SnippetPosition = "head" | "body_end";
+
+export const siteSnippets = pgTable("site_snippets", {
+  id: serial("id").primaryKey(),
+  /** Label visibile solo in admin */
+  name: varchar("name", { length: 150 }).notNull(),
+  /** link_css | style | script_src | script | raw */
+  type: varchar("type", { length: 20 }).notNull().default("script"),
+  /** head | body_end */
+  position: varchar("position", { length: 20 }).notNull().default("head"),
+  /** URL (per link_css / script_src) o codice grezzo (per gli altri) */
+  content: text("content").notNull().default(""),
+  /** Se false lo snippet è salvato ma non viene iniettato */
+  isActive: boolean("is_active").notNull().default(true),
+  /** Ordine di iniezione (ASC) */
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// ---------------------------------------------------------------------------
 // Resto delle tabelle
 // ---------------------------------------------------------------------------
 export const activityLogs = pgTable("activity_logs", {
@@ -286,6 +325,8 @@ export type TemplateField = typeof templateFields.$inferSelect;
 export type NewTemplateField = typeof templateFields.$inferInsert;
 export type Redirect = typeof redirects.$inferSelect;
 export type NewRedirect = typeof redirects.$inferInsert;
+export type SiteSnippet = typeof siteSnippets.$inferSelect;
+export type NewSiteSnippet = typeof siteSnippets.$inferInsert;
 
 export interface TemplateStyleConfig {
   fontBody?: string;

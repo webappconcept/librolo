@@ -2,23 +2,32 @@
 "use client";
 
 import type { AppSettings } from "@/lib/db/settings-queries";
-import { Mail, Map, Settings, SlidersHorizontal } from "lucide-react";
+import type { SiteSnippet } from "@/lib/db/schema";
+import { Code2, Mail, Map, Settings, SlidersHorizontal } from "lucide-react";
 import { useState } from "react";
 import { BehaviourTab } from "./tabs/behaviour-tab";
 import { EmailTab } from "./tabs/email-tab";
 import { GeneralTab } from "./tabs/general-tab";
 import { RoutesTab } from "./tabs/routes-tab";
+import { SnippetsTab } from "./tabs/snippets-tab";
 
 const TABS = [
   { id: "general", label: "Generale", icon: Settings },
   { id: "behaviour", label: "Comportamento", icon: SlidersHorizontal },
   { id: "email", label: "Email", icon: Mail },
   { id: "routes", label: "Route", icon: Map },
+  { id: "snippets", label: "Contenuti", icon: Code2 },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
 
-export function SettingsTabs({ settings }: { settings: AppSettings }) {
+export function SettingsTabs({
+  settings,
+  snippets,
+}: {
+  settings: AppSettings;
+  snippets: SiteSnippet[];
+}) {
   const [active, setActive] = useState<TabId>("general");
 
   return (
@@ -53,6 +62,7 @@ export function SettingsTabs({ settings }: { settings: AppSettings }) {
       {active === "behaviour" && <BehaviourTab settings={settings} />}
       {active === "email" && <EmailTab settings={settings} />}
       {active === "routes" && <RoutesTab />}
+      {active === "snippets" && <SnippetsTab initialSnippets={snippets} />}
     </div>
   );
 }

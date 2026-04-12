@@ -1,95 +1,66 @@
 "use server";
 
-import { getUser } from "@/lib/db/queries";
-import { updateAppSetting, type SettingKey } from "@/lib/db/settings-queries";
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import { updateAppSetting } from "@/lib/db/settings-queries";
+import { db } from "@/lib/db/drizzle";
+import { siteSnippets } from "@/lib/db/schema";
+import type { SiteSnippet } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
+import { revalidateTag } from "next/cache";
 
-export type ActionState =
-  | { success: string; error?: undefined; timestamp: number }
-  | { error: string; success?: undefined; timestamp: number }
-  | {};
-
-async function requireAdmin() {
-  const user = await getUser();
-  if (!user || user.role !== "admin") redirect("/");
-  return user;
+// ─── AppSettings ─────────────────────────────────────────────────────────────
+export async function saveGeneralSettingsAction(formData: FormData) {
+  await updateAppSetting("app_name", formData.get("app_name") as string);
+  await updateAppSetting("app_description", formData.get("app_description") as string);
+  await updateAppSetting("app_domain", formData.get("app_domain") as string);
 }
 
-/** Normalizza il dominio: rimuove protocollo e slash finale. */
-function normalizeDomain(raw: string): string {
-  return raw
-    .trim()
-    .replace(/^https?:\/\//i, "")
-    .replace(/\/$/, "");
+export async function saveBehaviourSettingsAction(formData: FormData) {
+  await updateAppSetting("maintenance_mode", formData.get("maintenance_mode") as string);
+  await updateAppSetting("registrations_enabled", formData.get("registrations_enabled") as string);
 }
 
-export async function saveAppSettings(
-  _prevState: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
-  try {
-    await requireAdmin();
-
-    const fields: SettingKey[] = [
-      "app_name",
-      "app_description",
-      "app_domain",
-      "maintenance_mode",
-      "registrations_enabled",
-    ];
-
-    await Promise.all(
-      fields.map((key) => {
-        const value = formData.get(key);
-        if (typeof value === "string") {
-          // Il dominio viene sempre normalizzato (senza protocollo)
-          const cleaned = key === "app_domain" ? normalizeDomain(value) : value.trim();
-          return updateAppSetting(key, cleaned);
-        }
-      }),
-    );
-
-    revalidatePath("/admin/settings");
-    revalidatePath("/");
-
-    return {
-      success: "Impostazioni salvate con successo",
-      timestamp: Date.now(),
-    };
-  } catch {
-    return {
-      error: "Errore durante il salvataggio. Riprova.",
-      timestamp: Date.now(),
-    };
-  }
+export async function saveEmailSettingsAction(formData: FormData) {
+  await updateAppSetting("resend_api_key", formData.get("resend_api_key") as string);
+  await updateAppSetting("email_from_name", formData.get("email_from_name") as string);
+  await updateAppSetting("email_from_address", formData.get("email_from_address") as string);
 }
 
-export async function saveEmailSettings(
-  _prev: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
-  try {
-    await requireAdmin();
+// ─── Snippets ─────────────────────────────────────────────────────────────────
+function invalidateSnippets() {
+  revalidateTag("snippets");
+}
 
-    const fields: SettingKey[] = [
-      "resend_api_key",
-      "email_from_name",
-      "email_from_address",
-    ];
+export async function createSnippetAction(
+  data: Omit<SiteSnippet, "id" | "createdAt" | "updatedAt">,
+) {
+  await db.insert(siteSnippets).values({
+    ...data,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
+  invalidateSnippets();
+}
 
-    await Promise.all(
-      fields.map((key) => {
-        const value = formData.get(key);
-        if (typeof value === "string" && value.trim()) {
-          return updateAppSetting(key, value.trim());
-        }
-      }),
-    );
+export async function updateSnippetAction(
+  id: number,
+  data: Omit<SiteSnippet, "id" | "createdAt" | "updatedAt">,
+) {
+  await db
+    .update(siteSnippets)
+    .set({ ...data, updatedAt: new Date() })
+    .where(eq(siteSnippets.id, id));
+  invalidateSnippets();
+}
 
-    revalidatePath("/admin/settings");
-    return { success: "Impostazioni email salvate.", timestamp: Date.now() };
-  } catch {
-    return { error: "Errore durante il salvataggio.", timestamp: Date.now() };
-  }
+export async function deleteSnippetAction(id: number) {
+  await db.delete(siteSnippets).where(eq(siteSnippets.id, id));
+  invalidateSnippets();
+}
+
+export async function toggleSnippetAction(id: number, isActive: boolean) {
+  await db
+    .update(siteSnippets)
+    .set({ isActive, updatedAt: new Date() })
+    .where(eq(siteSnippets.id, id));
+  invalidateSnippets();
 }
