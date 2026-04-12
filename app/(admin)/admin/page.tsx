@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 import { DashboardCharts } from "./_components/dashboard-charts";
 import KpiCard from "./_components/kpi-card";
-import { RecentActivity } from "./_components/recent-activity";
 
 export default async function AdminDashboardPage() {
   const [stats, growthData, settings] = await Promise.all([
@@ -164,9 +163,6 @@ export default async function AdminDashboardPage() {
         pagesDraft={stats.pagesDraft}
         templatesCount={stats.templatesCount}
       />
-
-      {/* Attività recente */}
-      <RecentActivity logs={stats.recentActivity} />
     </div>
   );
 }
