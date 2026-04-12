@@ -26,17 +26,15 @@ export const TEMPLATE_REGISTRY: Record<
   // slug "default" → usato come fallback generico
   default: TemplateDefault,
 
-  // Aggiungi qui i tuoi slug:
-  // "articolo": TemplateArticle,
-  // "servizio": TemplateService,
-  // "landing": TemplateLanding,
-  // "faq": TemplateFaq,
-
-  // Esempi con slug in inglese (se crei i template con slug inglesi):
-  article: TemplateArticle,
-  service: TemplateService,
+  // Slug italiani (usati nel CMS admin)
+  articolo: TemplateArticle,
+  servizio: TemplateService,
   landing: TemplateLanding,
   faq: TemplateFaq,
+
+  // Alias slug inglesi (retrocompatibilità)
+  article: TemplateArticle,
+  service: TemplateService,
 };
 
 /**

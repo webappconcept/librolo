@@ -20,6 +20,12 @@ function resolveMeta(value: string | null | undefined, appName: string, appDomai
     .replace(/\{currentYear\}/g, String(new Date().getFullYear()));
 }
 
+function isPubliclyVisible(page: Awaited<ReturnType<typeof getPageBySlug>>): page is NonNullable<typeof page> {
+  if (!page || page.status !== "published") return false;
+  if (page.expiresAt && new Date(page.expiresAt) <= new Date()) return false;
+  return true;
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const fullSlug = slug.join("/");
@@ -30,7 +36,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     getAppSettings(),
   ]);
 
-  if (!page || page.status !== "published") return {};
+  if (!isPubliclyVisible(page)) return {};
 
   const appName = settings.app_name ?? "";
   const appDomain = settings.app_domain ?? "";
@@ -56,8 +62,7 @@ export default async function FrontendPage({ params }: Props) {
   const { slug } = await params;
   const page = await getPageBySlug(slug.join("/"));
 
-  if (!page) notFound();
-  if (page.status !== "published") notFound();
+  if (!isPubliclyVisible(page)) notFound();
 
   const template = page.templateId
     ? await getTemplateById(page.templateId)
