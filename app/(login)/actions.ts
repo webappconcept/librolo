@@ -184,12 +184,15 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
 
   const passwordHash = await hashPassword(password);
 
+  // Usa il ruolo predefinito configurato nelle impostazioni
+  const defaultRole = settings.default_role || "member";
+
   const newUser: NewUser = {
     firstName,
     lastName,
     email,
     passwordHash,
-    role: "owner",
+    role: defaultRole,
   };
 
   const [createdUser] = await db.insert(users).values(newUser).returning();
