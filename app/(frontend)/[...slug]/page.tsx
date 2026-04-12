@@ -1,97 +1,67 @@
-import { notFound } from "next/navigation";
+import { getPageWithTemplate } from "@/lib/db/pages-queries";
+import { getSeoPage } from "@/lib/db/seo-queries";
+import { getDynamicTemplate } from "@/app/(frontend)/_templates/loader";
 import type { Metadata } from "next";
-import { getPageWithTemplate, getPublishedPages } from "@/lib/db/pages-queries";
-import { getDynamicTemplate } from "../_templates/loader";
-import { parseStyleConfig, parseCustomFields } from "../_templates/types";
+import { notFound } from "next/navigation";
 
 // ---------------------------------------------------------------------------
-// Tipi
+// generateMetadata — legge seo_pages per il pathname corrente.
+// Fallback: title della pagina CMS.
 // ---------------------------------------------------------------------------
-interface Props {
+
+export async function generateMetadata({
+  params,
+}: {
   params: Promise<{ slug: string[] }>;
-}
-
-// ---------------------------------------------------------------------------
-// generateStaticParams — pre-genera tutte le pagine pubblicate in build
-// ---------------------------------------------------------------------------
-export async function generateStaticParams() {
-  const published = await getPublishedPages();
-  return published.map((p) => ({
-    slug: p.slug.split("/").filter(Boolean),
-  }));
-}
-
-// ---------------------------------------------------------------------------
-// generateMetadata — SEO automatico dalla pagina
-// ---------------------------------------------------------------------------
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+}): Promise<Metadata> {
   const { slug } = await params;
-  const slugPath = slug.join("/");
-  const page = await getPageWithTemplate(slugPath);
-  if (!page) return {};
-  return {
-    title: page.title,
-  };
-}
+  const pathname = "/" + slug.join("/");
 
-// ---------------------------------------------------------------------------
-// Banner preview — mostrato solo per pagine non pubblicate in anteprima
-// Tenuto qui e non nei template: ogni template deve occuparsi solo del layout.
-// ---------------------------------------------------------------------------
-function PreviewBanner() {
-  return (
-    <div
-      style={{
-        background: "#fbbf24",
-        color: "#1a1a1a",
-        textAlign: "center",
-        padding: "0.5rem",
-        fontSize: "0.75rem",
-        fontWeight: 600,
-        letterSpacing: "0.05em",
-        textTransform: "uppercase",
-      }}>
-      ⚠️ Anteprima — non pubblicata
-    </div>
-  );
+  const [seo, page] = await Promise.all([
+    getSeoPage(pathname),
+    getPageWithTemplate(slug.join("/")),
+  ]);
+
+  const title = seo?.title || page?.title || undefined;
+  const description = seo?.description || undefined;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title: seo?.ogTitle || title,
+      description: seo?.ogDescription || description,
+      ...(seo?.ogImage ? { images: [{ url: seo.ogImage }] } : {}),
+    },
+    robots: seo?.robots || undefined,
+  };
 }
 
 // ---------------------------------------------------------------------------
 // Page component
 // ---------------------------------------------------------------------------
-export default async function FrontendPage({ params }: Props) {
+
+export default async function FrontendPage({
+  params,
+}: {
+  params: Promise<{ slug: string[] }>;
+}) {
   const { slug } = await params;
-  const slugPath = slug.join("/");
+  const pageSlug = slug.join("/");
 
-  // Recupera pagina + template + campi dal DB
-  const page = await getPageWithTemplate(slugPath);
+  const pageData = await getPageWithTemplate(pageSlug);
 
-  // La pagina deve esistere (le bozze sono accessibili solo in preview)
-  if (!page) return notFound();
+  if (!pageData || pageData.status !== "published") {
+    notFound();
+  }
 
-  const isPreview = page.status !== "published";
-
-  // In produzione le pagine non pubblicate restituiscono 404
-  // (il parametro ?preview=1 potrà bypassare questo controllo in futuro)
-  if (isPreview) return notFound();
-
-  // Risolve il componente template tramite loader (async, import dinamico)
-  const templateSlug = page.template?.slug ?? "default";
+  const templateSlug = pageData.template?.slug ?? null;
   const TemplateComponent = await getDynamicTemplate(templateSlug);
 
-  // Parsa i dati custom dalla pagina
-  const fields = parseCustomFields(page.customFields);
-  const styleConfig = parseStyleConfig(page.template?.styleConfig);
-
   return (
-    <>
-      {isPreview && <PreviewBanner />}
-      <TemplateComponent
-        page={page}
-        template={page.template ?? null}
-        fields={fields}
-        styleConfig={styleConfig}
-      />
-    </>
+    <TemplateComponent
+      page={pageData}
+      template={pageData.template ?? null}
+    />
   );
 }
