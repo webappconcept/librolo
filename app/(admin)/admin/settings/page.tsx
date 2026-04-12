@@ -1,12 +1,16 @@
 // app/(admin)/admin/settings/page.tsx
+import { db } from "@/lib/db/drizzle";
+import { roles } from "@/lib/db/schema";
 import { getAppSettings } from "@/lib/db/settings-queries";
 import { getAllSnippets } from "@/lib/db/snippets-queries";
+import { asc } from "drizzle-orm";
 import { SettingsTabs } from "./settings-tabs";
 
 export default async function SettingsPage() {
-  const [settings, snippets] = await Promise.all([
+  const [settings, snippets, allRoles] = await Promise.all([
     getAppSettings(),
     getAllSnippets(),
+    db.select().from(roles).orderBy(asc(roles.sortOrder)),
   ]);
 
   return (
@@ -16,10 +20,10 @@ export default async function SettingsPage() {
           Impostazioni
         </h1>
         <p className="text-sm mt-1" style={{ color: "var(--admin-text-muted)" }}>
-          Configura il comportamento dell'applicazione.
+          Configura il comportamento dell&apos;applicazione.
         </p>
       </div>
-      <SettingsTabs settings={settings} snippets={snippets} />
+      <SettingsTabs settings={settings} snippets={snippets} roles={allRoles} />
     </div>
   );
 }
