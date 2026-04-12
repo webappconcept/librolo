@@ -5,10 +5,14 @@
 
 import type { CmsTemplateProps } from "../page";
 
-export default function DefaultTemplate({
+export default function ArticoloTemplate({
   page,
+  template,
   resolvedContent,
+  settings,
 }: CmsTemplateProps) {
+  const custom = JSON.parse(page.customFields ?? "{}");
+  const style = JSON.parse(template?.styleConfig ?? "{}");
   return (
     <main className="max-w-3xl mx-auto px-4 py-12 sm:py-16">
       <h1 className="text-3xl font-bold mb-8 text-gray-900 dark:text-white">
