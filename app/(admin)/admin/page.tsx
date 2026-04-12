@@ -8,7 +8,7 @@ import {
   BookOpen,
   FileText,
   GitMerge,
-  Layers,
+  PanelTop,
   ShieldCheck,
   TrendingUp,
   UserCog,
@@ -140,7 +140,7 @@ export default async function AdminDashboardPage() {
             title="Template"
             value={stats.templatesCount}
             sub="layout disponibili"
-            icon={Layers}
+            icon={PanelTop}
             iconColor="#f472b6"
             iconBg="color-mix(in oklch, #f472b6 12%, transparent)"
           />
