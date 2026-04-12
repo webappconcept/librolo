@@ -3,7 +3,7 @@
 import ConfirmModal from "@/app/(admin)/admin/_components/confirm-modal";
 import Tooltip from "@/app/(admin)/admin/_components/tooltip";
 import type { Page, PageTemplate } from "@/lib/db/schema";
-import { ChevronRight, ExternalLink, EyeOff, FileText, GitFork, Globe, PanelTop, Pencil, Plus, Search, Trash2, ShieldCheck } from "lucide-react";
+import { ChevronRight, ExternalLink, Eye, EyeOff, FileText, GitFork, Globe, PanelTop, Pencil, Plus, Search, Trash2, ShieldCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { deletePageAction, togglePageStatusAction } from "../actions";
@@ -151,7 +151,13 @@ function PageRow({
   const isPendingToggle = pendingToggleId === page.id;
   const indent = depth * 20;
 
-  const frontUrl = appDomain ? `${appDomain}/${page.slug}` : null;
+  // URL pubblico — solo se domain configurato e pagina pubblicata
+  const frontUrl = isPublished && appDomain
+    ? `${appDomain.replace(/\/+$/, "")}/${page.slug}`
+    : null;
+
+  // URL anteprima admin — sempre disponibile in modifica
+  const previewUrl = `/admin/preview/${page.id}`;
 
   function countDescendants(id: number): number {
     const direct = allPages.filter((p) => p.parentId === id);
@@ -247,6 +253,7 @@ function PageRow({
         </span>
 
         <div className="flex items-center gap-0.5 shrink-0" onClick={stopRow}>
+          {/* Modifica */}
           <Tooltip label="Modifica pagina" side="top">
             <button onClick={() => onEdit(page.id)}
               className="p-1.5 rounded-lg transition-colors"
@@ -257,18 +264,33 @@ function PageRow({
             </button>
           </Tooltip>
 
+          {/* Vedi online (pubblicata) — apre il sito reale */}
           {isPublished && frontUrl && (
-            <Tooltip label="Anteprima sul sito" side="top">
+            <Tooltip label="Vedi online" side="top">
               <a href={frontUrl} target="_blank" rel="noopener noreferrer"
                 className="p-1.5 rounded-lg transition-colors inline-flex items-center"
-                style={{ color: "var(--admin-text-faint)" }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "color-mix(in srgb, var(--admin-accent) 10%, var(--admin-card-bg))"; (e.currentTarget as HTMLAnchorElement).style.color = "var(--admin-accent)"; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; (e.currentTarget as HTMLAnchorElement).style.color = "var(--admin-text-faint)"; }}>
+                style={{ color: "#22c55e" }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "color-mix(in srgb, #22c55e 12%, var(--admin-card-bg))"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; }}>
                 <ExternalLink size={13} />
               </a>
             </Tooltip>
           )}
 
+          {/* Anteprima (bozza) — apre /admin/preview/[id] */}
+          {!isPublished && (
+            <Tooltip label="Anteprima bozza" side="top">
+              <a href={previewUrl} target="_blank" rel="noopener noreferrer"
+                className="p-1.5 rounded-lg transition-colors inline-flex items-center"
+                style={{ color: "var(--admin-text-faint)" }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "color-mix(in srgb, var(--admin-accent) 10%, var(--admin-card-bg))"; (e.currentTarget as HTMLAnchorElement).style.color = "var(--admin-accent)"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; (e.currentTarget as HTMLAnchorElement).style.color = "var(--admin-text-faint)"; }}>
+                <Eye size={13} />
+              </a>
+            </Tooltip>
+          )}
+
+          {/* Nuova pagina figlia */}
           <Tooltip label="Nuova pagina figlia" side="top">
             <button onClick={() => onNewChild(page.id)}
               className="p-1.5 rounded-lg transition-colors"
@@ -279,6 +301,7 @@ function PageRow({
             </button>
           </Tooltip>
 
+          {/* Pubblica / Depubblica */}
           <Tooltip label={isPublished ? "Depubblica" : "Pubblica"} side="top">
             <button onClick={() => onToggleStatus(page.id, page.status)}
               disabled={isPendingToggle}
@@ -300,6 +323,7 @@ function PageRow({
             </button>
           </Tooltip>
 
+          {/* Elimina */}
           <Tooltip label="Elimina pagina" side="top">
             <button
               onClick={() => onDeleteRequest({ slug: page.slug, title: page.title, descendants: countDescendants(page.id) })}
@@ -354,7 +378,6 @@ export default function PageManager({
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [, startTransition] = useTransition();
 
-  // Stato modale picker template figlio
   const [pickerParent, setPickerParent] = useState<Page | null>(null);
   const [pickerOptions, setPickerOptions] = useState<TemplateWithFields[]>([]);
 
@@ -410,12 +433,6 @@ export default function PageManager({
     });
   }
 
-  /**
-   * Logica smart "Nuova pagina figlia" (stile ProcessWire):
-   * - 0 template consentiti nel padre → /new?parentId=X (libera scelta)
-   * - 1 template consentito       → /new?parentId=X&templateId=Y (automatico, locked)
-   * - N template consentiti       → mostra picker, poi /new?parentId=X&templateId=Y (locked)
-   */
   function handleNewChild(parentId: number) {
     const parent = initialPages.find((p) => p.id === parentId);
     if (!parent) { router.push(`/admin/contenuti/new?parentId=${parentId}`); return; }
@@ -427,18 +444,13 @@ export default function PageManager({
     const allowedIds = getAllowedChildIds(parentTemplate);
 
     if (allowedIds.length === 0) {
-      // Nessuna restrizione — editor libero
       router.push(`/admin/contenuti/new?parentId=${parentId}`);
       return;
     }
-
     if (allowedIds.length === 1) {
-      // Unico template consentito — assegnazione automatica e locked
       router.push(`/admin/contenuti/new?parentId=${parentId}&templateId=${allowedIds[0]}&templateLocked=1`);
       return;
     }
-
-    // Più template consentiti — mostra picker
     const options = templates.filter((t) => allowedIds.includes(t.id));
     setPickerParent(parent);
     setPickerOptions(options);
@@ -555,7 +567,6 @@ export default function PageManager({
         </div>
       )}
 
-      {/* Modale picker template figlio */}
       {pickerParent && (
         <ChildTemplatePicker
           parentTitle={pickerParent.title}
@@ -565,7 +576,6 @@ export default function PageManager({
         />
       )}
 
-      {/* Modale conferma eliminazione */}
       {deleteTarget && (
         <ConfirmModal
           open={!!deleteTarget}
