@@ -19,6 +19,16 @@ export async function saveTemplateAction(formData: FormData) {
   const description = (formData.get("description") as string | null)?.trim() || null;
   const isCreating = !id;
 
+  // Leggi allowedChildTemplateIds dal campo dedicato
+  let allowedChildTemplateIds: number[] = [];
+  const allowedJson = formData.get("allowedChildTemplateIdsJson") as string | null;
+  if (allowedJson) {
+    try {
+      const parsed = JSON.parse(allowedJson);
+      if (Array.isArray(parsed)) allowedChildTemplateIds = parsed.map(Number).filter(Boolean);
+    } catch { /* noop */ }
+  }
+
   const styleConfig = {
     fontBody: formData.get("fontBody") as string | null,
     fontDisplay: formData.get("fontDisplay") as string | null,
@@ -27,6 +37,8 @@ export async function saveTemplateAction(formData: FormData) {
     colorText: formData.get("colorText") as string | null,
     spacing: (formData.get("spacing") as string | null) ?? "normal",
     borderRadius: (formData.get("borderRadius") as string | null) ?? "medium",
+    // Regola pagine figlie (stile ProcessWire)
+    allowedChildTemplateIds,
   };
 
   const fieldsJson = formData.get("fieldsJson") as string | null;
@@ -49,7 +61,7 @@ export async function saveTemplateAction(formData: FormData) {
 
   await upsertTemplate(templateData, fields);
 
-  // ── Activity log ────────────────────────────────────────────────────────────
+  // ── Activity log ─────────────────────────────────────────────────────────────────────────────
   const user = await getUser();
   const detail = `slug: ${slug} | nome: ${name}`;
   await logContentActivity(
@@ -70,14 +82,12 @@ export async function deleteTemplateAction(formData: FormData) {
   if (!result.error) {
     revalidatePath("/admin/template");
 
-    // ── Activity log ──────────────────────────────────────────────────────────
     const user = await getUser();
     await logContentActivity(
       ActivityType.TEMPLATE_DELETED,
       `id: ${id}`,
       user?.id ?? null,
     );
-    // ──────────────────────────────────────────────────────────────────────────
   }
 }
 
@@ -87,12 +97,10 @@ export async function duplicateTemplateAction(formData: FormData) {
   await duplicateTemplate(id);
   revalidatePath("/admin/template");
 
-  // ── Activity log ────────────────────────────────────────────────────────────
   const user = await getUser();
   await logContentActivity(
     ActivityType.TEMPLATE_CREATED,
     `duplicato da id: ${id}`,
     user?.id ?? null,
   );
-  // ────────────────────────────────────────────────────────────────────────────
 }

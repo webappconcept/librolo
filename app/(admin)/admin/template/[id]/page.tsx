@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getTemplateById } from "@/lib/db/template-queries";
+import { getTemplateById, getAllTemplates } from "@/lib/db/template-queries";
 import { saveTemplateAction } from "../actions";
 import TemplateFormClient from "../_components/template-form-client";
 
@@ -12,10 +12,13 @@ export default async function EditTemplatePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const template = await getTemplateById(Number(id));
+  const [template, allTemplates] = await Promise.all([
+    getTemplateById(Number(id)),
+    getAllTemplates(),
+  ]);
   if (!template) notFound();
 
-  let styleConfig: Record<string, string> = {};
+  let styleConfig: Record<string, unknown> = {};
   try {
     styleConfig = JSON.parse(template.styleConfig ?? "{}");
   } catch {
@@ -34,6 +37,7 @@ export default async function EditTemplatePage({
           fields: template.fields,
           isSystem: template.isSystem,
         }}
+        allTemplates={allTemplates.map((t) => ({ id: t.id, name: t.name, slug: t.slug }))}
         saveAction={saveTemplateAction}
       />
     </div>
