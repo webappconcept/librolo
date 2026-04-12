@@ -19,6 +19,7 @@ export default function ArticoloTemplate({
         <div>template articolo</div>
         {page.title}
       </h1>
+      {custom.autore && <p>di {custom.autore}</p>}
       {resolvedContent ? (
         <div
           className="prose prose-gray dark:prose-invert max-w-none"
