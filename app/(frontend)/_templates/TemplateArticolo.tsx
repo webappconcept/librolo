@@ -10,7 +10,7 @@ import { styleConfigToCssVars } from "./types";
  *   - readTime   (number)  — minuti di lettura stimati
  *   - intro      (textarea)— testo di introduzione sopra il body
  */
-export function TemplateArticle({
+export function TemplateArticolo({
   page,
   fields,
   styleConfig,
