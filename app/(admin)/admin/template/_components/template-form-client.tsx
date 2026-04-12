@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, useState, useCallback, useEffect } from "react";
-import { GripVertical, Plus, Trash2 } from "lucide-react";
+import { useRef, useState, useEffect } from "react";
+import { GripVertical, Plus, Trash2, Settings, ShieldCheck } from "lucide-react";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import type { TemplateField } from "@/lib/db/schema";
 import { EditorPageHeader } from "../../_components/editor-page-header";
@@ -31,16 +31,23 @@ interface FieldDraft {
   options: string;
 }
 
+interface TemplateOption {
+  id: number;
+  name: string;
+  slug: string;
+}
+
 interface TemplateFormClientProps {
   template?: {
     id: number;
     name: string;
     slug: string;
     description: string;
-    styleConfig: Record<string, string>;
+    styleConfig: Record<string, unknown>;
     fields: TemplateField[];
     isSystem: boolean;
   };
+  allTemplates?: TemplateOption[];
   saveAction: (formData: FormData) => Promise<void>;
 }
 
@@ -48,15 +55,39 @@ function uid() {
   return Math.random().toString(36).slice(2);
 }
 
+const tabStyle = (active: boolean): React.CSSProperties => ({
+  display: "flex",
+  alignItems: "center",
+  gap: "6px",
+  padding: "0.625rem 1rem",
+  fontSize: "0.875rem",
+  fontWeight: 500,
+  cursor: "pointer",
+  background: "none",
+  border: "none",
+  borderBottom: active ? "2px solid var(--admin-accent)" : "2px solid transparent",
+  color: active ? "var(--admin-accent)" : "var(--admin-text-muted)",
+  transition: "color 150ms, border-color 150ms",
+});
+
 export default function TemplateFormClient({
   template,
+  allTemplates = [],
   saveAction,
 }: TemplateFormClientProps) {
   const isEdit = !!template;
+  const [activeTab, setActiveTab] = useState<"generale" | "regole">("generale");
   const [name, setName] = useState(template?.name ?? "");
   const [slug, setSlug] = useState(template?.slug ?? "");
   const [slugManual, setSlugManual] = useState(!!template?.slug);
   const [description, setDescription] = useState(template?.description ?? "");
+
+  // Legge allowedChildTemplateIds da styleConfig (se presenti)
+  const [allowedChildIds, setAllowedChildIds] = useState<number[]>(() => {
+    const raw = template?.styleConfig?.allowedChildTemplateIds;
+    if (Array.isArray(raw)) return raw.map(Number).filter(Boolean);
+    return [];
+  });
 
   const [fields, setFields] = useState<FieldDraft[]>(
     (template?.fields ?? []).map((f) => ({
@@ -76,7 +107,6 @@ export default function TemplateFormClient({
   const [error, setError] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
-  // Auto-dismiss feedback dopo 4s
   useEffect(() => {
     if (!savedAt) return;
     const t = setTimeout(() => setSavedAt(null), 4000);
@@ -102,12 +132,20 @@ export default function TemplateFormClient({
     setFields((prev) => prev.map((f) => (f._id === id ? { ...f, [key]: value } : f)));
   }
 
+  function toggleAllowedChild(id: number) {
+    setAllowedChildIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  }
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setSaving(true);
     setError(null);
     try {
       const fd = new FormData(formRef.current!);
+
+      // Serializza i campi
       fd.set("fieldsJson", JSON.stringify(
         fields.map((f, i) => ({
           fieldKey: f.fieldKey,
@@ -120,6 +158,17 @@ export default function TemplateFormClient({
           sortOrder: i,
         }))
       ));
+
+      // Serializza allowedChildTemplateIds dentro styleConfig
+      // Leggiamo i valori già presenti di styleConfig e aggiungiamo la nuova chiave
+      const existingStyleConfig: Record<string, unknown> = {};
+      for (const key of ["fontBody", "fontDisplay", "colorPrimary", "colorBg", "colorText", "spacing", "borderRadius"]) {
+        const v = fd.get(key);
+        if (v !== null) existingStyleConfig[key] = v;
+      }
+      existingStyleConfig.allowedChildTemplateIds = allowedChildIds;
+      fd.set("allowedChildTemplateIdsJson", JSON.stringify(allowedChildIds));
+
       await saveAction(fd);
       setSavedAt(new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" }));
     } catch (err) {
@@ -144,7 +193,9 @@ export default function TemplateFormClient({
   };
   const labelCls = "block text-xs font-medium mb-1";
 
-  // Breadcrumb label corrente
+  // Filtra i template disponibili escludendo se stesso
+  const availableTemplates = allTemplates.filter((t) => t.id !== template?.id);
+
   const currentLabel = isEdit
     ? (name || template?.name || "Modifica template")
     : (name ? name : "Nuovo template");
@@ -153,7 +204,6 @@ export default function TemplateFormClient({
     <form id={FORM_ID} ref={formRef} onSubmit={handleSubmit}>
       {template?.id && <input type="hidden" name="id" value={template.id} />}
 
-      {/* Header unificato */}
       <EditorPageHeader
         breadcrumbs={[
           { label: "Contenuti", href: "/admin/contenuti" },
@@ -168,111 +218,226 @@ export default function TemplateFormClient({
         error={error}
       />
 
-      {/* Informazioni base */}
-      <section className="rounded-xl p-5 mb-5" style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-border)" }}>
-        <h2 className="text-sm font-semibold mb-4" style={{ color: "var(--admin-text)" }}>Informazioni base</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className={labelCls} style={{ color: "var(--admin-text-muted)" }}>Nome *</label>
-            <input name="name" required value={name}
-              onChange={(e) => { setName(e.target.value); if (!slugManual) setSlug(autoSlug(e.target.value)); }}
-              className={inputCls} style={inputStyle} placeholder="Es. Articolo blog" />
-          </div>
-          <div>
-            <label className={labelCls} style={{ color: "var(--admin-text-muted)" }}>Slug *</label>
-            <input name="slug" required value={slug}
-              onChange={(e) => { setSlug(e.target.value); setSlugManual(true); }}
-              className={inputCls} style={inputStyle} placeholder="articolo-blog"
-              disabled={template?.isSystem} />
-          </div>
-          <div className="col-span-2">
-            <label className={labelCls} style={{ color: "var(--admin-text-muted)" }}>Descrizione</label>
-            <textarea name="description" value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={2} className={inputCls} style={inputStyle}
-              placeholder="Breve descrizione dell'uso del template…" />
-          </div>
-        </div>
-      </section>
-
-      {/* Campi custom */}
-      <section className="rounded-xl p-5 mb-6" style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-border)" }}>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-semibold" style={{ color: "var(--admin-text)" }}>
-            Campi custom ({fields.length})
-          </h2>
-          <button type="button" onClick={addField}
-            className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg"
-            style={{ background: "var(--admin-accent)", color: "#fff" }}>
-            <Plus size={13} /> Aggiungi campo
+      {/* Tab bar */}
+      <div className="flex mb-5 rounded-xl overflow-hidden"
+        style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-border)" }}>
+        <div className="flex" style={{ borderBottom: "1px solid var(--admin-border)", width: "100%" }}>
+          <button type="button" style={tabStyle(activeTab === "generale")} onClick={() => setActiveTab("generale")}>
+            <Settings size={14} />
+            Generale
+          </button>
+          <button type="button" style={tabStyle(activeTab === "regole")} onClick={() => setActiveTab("regole")}>
+            <ShieldCheck size={14} />
+            Regole
+            {allowedChildIds.length > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 rounded-full text-xs font-semibold"
+                style={{
+                  background: "color-mix(in srgb, var(--admin-accent) 15%, var(--admin-card-bg))",
+                  color: "var(--admin-accent)",
+                  fontSize: "0.65rem",
+                  lineHeight: 1,
+                }}>
+                {allowedChildIds.length}
+              </span>
+            )}
           </button>
         </div>
+      </div>
 
-        {fields.length === 0 && (
-          <p className="text-sm text-center py-6" style={{ color: "var(--admin-text-muted)" }}>
-            Nessun campo — il template usa solo il contenuto principale
-          </p>
-        )}
-
-        <div className="space-y-3">
-          {fields.map((field) => (
-            <div key={field._id} className="rounded-lg p-3"
-              style={{ background: "var(--admin-input-bg)", border: "1px solid var(--admin-border)" }}>
-              <div className="flex items-center gap-2 mb-3">
-                <GripVertical size={14} style={{ color: "var(--admin-text-faint)" }} />
-                <span className="text-xs font-semibold" style={{ color: "var(--admin-text)" }}>Campo</span>
-                <button type="button" onClick={() => removeField(field._id)}
-                  className="ml-auto p-1 rounded" style={{ color: "var(--admin-error, #dc2626)" }}>
-                  <Trash2 size={13} />
-                </button>
+      {activeTab === "generale" && (
+        <>
+          {/* Informazioni base */}
+          <section className="rounded-xl p-5 mb-5" style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-border)" }}>
+            <h2 className="text-sm font-semibold mb-4" style={{ color: "var(--admin-text)" }}>Informazioni base</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className={labelCls} style={{ color: "var(--admin-text-muted)" }}>Nome *</label>
+                <input name="name" required value={name}
+                  onChange={(e) => { setName(e.target.value); if (!slugManual) setSlug(autoSlug(e.target.value)); }}
+                  className={inputCls} style={inputStyle} placeholder="Es. Articolo blog" />
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className={labelCls} style={{ color: "var(--admin-text-muted)" }}>Chiave (key) *</label>
-                  <input value={field.fieldKey}
-                    onChange={(e) => updateField(field._id, "fieldKey", e.target.value)}
-                    placeholder="es. coverImage" className={inputCls} style={fieldInputStyle} required />
-                </div>
-                <div>
-                  <label className={labelCls} style={{ color: "var(--admin-text-muted)" }}>Etichetta *</label>
-                  <input value={field.label}
-                    onChange={(e) => updateField(field._id, "label", e.target.value)}
-                    placeholder="es. Immagine copertina" className={inputCls} style={fieldInputStyle} required />
-                </div>
-                <div>
-                  <label className={labelCls} style={{ color: "var(--admin-text-muted)" }}>Tipo</label>
-                  <select value={field.fieldType}
-                    onChange={(e) => updateField(field._id, "fieldType", e.target.value)}
-                    className={inputCls} style={fieldInputStyle}>
-                    {FIELD_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className={labelCls} style={{ color: "var(--admin-text-muted)" }}>Placeholder</label>
-                  <input value={field.placeholder}
-                    onChange={(e) => updateField(field._id, "placeholder", e.target.value)}
-                    className={inputCls} style={fieldInputStyle} />
-                </div>
-                <div>
-                  <label className={labelCls} style={{ color: "var(--admin-text-muted)" }}>Valore default</label>
-                  <input value={field.defaultValue}
-                    onChange={(e) => updateField(field._id, "defaultValue", e.target.value)}
-                    className={inputCls} style={fieldInputStyle} />
-                </div>
-                <div className="flex items-center gap-2 pt-5">
-                  <input type="checkbox" id={`req-${field._id}`}
-                    checked={field.required}
-                    onChange={(e) => updateField(field._id, "required", e.target.checked)}
-                    className="w-4 h-4 rounded" />
-                  <label htmlFor={`req-${field._id}`} className="text-xs" style={{ color: "var(--admin-text)" }}>
-                    Obbligatorio
-                  </label>
-                </div>
+              <div>
+                <label className={labelCls} style={{ color: "var(--admin-text-muted)" }}>Slug *</label>
+                <input name="slug" required value={slug}
+                  onChange={(e) => { setSlug(e.target.value); setSlugManual(true); }}
+                  className={inputCls} style={inputStyle} placeholder="articolo-blog"
+                  disabled={template?.isSystem} />
+              </div>
+              <div className="col-span-2">
+                <label className={labelCls} style={{ color: "var(--admin-text-muted)" }}>Descrizione</label>
+                <textarea name="description" value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={2} className={inputCls} style={inputStyle}
+                  placeholder="Breve descrizione dell'uso del template…" />
               </div>
             </div>
-          ))}
-        </div>
-      </section>
+          </section>
+
+          {/* Campi custom */}
+          <section className="rounded-xl p-5 mb-6" style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-border)" }}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-semibold" style={{ color: "var(--admin-text)" }}>
+                Campi custom ({fields.length})
+              </h2>
+              <button type="button" onClick={addField}
+                className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg"
+                style={{ background: "var(--admin-accent)", color: "#fff" }}>
+                <Plus size={13} /> Aggiungi campo
+              </button>
+            </div>
+
+            {fields.length === 0 && (
+              <p className="text-sm text-center py-6" style={{ color: "var(--admin-text-muted)" }}>
+                Nessun campo — il template usa solo il contenuto principale
+              </p>
+            )}
+
+            <div className="space-y-3">
+              {fields.map((field) => (
+                <div key={field._id} className="rounded-lg p-3"
+                  style={{ background: "var(--admin-input-bg)", border: "1px solid var(--admin-border)" }}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <GripVertical size={14} style={{ color: "var(--admin-text-faint)" }} />
+                    <span className="text-xs font-semibold" style={{ color: "var(--admin-text)" }}>Campo</span>
+                    <button type="button" onClick={() => removeField(field._id)}
+                      className="ml-auto p-1 rounded" style={{ color: "var(--admin-error, #dc2626)" }}>
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className={labelCls} style={{ color: "var(--admin-text-muted)" }}>Chiave (key) *</label>
+                      <input value={field.fieldKey}
+                        onChange={(e) => updateField(field._id, "fieldKey", e.target.value)}
+                        placeholder="es. coverImage" className={inputCls} style={fieldInputStyle} required />
+                    </div>
+                    <div>
+                      <label className={labelCls} style={{ color: "var(--admin-text-muted)" }}>Etichetta *</label>
+                      <input value={field.label}
+                        onChange={(e) => updateField(field._id, "label", e.target.value)}
+                        placeholder="es. Immagine copertina" className={inputCls} style={fieldInputStyle} required />
+                    </div>
+                    <div>
+                      <label className={labelCls} style={{ color: "var(--admin-text-muted)" }}>Tipo</label>
+                      <select value={field.fieldType}
+                        onChange={(e) => updateField(field._id, "fieldType", e.target.value)}
+                        className={inputCls} style={fieldInputStyle}>
+                        {FIELD_TYPES.map((ft) => (
+                          <option key={ft.value} value={ft.value}>{ft.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className={labelCls} style={{ color: "var(--admin-text-muted)" }}>Placeholder</label>
+                      <input value={field.placeholder}
+                        onChange={(e) => updateField(field._id, "placeholder", e.target.value)}
+                        placeholder="Testo suggerimento" className={inputCls} style={fieldInputStyle} />
+                    </div>
+                    <div>
+                      <label className={labelCls} style={{ color: "var(--admin-text-muted)" }}>Valore default</label>
+                      <input value={field.defaultValue}
+                        onChange={(e) => updateField(field._id, "defaultValue", e.target.value)}
+                        placeholder="Lascia vuoto se nessuno" className={inputCls} style={fieldInputStyle} />
+                    </div>
+                    <div className="flex items-end">
+                      <label className="flex items-center gap-2 cursor-pointer pb-2">
+                        <input type="checkbox" checked={field.required}
+                          onChange={(e) => updateField(field._id, "required", e.target.checked)}
+                          className="w-4 h-4 rounded" />
+                        <span className="text-xs font-medium" style={{ color: "var(--admin-text-muted)" }}>Obbligatorio</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        </>
+      )}
+
+      {activeTab === "regole" && (
+        <section className="rounded-xl p-5 mb-6" style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-border)" }}>
+          <div className="mb-5">
+            <h2 className="text-sm font-semibold mb-1" style={{ color: "var(--admin-text)" }}>
+              Template figli consentiti
+            </h2>
+            <p className="text-xs leading-relaxed" style={{ color: "var(--admin-text-muted)" }}>
+              Seleziona quali template possono essere usati dalle pagine figlie di una pagina con questo template.
+              Funziona come ProcessWire: se selezioni un solo template, verrà assegnato automaticamente alla nuova
+              pagina figlia. Se ne selezioni più di uno, verrà mostrato un selettore prima di creare la pagina.
+              Se non selezioni nulla, qualsiasi template può essere usato.
+            </p>
+          </div>
+
+          {availableTemplates.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 text-center gap-2">
+              <ShieldCheck size={28} style={{ color: "var(--admin-text-faint)" }} />
+              <p className="text-sm" style={{ color: "var(--admin-text-muted)" }}>
+                {isEdit
+                  ? "Non ci sono altri template nel sistema."
+                  : "Salva prima il template, poi potrai configurare le regole."}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {availableTemplates.map((t) => {
+                const checked = allowedChildIds.includes(t.id);
+                return (
+                  <label
+                    key={t.id}
+                    className="flex items-center gap-3 rounded-lg px-4 py-3 cursor-pointer transition-colors"
+                    style={{
+                      background: checked
+                        ? "color-mix(in srgb, var(--admin-accent) 8%, var(--admin-input-bg))"
+                        : "var(--admin-input-bg)",
+                      border: checked
+                        ? "1px solid color-mix(in srgb, var(--admin-accent) 35%, transparent)"
+                        : "1px solid var(--admin-border)",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggleAllowedChild(t.id)}
+                      className="w-4 h-4 rounded shrink-0"
+                      style={{ accentColor: "var(--admin-accent)" }}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium" style={{ color: "var(--admin-text)" }}>{t.name}</p>
+                      <p className="text-xs font-mono" style={{ color: "var(--admin-text-faint)" }}>{t.slug}</p>
+                    </div>
+                    {checked && (
+                      <span className="text-xs px-2 py-0.5 rounded-full font-medium shrink-0"
+                        style={{
+                          background: "color-mix(in srgb, var(--admin-accent) 15%, var(--admin-card-bg))",
+                          color: "var(--admin-accent)",
+                        }}>
+                        Consentito
+                      </span>
+                    )}
+                  </label>
+                );
+              })}
+            </div>
+          )}
+
+          {allowedChildIds.length > 0 && (
+            <div className="mt-4 rounded-lg px-4 py-3 flex items-start gap-2"
+              style={{
+                background: "color-mix(in srgb, var(--admin-accent) 6%, var(--admin-card-bg))",
+                border: "1px solid color-mix(in srgb, var(--admin-accent) 20%, transparent)",
+              }}>
+              <ShieldCheck size={14} className="mt-0.5 shrink-0" style={{ color: "var(--admin-accent)" }} />
+              <p className="text-xs leading-relaxed" style={{ color: "var(--admin-text-muted)" }}>
+                {allowedChildIds.length === 1
+                  ? <>Il template <strong style={{ color: "var(--admin-text)" }}>{availableTemplates.find(t => t.id === allowedChildIds[0])?.name}</strong> verrà assegnato <strong>automaticamente</strong> alla nuova pagina figlia — nessuna scelta richiesta.</>  
+                  : <>Alla creazione di una pagina figlia verrà mostrato un selettore con <strong style={{ color: "var(--admin-text)" }}>{allowedChildIds.length} template</strong> tra cui scegliere.</>  
+                }
+              </p>
+            </div>
+          )}
+        </section>
+      )}
     </form>
   );
 }
