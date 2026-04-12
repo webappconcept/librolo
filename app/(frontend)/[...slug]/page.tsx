@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getPageWithTemplate, getPublishedPages } from "@/lib/db/pages-queries";
-import { getLayoutComponent } from "../_templates/registry";
+import { getDynamicTemplate } from "../_templates/loader";
 import { parseStyleConfig, parseCustomFields } from "../_templates/types";
 
 // ---------------------------------------------------------------------------
@@ -47,10 +47,10 @@ export default async function FrontendPage({ params }: Props) {
   // 404 se non esiste o non è pubblicata
   if (!page || page.status !== "published") return notFound();
 
-  // Risolve il componente template dal registry
-  // Usa template.slug (es. "articolo", "faq") oppure "default" come fallback
+  // Risolve il componente template tramite loader (async, import dinamico)
+  // Usa template.slug (es. "articolo", "blog") oppure "default" come fallback
   const templateSlug = page.template?.slug ?? "default";
-  const TemplateComponent = getLayoutComponent(templateSlug);
+  const TemplateComponent = await getDynamicTemplate(templateSlug);
 
   // Parsa i dati custom dalla pagina
   const fields = parseCustomFields(page.customFields);
