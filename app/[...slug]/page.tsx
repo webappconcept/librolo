@@ -1,7 +1,6 @@
 // app/[...slug]/page.tsx
-// Routing pubblico CMS — Opzione B: auto-import dinamico del template
-// Convenzione: template slug "articolo-blog" → file templates/ArticoloBlogTemplate.tsx
-// Se il file non esiste, cade su DefaultTemplate senza errori.
+// Routing pubblico CMS — mappa statica dei template con dynamic import.
+// Per aggiungere un nuovo template: registralo in ./templates/index.ts
 
 import { getPageBySlug } from "@/lib/db/pages-queries";
 import { getTemplateById } from "@/lib/db/template-queries";
@@ -12,6 +11,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import type { Page, PageTemplate } from "@/lib/db/schema";
 import DefaultTemplate from "./templates/DefaultTemplate";
+import templateMap from "./templates/index";
 
 export const dynamic = "force-dynamic";
 
@@ -24,14 +24,6 @@ export type CmsTemplateProps = {
 
 interface Props {
   params: Promise<{ slug: string[] }>;
-}
-
-/** "articolo-blog" → "ArticoloBlog" */
-function toPascalCase(slug: string): string {
-  return slug
-    .split("-")
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join("");
 }
 
 function isPubliclyVisible(page: Page | null | undefined): page is Page {
@@ -80,18 +72,18 @@ export default async function CmsPage({ params }: Props) {
   // Risolvi i placeholder nel contenuto (es. {{app_name}})
   const resolvedContent = resolvePlaceholders(page.content, settings);
 
-  // --- Auto-routing Opzione B ---
-  // Prova a importare templates/{PascalCase}Template.tsx
-  // Se il file non esiste → usa DefaultTemplate
+  // --- Selezione template con mappa statica ---
+  // Il bundler analizza staticamente templateMap → i file vengono inclusi nel bundle.
+  // Con stringhe interpolate (import(`./templates/${name}`)) il bundler
+  // non può risolvere i path e li esclude dal bundle in produzione.
   let TemplateComponent: React.ComponentType<CmsTemplateProps> = DefaultTemplate;
 
-  if (template?.slug) {
-    const componentName = toPascalCase(template.slug);
+  if (template?.slug && templateMap[template.slug]) {
     try {
-      const mod = await import(`./templates/${componentName}Template`);
+      const mod = await templateMap[template.slug]();
       if (mod.default) TemplateComponent = mod.default;
     } catch {
-      // File non trovato o errore di import — cade su DefaultTemplate
+      // Errore imprevisto nell'import — cade su DefaultTemplate
       TemplateComponent = DefaultTemplate;
     }
   }

@@ -1,7 +1,7 @@
-// app/[...slug]/templates/DefaultTemplate.tsx
-// Template di fallback generico — usato quando nessun file specifico esiste per lo slug del template.
-// Mostra titolo + contenuto TipTap con stile prose minimal.
-// Personalizza questo file per cambiare l'aspetto di tutte le pagine senza template dedicato.
+// app/[...slug]/templates/ArticoloTemplate.tsx
+// Template per le pagine di tipo "articolo".
+// Slug DB atteso: "articolo"
+// Registrato in: ./index.ts
 
 import type { CmsTemplateProps } from "../page";
 
@@ -9,17 +9,20 @@ export default function ArticoloTemplate({
   page,
   template,
   resolvedContent,
-  settings,
 }: CmsTemplateProps) {
   const custom = JSON.parse(page.customFields ?? "{}");
-  const style = JSON.parse(template?.styleConfig ?? "{}");
+  const _style = JSON.parse(template?.styleConfig ?? "{}");
+
   return (
     <main className="max-w-3xl mx-auto px-4 py-12 sm:py-16">
-      <h1 className="text-3xl font-bold mb-8 text-gray-900 dark:text-white">
-        <div>template articolo</div>
+      <h1 className="text-3xl font-bold mb-4 text-gray-900 dark:text-white">
         {page.title}
       </h1>
-      {custom.autore && <p>di {custom.autore}</p>}
+      {custom.autore && (
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-8">
+          di {custom.autore}
+        </p>
+      )}
       {resolvedContent ? (
         <div
           className="prose prose-gray dark:prose-invert max-w-none"
