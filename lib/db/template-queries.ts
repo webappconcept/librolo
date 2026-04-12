@@ -2,14 +2,16 @@ import { db } from "@/lib/db/drizzle";
 import {
   pageTemplates,
   templateFields,
+  pages,
   type NewPageTemplate,
   type NewTemplateField,
   type PageTemplate,
   type TemplateField,
 } from "@/lib/db/schema";
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 
 export type TemplateWithFields = PageTemplate & { fields: TemplateField[] };
+export type TemplateWithCount = TemplateWithFields & { pageCount: number };
 
 // ---------------------------------------------------------------------------
 // Templates
@@ -29,6 +31,38 @@ export async function getAllTemplates(): Promise<TemplateWithFields[]> {
   return templates.map((t) => ({
     ...t,
     fields: allFields.filter((f) => f.templateId === t.id),
+  }));
+}
+
+/**
+ * Come getAllTemplates ma include il conteggio delle pagine che usano ogni template.
+ */
+export async function getAllTemplatesWithPageCount(): Promise<TemplateWithCount[]> {
+  const templates = await db
+    .select()
+    .from(pageTemplates)
+    .orderBy(asc(pageTemplates.name));
+
+  const allFields = await db
+    .select()
+    .from(templateFields)
+    .orderBy(asc(templateFields.sortOrder));
+
+  // Conta le pagine raggruppate per templateId
+  const counts = await db
+    .select({
+      templateId: pages.templateId,
+      count: sql<number>`cast(count(*) as integer)`,
+    })
+    .from(pages)
+    .groupBy(pages.templateId);
+
+  const countMap = new Map(counts.map((c) => [c.templateId, c.count]));
+
+  return templates.map((t) => ({
+    ...t,
+    fields: allFields.filter((f) => f.templateId === t.id),
+    pageCount: countMap.get(t.id) ?? 0,
   }));
 }
 

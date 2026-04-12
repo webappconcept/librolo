@@ -1,4 +1,4 @@
-import { getAllTemplates } from "@/lib/db/template-queries";
+import { getAllTemplatesWithPageCount } from "@/lib/db/template-queries";
 import Link from "next/link";
 import { PanelTop, Plus, Copy } from "lucide-react";
 import { duplicateTemplateAction } from "./actions";
@@ -8,7 +8,7 @@ export const metadata = { title: "Template pagine" };
 export const dynamic = "force-dynamic";
 
 export default async function TemplatePage() {
-  const templates = await getAllTemplates();
+  const templates = await getAllTemplatesWithPageCount();
 
   return (
     <div className="p-4 sm:p-6 max-w-5xl">
@@ -89,9 +89,20 @@ export default async function TemplatePage() {
                         </span>
                       )}
                     </p>
-                    <p className="text-xs mt-0.5" style={{ color: "var(--admin-text-muted)" }}>
-                      {tpl.fields.length} {tpl.fields.length === 1 ? "campo" : "campi"}
-                    </p>
+                    {/* Campi + pagine che usano questo template */}
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <p className="text-xs" style={{ color: "var(--admin-text-muted)" }}>
+                        {tpl.fields.length} {tpl.fields.length === 1 ? "campo" : "campi"}
+                      </p>
+                      {tpl.pageCount > 0 && (
+                        <>
+                          <span style={{ color: "var(--admin-text-faint)", fontSize: "10px" }}>·</span>
+                          <p className="text-xs" style={{ color: "var(--admin-text-muted)" }}>
+                            {tpl.pageCount} {tpl.pageCount === 1 ? "pagina" : "pagine"}
+                          </p>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -130,7 +141,11 @@ export default async function TemplatePage() {
                   </form>
 
                   {!tpl.isSystem && (
-                    <DeleteTemplateButton id={tpl.id} name={tpl.name} />
+                    <DeleteTemplateButton
+                      id={tpl.id}
+                      name={tpl.name}
+                      pageCount={tpl.pageCount}
+                    />
                   )}
                 </div>
               </div>
