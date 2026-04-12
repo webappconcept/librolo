@@ -3,7 +3,7 @@
 import ConfirmModal from "@/app/(admin)/admin/_components/confirm-modal";
 import Tooltip from "@/app/(admin)/admin/_components/tooltip";
 import type { Page, PageTemplate } from "@/lib/db/schema";
-import { ChevronRight, ExternalLink, EyeOff, FileText, GitFork, Globe, PanelTop, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { ChevronRight, ExternalLink, EyeOff, FileText, GitFork, Globe, PanelTop, Pencil, Plus, Search, Trash2, ShieldCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { deletePageAction, togglePageStatusAction } from "../actions";
@@ -13,8 +13,104 @@ type TemplateWithFields = PageTemplate & { fields: import("@/lib/db/schema").Tem
 interface DeleteTarget {
   slug: string;
   title: string;
-  /** Numero totale di discendenti (figli + nipoti + …) */
   descendants: number;
+}
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+function parseStyleConfig(raw: string | null | undefined): Record<string, unknown> {
+  try { return JSON.parse(raw ?? "{}"); } catch { return {}; }
+}
+
+function getAllowedChildIds(template: TemplateWithFields | undefined): number[] {
+  if (!template) return [];
+  const cfg = parseStyleConfig(template.styleConfig);
+  const ids = cfg.allowedChildTemplateIds;
+  if (Array.isArray(ids)) return ids.map(Number).filter(Boolean);
+  return [];
+}
+
+// ─── ChildTemplatePicker modale ─────────────────────────────────────────────
+function ChildTemplatePicker({
+  parentTitle,
+  options,
+  onSelect,
+  onCancel,
+}: {
+  parentTitle: string;
+  options: TemplateWithFields[];
+  onSelect: (templateId: number) => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.55)" }}
+      onClick={onCancel}
+    >
+      <div
+        className="rounded-2xl p-6 w-full max-w-sm"
+        style={{
+          background: "var(--admin-card-bg)",
+          border: "1px solid var(--admin-card-border)",
+          boxShadow: "0 20px 60px rgba(0,0,0,0.35)",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center gap-2 mb-1">
+          <ShieldCheck size={15} style={{ color: "var(--admin-accent)" }} />
+          <h3 className="text-sm font-semibold" style={{ color: "var(--admin-text)" }}>
+            Scegli il template
+          </h3>
+        </div>
+        <p className="text-xs mb-5" style={{ color: "var(--admin-text-muted)" }}>
+          Nuova pagina figlia di <strong style={{ color: "var(--admin-text)" }}>{parentTitle}</strong>.
+          Seleziona il template da usare:
+        </p>
+        <div className="space-y-2 mb-5">
+          {options.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => onSelect(t.id)}
+              className="w-full flex items-center gap-3 rounded-xl px-4 py-3 text-left transition-colors"
+              style={{
+                background: "var(--admin-input-bg)",
+                border: "1px solid var(--admin-border)",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = "var(--admin-accent)";
+                e.currentTarget.style.background = "color-mix(in srgb, var(--admin-accent) 8%, var(--admin-input-bg))";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = "var(--admin-border)";
+                e.currentTarget.style.background = "var(--admin-input-bg)";
+              }}
+            >
+              <PanelTop size={15} style={{ color: "var(--admin-accent)", flexShrink: 0 }} />
+              <div className="min-w-0">
+                <p className="text-sm font-medium truncate" style={{ color: "var(--admin-text)" }}>{t.name}</p>
+                <p className="text-xs font-mono truncate" style={{ color: "var(--admin-text-faint)" }}>{t.slug}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="w-full py-2 rounded-lg text-sm transition-colors"
+          style={{
+            background: "var(--admin-input-bg)",
+            border: "1px solid var(--admin-border)",
+            color: "var(--admin-text-muted)",
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--admin-input-border)")}
+          onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--admin-border))")}
+        >
+          Annulla
+        </button>
+      </div>
+    </div>
+  );
 }
 
 // ─── PageRow ──────────────────────────────────────────────────────────────────
@@ -55,11 +151,8 @@ function PageRow({
   const isPendingToggle = pendingToggleId === page.id;
   const indent = depth * 20;
 
-  // URL del front: dominio + /slug
-  // Lo slug in DB non ha lo slash iniziale, lo aggiungiamo noi
   const frontUrl = appDomain ? `${appDomain}/${page.slug}` : null;
 
-  /** Conta ricorsivamente tutti i discendenti dalla lista già in memoria */
   function countDescendants(id: number): number {
     const direct = allPages.filter((p) => p.parentId === id);
     return direct.reduce((acc, child) => acc + 1 + countDescendants(child.id), 0);
@@ -89,24 +182,16 @@ function PageRow({
         onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.borderColor = "var(--admin-input-border)")}
         onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.borderColor = "var(--admin-card-border)")}
       >
-        {/* Chevron — visuale puro */}
-        <span
-          className="flex items-center justify-center w-6 h-6 rounded shrink-0"
-          style={{ color: hasChildren ? "var(--admin-text-muted)" : "transparent" }}
-        >
-          <ChevronRight
-            size={14}
-            style={{
-              transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
-              transition: "transform 160ms ease",
-            }}
-          />
+        <span className="flex items-center justify-center w-6 h-6 rounded shrink-0"
+          style={{ color: hasChildren ? "var(--admin-text-muted)" : "transparent" }}>
+          <ChevronRight size={14} style={{
+            transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
+            transition: "transform 160ms ease",
+          }} />
         </span>
 
-        {/* Children count badge */}
         {hasChildren ? (
-          <span
-            className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-semibold shrink-0 transition-colors"
+          <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-semibold shrink-0 transition-colors"
             style={{
               background: isExpanded
                 ? "color-mix(in srgb, var(--admin-accent) 14%, var(--admin-card-bg))"
@@ -117,21 +202,16 @@ function PageRow({
                 : "1px solid color-mix(in srgb, var(--admin-text-faint) 22%, transparent)",
               minWidth: "28px",
               justifyContent: "center",
-            }}
-          >
+            }}>
             +{children.length}
           </span>
         ) : (
           <span className="w-7 shrink-0" />
         )}
 
-        {/* Status dot */}
-        <span
-          className="w-2 h-2 rounded-full shrink-0 transition-colors"
-          style={{ background: isPublished ? "#22c55e" : "var(--admin-text-faint)" }}
-        />
+        <span className="w-2 h-2 rounded-full shrink-0 transition-colors"
+          style={{ background: isPublished ? "#22c55e" : "var(--admin-text-faint)" }} />
 
-        {/* Title + slug */}
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium truncate" style={{ color: "var(--admin-text)" }}>
             {page.title}
@@ -141,24 +221,19 @@ function PageRow({
           </p>
         </div>
 
-        {/* Template badge */}
         {tplName && (
-          <span
-            className="hidden sm:flex items-center gap-1 text-xs px-2 py-0.5 rounded-full shrink-0"
+          <span className="hidden sm:flex items-center gap-1 text-xs px-2 py-0.5 rounded-full shrink-0"
             style={{
               background: "color-mix(in srgb, var(--admin-accent) 10%, var(--admin-card-bg))",
               color: "var(--admin-accent)",
               border: "1px solid color-mix(in srgb, var(--admin-accent) 20%, transparent)",
-            }}
-          >
+            }}>
             <PanelTop size={10} />
             {tplName}
           </span>
         )}
 
-        {/* Status badge */}
-        <span
-          className="hidden sm:flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium shrink-0 whitespace-nowrap transition-all"
+        <span className="hidden sm:flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium shrink-0 whitespace-nowrap transition-all"
           style={{
             background: isPublished
               ? "color-mix(in srgb, #22c55e 12%, var(--admin-card-bg))"
@@ -167,101 +242,56 @@ function PageRow({
             border: isPublished
               ? "1px solid color-mix(in srgb, #22c55e 25%, transparent)"
               : "1px solid color-mix(in srgb, var(--admin-text-faint) 25%, transparent)",
-          }}
-        >
+          }}>
           {isPublished ? <><Globe size={10} /> Pubblicata</> : <>Bozza</>}
         </span>
 
-        {/* Actions — stopPropagation evita toggle riga */}
         <div className="flex items-center gap-0.5 shrink-0" onClick={stopRow}>
-
-          {/* 1. Modifica — sempre visibile, prima di tutto */}
           <Tooltip label="Modifica pagina" side="top">
-            <button
-              onClick={() => onEdit(page.id)}
+            <button onClick={() => onEdit(page.id)}
               className="p-1.5 rounded-lg transition-colors"
               style={{ color: "var(--admin-text-faint)" }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = "var(--admin-hover-bg)";
-                e.currentTarget.style.color = "var(--admin-text-muted)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "transparent";
-                e.currentTarget.style.color = "var(--admin-text-faint)";
-              }}
-            >
+              onMouseEnter={(e) => { e.currentTarget.style.background = "var(--admin-hover-bg)"; e.currentTarget.style.color = "var(--admin-text-muted)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--admin-text-faint)"; }}>
               <Pencil size={13} />
             </button>
           </Tooltip>
 
-          {/* 2. Anteprima — solo se pubblicata e appDomain impostato */}
           {isPublished && frontUrl && (
             <Tooltip label="Anteprima sul sito" side="top">
-              <a
-                href={frontUrl}
-                target="_blank"
-                rel="noopener noreferrer"
+              <a href={frontUrl} target="_blank" rel="noopener noreferrer"
                 className="p-1.5 rounded-lg transition-colors inline-flex items-center"
                 style={{ color: "var(--admin-text-faint)" }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLAnchorElement).style.background = "color-mix(in srgb, var(--admin-accent) 10%, var(--admin-card-bg))";
-                  (e.currentTarget as HTMLAnchorElement).style.color = "var(--admin-accent)";
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLAnchorElement).style.background = "transparent";
-                  (e.currentTarget as HTMLAnchorElement).style.color = "var(--admin-text-faint)";
-                }}
-              >
+                onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "color-mix(in srgb, var(--admin-accent) 10%, var(--admin-card-bg))"; (e.currentTarget as HTMLAnchorElement).style.color = "var(--admin-accent)"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; (e.currentTarget as HTMLAnchorElement).style.color = "var(--admin-text-faint)"; }}>
                 <ExternalLink size={13} />
               </a>
             </Tooltip>
           )}
 
-          {/* 3. Nuova pagina figlia */}
           <Tooltip label="Nuova pagina figlia" side="top">
-            <button
-              onClick={() => onNewChild(page.id)}
+            <button onClick={() => onNewChild(page.id)}
               className="p-1.5 rounded-lg transition-colors"
               style={{ color: "var(--admin-text-faint)" }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = "color-mix(in srgb, var(--admin-accent) 10%, var(--admin-card-bg))";
-                e.currentTarget.style.color = "var(--admin-accent)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "transparent";
-                e.currentTarget.style.color = "var(--admin-text-faint)";
-              }}
-            >
+              onMouseEnter={(e) => { e.currentTarget.style.background = "color-mix(in srgb, var(--admin-accent) 10%, var(--admin-card-bg))"; e.currentTarget.style.color = "var(--admin-accent)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--admin-text-faint)"; }}>
               <GitFork size={13} />
             </button>
           </Tooltip>
 
-          {/* 4. Pubblica / Depubblica */}
           <Tooltip label={isPublished ? "Depubblica" : "Pubblica"} side="top">
-            <button
-              onClick={() => onToggleStatus(page.id, page.status)}
+            <button onClick={() => onToggleStatus(page.id, page.status)}
               disabled={isPendingToggle}
               className="p-1.5 rounded-lg transition-colors"
               style={{ color: isPublished ? "#22c55e" : "var(--admin-text-faint)" }}
               onMouseEnter={(e) => {
-                if (isPublished) {
-                  e.currentTarget.style.background = "color-mix(in srgb, #ef4444 10%, var(--admin-card-bg))";
-                  e.currentTarget.style.color = "#ef4444";
-                } else {
-                  e.currentTarget.style.background = "color-mix(in srgb, #22c55e 10%, var(--admin-card-bg))";
-                  e.currentTarget.style.color = "#22c55e";
-                }
+                if (isPublished) { e.currentTarget.style.background = "color-mix(in srgb, #ef4444 10%, var(--admin-card-bg))"; e.currentTarget.style.color = "#ef4444"; }
+                else { e.currentTarget.style.background = "color-mix(in srgb, #22c55e 10%, var(--admin-card-bg))"; e.currentTarget.style.color = "#22c55e"; }
               }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "transparent";
-                e.currentTarget.style.color = isPublished ? "#22c55e" : "var(--admin-text-faint)";
-              }}
-            >
+              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = isPublished ? "#22c55e" : "var(--admin-text-faint)"; }}>
               {isPendingToggle ? (
-                <span
-                  className="block w-3 h-3 border border-t-transparent rounded-full animate-spin"
-                  style={{ borderColor: "var(--admin-accent)", borderTopColor: "transparent" }}
-                />
+                <span className="block w-3 h-3 border border-t-transparent rounded-full animate-spin"
+                  style={{ borderColor: "var(--admin-accent)", borderTopColor: "transparent" }} />
               ) : isPublished ? (
                 <EyeOff size={13} />
               ) : (
@@ -270,35 +300,19 @@ function PageRow({
             </button>
           </Tooltip>
 
-          {/* 5. Elimina */}
           <Tooltip label="Elimina pagina" side="top">
             <button
-              onClick={() =>
-                onDeleteRequest({
-                  slug: page.slug,
-                  title: page.title,
-                  descendants: countDescendants(page.id),
-                })
-              }
+              onClick={() => onDeleteRequest({ slug: page.slug, title: page.title, descendants: countDescendants(page.id) })}
               className="p-1.5 rounded-lg transition-colors"
               style={{ color: "var(--admin-text-faint)" }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = "color-mix(in srgb, #ef4444 10%, var(--admin-card-bg))";
-                e.currentTarget.style.color = "#ef4444";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "transparent";
-                e.currentTarget.style.color = "var(--admin-text-faint)";
-              }}
-            >
+              onMouseEnter={(e) => { e.currentTarget.style.background = "color-mix(in srgb, #ef4444 10%, var(--admin-card-bg))"; e.currentTarget.style.color = "#ef4444"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--admin-text-faint)"; }}>
               <Trash2 size={13} />
             </button>
           </Tooltip>
-
         </div>
       </div>
 
-      {/* Children */}
       {(isExpanded || searchActive) &&
         children.map((child) => (
           <PageRow
@@ -339,6 +353,10 @@ export default function PageManager({
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [, startTransition] = useTransition();
+
+  // Stato modale picker template figlio
+  const [pickerParent, setPickerParent] = useState<Page | null>(null);
+  const [pickerOptions, setPickerOptions] = useState<TemplateWithFields[]>([]);
 
   const searchActive = search.trim().length > 0;
 
@@ -392,7 +410,46 @@ export default function PageManager({
     });
   }
 
-  // Messaggio dinamico per la modale di eliminazione
+  /**
+   * Logica smart "Nuova pagina figlia" (stile ProcessWire):
+   * - 0 template consentiti nel padre → /new?parentId=X (libera scelta)
+   * - 1 template consentito       → /new?parentId=X&templateId=Y (automatico, locked)
+   * - N template consentiti       → mostra picker, poi /new?parentId=X&templateId=Y (locked)
+   */
+  function handleNewChild(parentId: number) {
+    const parent = initialPages.find((p) => p.id === parentId);
+    if (!parent) { router.push(`/admin/contenuti/new?parentId=${parentId}`); return; }
+
+    const parentTemplate = parent.templateId
+      ? templates.find((t) => t.id === parent.templateId)
+      : undefined;
+
+    const allowedIds = getAllowedChildIds(parentTemplate);
+
+    if (allowedIds.length === 0) {
+      // Nessuna restrizione — editor libero
+      router.push(`/admin/contenuti/new?parentId=${parentId}`);
+      return;
+    }
+
+    if (allowedIds.length === 1) {
+      // Unico template consentito — assegnazione automatica e locked
+      router.push(`/admin/contenuti/new?parentId=${parentId}&templateId=${allowedIds[0]}&templateLocked=1`);
+      return;
+    }
+
+    // Più template consentiti — mostra picker
+    const options = templates.filter((t) => allowedIds.includes(t.id));
+    setPickerParent(parent);
+    setPickerOptions(options);
+  }
+
+  function handlePickerSelect(templateId: number) {
+    if (!pickerParent) return;
+    setPickerParent(null);
+    router.push(`/admin/contenuti/new?parentId=${pickerParent.id}&templateId=${templateId}&templateLocked=1`);
+  }
+
   function buildDeleteMessage(target: DeleteTarget): React.ReactNode {
     return (
       <span>
@@ -403,15 +460,10 @@ export default function PageManager({
           <>
             <br /><br />
             <span style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "6px",
-              padding: "6px 10px",
-              borderRadius: "8px",
-              background: "rgba(220,38,38,0.1)",
-              color: "#f87171",
-              fontSize: "13px",
-              fontWeight: 500,
+              display: "inline-flex", alignItems: "center", gap: "6px",
+              padding: "6px 10px", borderRadius: "8px",
+              background: "rgba(220,38,38,0.1)", color: "#f87171",
+              fontSize: "13px", fontWeight: 500,
             }}>
               ⚠️ Verranno eliminate anche{" "}
               <strong>{target.descendants}</strong>{" "}
@@ -430,11 +482,7 @@ export default function PageManager({
       {/* Toolbar */}
       <div className="flex items-center gap-3 mb-4">
         <div className="relative flex-1">
-          <Search
-            size={14}
-            className="absolute left-3 top-1/2 -translate-y-1/2"
-            style={{ color: "var(--admin-text-faint)" }}
-          />
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--admin-text-faint)" }} />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -497,7 +545,7 @@ export default function PageManager({
               toggleExpand={toggleExpand}
               onEdit={(id) => router.push(`/admin/contenuti/${id}/edit`)}
               onDeleteRequest={setDeleteTarget}
-              onNewChild={(id) => router.push(`/admin/contenuti/new?parentId=${id}`)}
+              onNewChild={handleNewChild}
               onToggleStatus={handleToggleStatus}
               pendingToggleId={pendingToggleId}
               searchActive={searchActive}
@@ -507,7 +555,17 @@ export default function PageManager({
         </div>
       )}
 
-      {/* Modale di conferma eliminazione */}
+      {/* Modale picker template figlio */}
+      {pickerParent && (
+        <ChildTemplatePicker
+          parentTitle={pickerParent.title}
+          options={pickerOptions}
+          onSelect={handlePickerSelect}
+          onCancel={() => setPickerParent(null)}
+        />
+      )}
+
+      {/* Modale conferma eliminazione */}
       {deleteTarget && (
         <ConfirmModal
           open={!!deleteTarget}
