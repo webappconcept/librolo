@@ -16,7 +16,7 @@ import { TemplateDefault } from "./TemplateDefault";
 import { GENERATED_TEMPLATE_MAP } from "./index.generated";
 
 export function getDynamicTemplate(
-  templateSlug: string
+  templateSlug: string | null | undefined,
 ): ComponentType<TemplateProps> {
   if (!templateSlug || templateSlug === "default") {
     return TemplateDefault;
