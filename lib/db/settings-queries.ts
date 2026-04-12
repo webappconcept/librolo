@@ -9,6 +9,7 @@ export type SettingKey =
   | "app_domain"
   | "maintenance_mode"
   | "registrations_enabled"
+  | "default_role"
   | "resend_api_key"
   | "email_from_name"
   | "email_from_address";
@@ -19,6 +20,7 @@ export type AppSettings = {
   app_domain: string;
   maintenance_mode: string;
   registrations_enabled: string;
+  default_role: string;
   resend_api_key: string | null;
   email_from_name: string | null;
   email_from_address: string | null;
@@ -30,6 +32,7 @@ const DEFAULTS: AppSettings = {
   app_domain: "",
   maintenance_mode: "false",
   registrations_enabled: "true",
+  default_role: "member",
   resend_api_key: null,
   email_from_name: null,
   email_from_address: null,
