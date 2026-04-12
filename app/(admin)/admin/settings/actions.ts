@@ -5,7 +5,7 @@ import { db } from "@/lib/db/drizzle";
 import { siteSnippets } from "@/lib/db/schema";
 import type { SiteSnippet } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { revalidateTag } from "next/cache";
+import { revalidatePath } from "next/cache";
 
 // ---------------------------------------------------------------------------
 // ActionState (usato dai tab esistenti con useActionState)
@@ -38,12 +38,6 @@ export async function saveAppSettings(
 }
 
 // ---------------------------------------------------------------------------
-// Comportamento  (behaviour-tab.tsx → saveAppSettings  ← stesso export)
-// ---------------------------------------------------------------------------
-// I toggle inviano maintenance_mode / registrations_enabled nello stesso form.
-// behaviour-tab.tsx usa già saveAppSettings, nessun alias extra necessario.
-
-// ---------------------------------------------------------------------------
 // Email  (email-tab.tsx → saveEmailSettings)
 // ---------------------------------------------------------------------------
 export async function saveEmailSettings(
@@ -70,8 +64,11 @@ export const saveEmailSettingsAction = saveEmailSettings;
 // ---------------------------------------------------------------------------
 // Snippets CRUD
 // ---------------------------------------------------------------------------
+
+/** Invalida la cache degli snippet su tutte le pagine frontend. */
 function invalidateSnippets() {
-  revalidateTag("snippets");
+  // revalidatePath con layout=true invalida il layout frontend che chiama getActiveSnippets()
+  revalidatePath("/", "layout");
 }
 
 export async function createSnippetAction(
