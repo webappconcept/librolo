@@ -82,7 +82,6 @@ export default function TemplateFormClient({
   const [slugManual, setSlugManual] = useState(!!template?.slug);
   const [description, setDescription] = useState(template?.description ?? "");
 
-  // Legge allowedChildTemplateIds da styleConfig (se presenti)
   const [allowedChildIds, setAllowedChildIds] = useState<number[]>(() => {
     const raw = template?.styleConfig?.allowedChildTemplateIds;
     if (Array.isArray(raw)) return raw.map(Number).filter(Boolean);
@@ -143,9 +142,26 @@ export default function TemplateFormClient({
     setSaving(true);
     setError(null);
     try {
-      const fd = new FormData(formRef.current!);
+      // Costruiamo la FormData manualmente dallo state React
+      // in modo che funzioni indipendentemente dal tab attivo
+      const fd = new FormData();
 
-      // Serializza i campi
+      if (template?.id) fd.set("id", String(template.id));
+
+      // Dati base sempre dallo state (non dal DOM) → funziona da qualsiasi tab
+      fd.set("name", name);
+      fd.set("slug", slug);
+      fd.set("description", description);
+
+      // Stile config (campi presenti solo nel tab Generale — leggiamo dal DOM se montato,
+      // altrimenti usiamo stringa vuota; non sono critici)
+      const formEl = formRef.current;
+      for (const key of ["fontBody", "fontDisplay", "colorPrimary", "colorBg", "colorText", "spacing", "borderRadius"]) {
+        const el = formEl?.elements.namedItem(key) as HTMLInputElement | HTMLSelectElement | null;
+        if (el) fd.set(key, el.value);
+      }
+
+      // Campi custom
       fd.set("fieldsJson", JSON.stringify(
         fields.map((f, i) => ({
           fieldKey: f.fieldKey,
@@ -159,14 +175,7 @@ export default function TemplateFormClient({
         }))
       ));
 
-      // Serializza allowedChildTemplateIds dentro styleConfig
-      // Leggiamo i valori già presenti di styleConfig e aggiungiamo la nuova chiave
-      const existingStyleConfig: Record<string, unknown> = {};
-      for (const key of ["fontBody", "fontDisplay", "colorPrimary", "colorBg", "colorText", "spacing", "borderRadius"]) {
-        const v = fd.get(key);
-        if (v !== null) existingStyleConfig[key] = v;
-      }
-      existingStyleConfig.allowedChildTemplateIds = allowedChildIds;
+      // Regole figli
       fd.set("allowedChildTemplateIdsJson", JSON.stringify(allowedChildIds));
 
       await saveAction(fd);
@@ -193,7 +202,6 @@ export default function TemplateFormClient({
   };
   const labelCls = "block text-xs font-medium mb-1";
 
-  // Filtra i template disponibili escludendo se stesso
   const availableTemplates = allTemplates.filter((t) => t.id !== template?.id);
 
   const currentLabel = isEdit
@@ -363,8 +371,8 @@ export default function TemplateFormClient({
             </h2>
             <p className="text-xs leading-relaxed" style={{ color: "var(--admin-text-muted)" }}>
               Seleziona quali template possono essere usati dalle pagine figlie di una pagina con questo template.
-              Funziona come ProcessWire: se selezioni un solo template, verrà assegnato automaticamente alla nuova
-              pagina figlia. Se ne selezioni più di uno, verrà mostrato un selettore prima di creare la pagina.
+              Se selezioni un solo template, verrà assegnato automaticamente alla nuova pagina figlia senza richiedere
+              alcuna scelta. Se ne selezioni più di uno, verrà mostrato un selettore prima di creare la pagina.
               Se non selezioni nulla, qualsiasi template può essere usato.
             </p>
           </div>
@@ -430,8 +438,8 @@ export default function TemplateFormClient({
               <ShieldCheck size={14} className="mt-0.5 shrink-0" style={{ color: "var(--admin-accent)" }} />
               <p className="text-xs leading-relaxed" style={{ color: "var(--admin-text-muted)" }}>
                 {allowedChildIds.length === 1
-                  ? <>Il template <strong style={{ color: "var(--admin-text)" }}>{availableTemplates.find(t => t.id === allowedChildIds[0])?.name}</strong> verrà assegnato <strong>automaticamente</strong> alla nuova pagina figlia — nessuna scelta richiesta.</>  
-                  : <>Alla creazione di una pagina figlia verrà mostrato un selettore con <strong style={{ color: "var(--admin-text)" }}>{allowedChildIds.length} template</strong> tra cui scegliere.</>  
+                  ? <>Il template <strong style={{ color: "var(--admin-text)" }}>{availableTemplates.find(t => t.id === allowedChildIds[0])?.name}</strong> verrà assegnato <strong>automaticamente</strong> alla nuova pagina figlia — nessuna scelta richiesta.</>
+                  : <>Alla creazione di una pagina figlia verrà mostrato un selettore con <strong style={{ color: "var(--admin-text)" }}>{allowedChildIds.length} template</strong> tra cui scegliere.</>
                 }
               </p>
             </div>
