@@ -1,11 +1,11 @@
 // app/(admin)/admin/_components/recent-activity.tsx
 import {
   ArrowRight,
-  BookOpen,
   FileText,
   KeyRound,
   LogIn,
   LogOut,
+  PanelTop,
   ShieldAlert,
   Trash2,
   UserCog,
@@ -36,7 +36,7 @@ function getActionMeta(action: string): { label: string; icon: React.ElementType
   if (base.startsWith("PERMISSION")) return { label: "Permesso", icon: KeyRound, color: "#fbbf24" };
   if (base.startsWith("ROLE_")) return { label: "Ruolo", icon: KeyRound, color: "#a78bfa" };
   if (base.startsWith("PAGE_")) return { label: "Pagina", icon: FileText, color: "#38bdf8" };
-  if (base.startsWith("TEMPLATE_")) return { label: "Template", icon: BookOpen, color: "#f472b6" };
+  if (base.startsWith("TEMPLATE_")) return { label: "Template", icon: PanelTop, color: "#f472b6" };
   return { label: base.replace(/_/g, " "), icon: ArrowRight, color: "var(--admin-text-muted)" };
 }
 
