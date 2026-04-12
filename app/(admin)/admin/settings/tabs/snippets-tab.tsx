@@ -13,8 +13,6 @@ import {
   Trash2,
   X,
   Save,
-  ToggleLeft,
-  ToggleRight,
   Wand2,
   ChevronRight,
 } from "lucide-react";
@@ -26,6 +24,7 @@ import {
   deleteSnippetAction,
   toggleSnippetAction,
 } from "../actions";
+import ConfirmModal from "@/app/(admin)/admin/_components/confirm-modal";
 
 // ---------------------------------------------------------------------------
 // Costanti UI
@@ -278,20 +277,28 @@ function PresetPicker({
 
             {/* Anteprima snippet che verranno creati */}
             <div className="space-y-1.5">
-              <p className="text-xs font-medium" style={{ color: "var(--admin-text-muted)" }}>Verranno creati:</p>
-              {selected.steps.map((step, i) => (
+              <p className="text-xs font-medium" style={{ color: "var(--admin-text-muted)" }}>
+                Verranno creati {selected.steps.length} snippet:
+              </p>
+              {selected.steps.map((s, i) => (
                 <div
                   key={i}
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg"
+                  className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg"
                   style={{
                     background: "color-mix(in srgb, var(--admin-accent) 6%, var(--admin-card-bg))",
-                    border: "1px solid color-mix(in srgb, var(--admin-accent) 15%, transparent)",
+                    border: "1px solid color-mix(in srgb, var(--admin-accent) 14%, transparent)",
                   }}
                 >
-                  <span style={{ color: "var(--admin-accent)" }}>{TYPE_ICONS[step.type]}</span>
-                  <span className="text-xs" style={{ color: "var(--admin-text)" }}>{step.name}</span>
-                  <span className="text-xs ml-auto" style={{ color: "var(--admin-text-faint)" }}>
-                    {POSITION_LABELS[step.position]}
+                  <span style={{ color: "var(--admin-accent)" }}>{TYPE_ICONS[s.type]}</span>
+                  <span className="text-xs" style={{ color: "var(--admin-text-muted)" }}>{s.name}</span>
+                  <span
+                    className="ml-auto text-xs px-1.5 py-0.5 rounded-full"
+                    style={{
+                      background: "color-mix(in srgb, var(--admin-text-faint) 12%, var(--admin-card-bg))",
+                      color: "var(--admin-text-faint)",
+                    }}
+                  >
+                    {POSITION_LABELS[s.position]}
                   </span>
                 </div>
               ))}
@@ -496,14 +503,39 @@ function SnippetForm({
           )}
         </div>
 
-        {/* Attivo */}
-        <div className="flex items-center gap-2">
+        {/* Attivo — pill toggle identico al resto dell'admin */}
+        <div className="flex items-center gap-2.5">
           <button
             type="button"
+            role="switch"
+            aria-checked={isActive}
             onClick={() => setIsActive((v) => !v)}
-            style={{ color: isActive ? "var(--admin-accent)" : "var(--admin-text-faint)" }}
+            style={{
+              position: "relative",
+              width: 44,
+              height: 24,
+              borderRadius: 9999,
+              border: "none",
+              cursor: "pointer",
+              flexShrink: 0,
+              transition: "background 160ms ease",
+              background: isActive ? "var(--admin-accent)" : "var(--admin-input-border, #3a3937)",
+            }}
           >
-            {isActive ? <ToggleRight size={22} /> : <ToggleLeft size={22} />}
+            <span
+              style={{
+                position: "absolute",
+                top: 2,
+                left: 2,
+                width: 20,
+                height: 20,
+                borderRadius: "50%",
+                background: "#fff",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.25)",
+                transition: "transform 160ms cubic-bezier(0.16,1,0.3,1)",
+                transform: isActive ? "translateX(20px)" : "translateX(0)",
+              }}
+            />
           </button>
           <span className="text-sm" style={{ color: "var(--admin-text-muted)" }}>
             {isActive ? "Attivo — verrà iniettato nel frontend" : "Inattivo — salvato ma non iniettato"}
@@ -605,13 +637,40 @@ function SnippetRow({
         </p>
       </div>
       <div className="flex items-center gap-1 shrink-0">
+        {/* Toggle pill — identico al resto dell'admin */}
         <button
           onClick={() => onToggle(snippet.id, snippet.isActive)}
           disabled={isPending}
+          role="switch"
+          aria-checked={snippet.isActive}
           title={snippet.isActive ? "Disattiva" : "Attiva"}
-          style={{ color: snippet.isActive ? "var(--admin-accent)" : "var(--admin-text-faint)", padding: "4px", borderRadius: "6px", display: "flex" }}
+          style={{
+            position: "relative",
+            width: 36,
+            height: 20,
+            borderRadius: 9999,
+            border: "none",
+            cursor: isPending ? "not-allowed" : "pointer",
+            flexShrink: 0,
+            transition: "background 160ms ease",
+            background: snippet.isActive ? "var(--admin-accent)" : "var(--admin-input-border, #3a3937)",
+            opacity: isPending ? 0.5 : 1,
+          }}
         >
-          {snippet.isActive ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
+          <span
+            style={{
+              position: "absolute",
+              top: 2,
+              left: 2,
+              width: 16,
+              height: 16,
+              borderRadius: "50%",
+              background: "#fff",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.25)",
+              transition: "transform 160ms cubic-bezier(0.16,1,0.3,1)",
+              transform: snippet.isActive ? "translateX(16px)" : "translateX(0)",
+            }}
+          />
         </button>
         <button
           onClick={() => onEdit(snippet)}
@@ -650,6 +709,8 @@ export function SnippetsTab({ initialSnippets }: { initialSnippets: SiteSnippet[
   const [showPresets, setShowPresets] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
   const [pendingId, setPendingId] = useState<number | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{ id: number; name: string } | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   async function handleSave(data: Omit<SiteSnippet, "id" | "createdAt" | "updatedAt">) {
     setFormLoading(true);
@@ -683,9 +744,17 @@ export function SnippetsTab({ initialSnippets }: { initialSnippets: SiteSnippet[
   }
 
   async function handleDelete(id: number) {
-    if (!confirm("Eliminare questo snippet?")) return;
-    setPendingId(id);
-    await deleteSnippetAction(id);
+    const snippet = snippets.find((s) => s.id === id);
+    setConfirmDelete({ id, name: snippet?.name ?? "questo snippet" });
+  }
+
+  async function doDelete() {
+    if (!confirmDelete) return;
+    setDeleteLoading(true);
+    setPendingId(confirmDelete.id);
+    await deleteSnippetAction(confirmDelete.id);
+    setDeleteLoading(false);
+    setConfirmDelete(null);
     setPendingId(null);
     startTransition(() => router.refresh());
   }
@@ -752,7 +821,7 @@ export function SnippetsTab({ initialSnippets }: { initialSnippets: SiteSnippet[
             onClick={() => { setEditTarget(null); setShowForm(true); }}
             className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white rounded-lg transition-colors"
             style={{ background: "var(--admin-accent)" }}
-            onMouseEnter={(e) => (e.currentTarget.style.filter = "brightness(0.9)")}
+            onMouseEnter={(e) => (e.currentTarget.style.filter = "brightness(0.88)")}
             onMouseLeave={(e) => (e.currentTarget.style.filter = "none")}
           >
             <Plus size={13} /> Aggiungi
@@ -760,88 +829,93 @@ export function SnippetsTab({ initialSnippets }: { initialSnippets: SiteSnippet[
         </div>
       </div>
 
-      {/* Lista */}
-      {snippets.length === 0 ? (
+      {/* Lista head */}
+      {headSnippets.length > 0 && (
+        <div>
+          <SectionTitle label="Head" count={headSnippets.length} />
+          <div className="space-y-2">
+            {headSnippets.map((s) => (
+              <SnippetRow
+                key={s.id}
+                snippet={s}
+                onEdit={(s) => { setEditTarget(s); setShowForm(true); }}
+                onDelete={handleDelete}
+                onToggle={handleToggle}
+                pendingId={pendingId}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Lista body_end */}
+      {bodySnippets.length > 0 && (
+        <div>
+          <SectionTitle label="Fine body" count={bodySnippets.length} />
+          <div className="space-y-2">
+            {bodySnippets.map((s) => (
+              <SnippetRow
+                key={s.id}
+                snippet={s}
+                onEdit={(s) => { setEditTarget(s); setShowForm(true); }}
+                onDelete={handleDelete}
+                onToggle={handleToggle}
+                pendingId={pendingId}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Empty state */}
+      {snippets.length === 0 && (
         <div
-          className="flex flex-col items-center justify-center py-12 rounded-xl text-center"
+          className="flex flex-col items-center justify-center py-16 rounded-2xl"
           style={{
             border: "1px dashed var(--admin-card-border)",
-            background: "var(--admin-card-bg)",
+            color: "var(--admin-text-faint)",
           }}
         >
-          <Code2 size={28} className="mb-3" style={{ color: "var(--admin-text-faint)" }} />
+          <Code2 size={28} style={{ marginBottom: "0.75rem", opacity: 0.4 }} />
           <p className="text-sm font-medium" style={{ color: "var(--admin-text-muted)" }}>
-            Nessuno snippet configurato
+            Nessuno snippet
           </p>
-          <p className="text-xs mt-1 mb-4" style={{ color: "var(--admin-text-faint)" }}>
-            Usa i modelli predefiniti per Google Analytics, Meta Pixel e altri.
+          <p className="text-xs mt-1" style={{ color: "var(--admin-text-faint)" }}>
+            Usa &quot;Modelli&quot; per aggiungere Analytics, GTM o altri script in pochi secondi.
           </p>
-          <button
-            onClick={() => setShowPresets(true)}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors"
-            style={{
-              background: "var(--admin-input-bg)",
-              border: "1px solid var(--admin-border)",
-              color: "var(--admin-text-muted)",
-            }}
-          >
-            <Wand2 size={13} /> Scegli un modello
-          </button>
-        </div>
-      ) : (
-        <div className="space-y-6">
-          {headSnippets.length > 0 && (
-            <div>
-              <SectionTitle label="Head" count={headSnippets.length} />
-              <div className="space-y-2">
-                {headSnippets.map((s) => (
-                  <SnippetRow
-                    key={s.id}
-                    snippet={s}
-                    onEdit={(s) => { setEditTarget(s); setShowForm(true); }}
-                    onDelete={handleDelete}
-                    onToggle={handleToggle}
-                    pendingId={pendingId}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-          {bodySnippets.length > 0 && (
-            <div>
-              <SectionTitle label="Fine body" count={bodySnippets.length} />
-              <div className="space-y-2">
-                {bodySnippets.map((s) => (
-                  <SnippetRow
-                    key={s.id}
-                    snippet={s}
-                    onEdit={(s) => { setEditTarget(s); setShowForm(true); }}
-                    onDelete={handleDelete}
-                    onToggle={handleToggle}
-                    pendingId={pendingId}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       )}
 
-      {/* Modale modelli */}
-      {showPresets && (
-        <PresetPicker
-          onPick={handlePresetPick}
-          onCancel={() => setShowPresets(false)}
-        />
-      )}
+      {/* ConfirmModal eliminazione */}
+      <ConfirmModal
+        open={!!confirmDelete}
+        title="Elimina snippet"
+        message={
+          <>
+            Stai per eliminare <strong style={{ color: "var(--admin-text)" }}>{confirmDelete?.name}</strong>.
+            <br />L&apos;operazione è irreversibile.
+          </>
+        }
+        confirmLabel="Elimina"
+        variant="danger"
+        loading={deleteLoading}
+        onConfirm={doDelete}
+        onCancel={() => setConfirmDelete(null)}
+      />
 
-      {/* Form singolo snippet */}
       {showForm && (
         <SnippetForm
           initial={editTarget ?? undefined}
           onSave={handleSave}
           onCancel={() => { setShowForm(false); setEditTarget(null); }}
           loading={formLoading}
+        />
+      )}
+
+      {showPresets && (
+        <PresetPicker
+          onPick={handlePresetPick}
+          onCancel={() => setShowPresets(false)}
         />
       )}
     </div>
