@@ -17,12 +17,14 @@ export const viewport: Viewport = {
 const manrope = Manrope({ subsets: ["latin"] });
 
 // ---------------------------------------------------------------------------
-// Snippet injection
-// NOTA: next/script strategy="beforeInteractive" funziona SOLO nel root
-// layout. In layout figli Next.js non può hoist il tag nel <head> reale.
+// Snippet HEAD — tag nativi, NON next/script.
+//
+// next/script strategy="beforeInteractive" in un Server Component asinco
+// viene sempre streamato via $RC fuori dall'<head> reale (div hidden S:x).
+// L'unico modo per finire nel primo byte dell'<head> è usare tag nativi.
 // ---------------------------------------------------------------------------
 
-function HeadSnippet({ s }: { s: SiteSnippet }) {
+function HeadSnippetTag({ s }: { s: SiteSnippet }) {
   const t = s.type as SnippetType;
   switch (t) {
     case "link_css":
@@ -31,23 +33,40 @@ function HeadSnippet({ s }: { s: SiteSnippet }) {
       // eslint-disable-next-line react/no-danger
       return <style dangerouslySetInnerHTML={{ __html: s.content }} />;
     case "script_src":
-      return <Script src={s.content} strategy="beforeInteractive" />;
+      // eslint-disable-next-line react/no-danger
+      return <script src={s.content} async />;
     case "script":
       return (
-        <Script
+        // eslint-disable-next-line react/no-danger
+        <script
           id={`snippet-head-${s.id}`}
-          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{ __html: s.content }}
         />
       );
     case "raw":
     default:
-      // raw non può andare nell'<head> via JSX — viene ignorato silenziosamente
+      // raw non è valido nell'<head> — ignorato
       return null;
   }
 }
 
-function BodySnippet({ s }: { s: SiteSnippet }) {
+async function HeadSnippets() {
+  const snippets = await getActiveSnippets();
+  const headSnippets = snippets.filter((s) => s.position === "head");
+  return (
+    <>
+      {headSnippets.map((s) => (
+        <HeadSnippetTag key={s.id} s={s} />
+      ))}
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Snippet BODY END — next/script afterInteractive va bene qui.
+// ---------------------------------------------------------------------------
+
+function BodySnippetTag({ s }: { s: SiteSnippet }) {
   const t = s.type as SnippetType;
   switch (t) {
     case "script_src":
@@ -72,16 +91,16 @@ function BodySnippet({ s }: { s: SiteSnippet }) {
   }
 }
 
-async function SnippetsHead() {
-  const snippets = await getActiveSnippets();
-  const headSnippets = snippets.filter((s) => s.position === "head");
-  return <>{headSnippets.map((s) => <HeadSnippet key={s.id} s={s} />)}</>;
-}
-
-async function SnippetsBodyEnd() {
+async function BodyEndSnippets() {
   const snippets = await getActiveSnippets();
   const bodySnippets = snippets.filter((s) => s.position === "body_end");
-  return <>{bodySnippets.map((s) => <BodySnippet key={s.id} s={s} />)}</>;
+  return (
+    <>
+      {bodySnippets.map((s) => (
+        <BodySnippetTag key={s.id} s={s} />
+      ))}
+    </>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -166,9 +185,14 @@ export default function RootLayout({
         <Suspense fallback={null}>
           <JsonLdScript />
         </Suspense>
-        {/* Snippet position="head" — beforeInteractive, nel <head> reale */}
+        {/*
+         * Snippet position="head" come tag nativi.
+         * Suspense è necessario perché HeadSnippets è async;
+         * il fallback null non blocca il rendering dell'<head>.
+         * I tag vengono inclusi nell'HTML statico iniziale.
+         */}
         <Suspense fallback={null}>
-          <SnippetsHead />
+          <HeadSnippets />
         </Suspense>
       </head>
       <body className="min-h-[100dvh] bg-gray-50">
@@ -176,9 +200,9 @@ export default function RootLayout({
           <DynamicWrapper>{children}</DynamicWrapper>
           <MaintenanceOverlay />
         </Suspense>
-        {/* Snippet position="body_end" — afterInteractive, prima di </body> */}
+        {/* Snippet position="body_end" — afterInteractive, va bene fuori dall'head */}
         <Suspense fallback={null}>
-          <SnippetsBodyEnd />
+          <BodyEndSnippets />
         </Suspense>
       </body>
     </html>
