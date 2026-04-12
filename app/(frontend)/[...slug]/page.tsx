@@ -1,12 +1,15 @@
 import { getPageWithTemplate } from "@/lib/db/pages-queries";
 import { getSeoPage } from "@/lib/db/seo-queries";
 import { getDynamicTemplate } from "@/app/(frontend)/_templates/loader";
+import {
+  parseCustomFields,
+  parseStyleConfig,
+} from "@/app/(frontend)/_templates/types";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 // ---------------------------------------------------------------------------
-// generateMetadata — legge seo_pages per il pathname corrente.
-// Fallback: title della pagina CMS.
+// generateMetadata
 // ---------------------------------------------------------------------------
 
 export async function generateMetadata({
@@ -56,12 +59,17 @@ export default async function FrontendPage({
   }
 
   const templateSlug = pageData.template?.slug ?? null;
-  const TemplateComponent = await getDynamicTemplate(templateSlug);
+  const TemplateComponent = getDynamicTemplate(templateSlug);
+
+  const fields = parseCustomFields(pageData.customFields);
+  const styleConfig = parseStyleConfig(pageData.template?.styleConfig);
 
   return (
     <TemplateComponent
       page={pageData}
       template={pageData.template ?? null}
+      fields={fields}
+      styleConfig={styleConfig}
     />
   );
 }
