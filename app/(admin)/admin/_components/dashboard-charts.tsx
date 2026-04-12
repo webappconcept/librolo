@@ -9,7 +9,6 @@ import {
   PieChart,
   Bar,
   BarChart,
-  ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
@@ -70,51 +69,55 @@ export function DashboardCharts({
             Ultimi 7 mesi
           </span>
         </div>
-        <ResponsiveContainer width="100%" height={220}>
-          <AreaChart data={growthData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
-            <defs>
-              <linearGradient id="gradUtenti" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="var(--admin-accent)" stopOpacity={0.18} />
-                <stop offset="95%" stopColor="var(--admin-accent)" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--admin-divider)" />
-            <XAxis
-              dataKey="month"
-              tick={{ fontSize: 11, fill: "var(--admin-text-faint)" }}
-              axisLine={false}
-              tickLine={false}
-            />
-            <YAxis
-              tick={{ fontSize: 11, fill: "var(--admin-text-faint)" }}
-              axisLine={false}
-              tickLine={false}
-            />
-            <Tooltip
-              contentStyle={{
-                background: "var(--admin-sidebar-bg)",
-                border: "none",
-                borderRadius: 8,
-                color: "#fff",
-                fontSize: 12,
-              }}
-              cursor={{
-                stroke: "var(--admin-accent)",
-                strokeWidth: 1,
-                strokeDasharray: "4 4",
-              }}
-            />
-            <Area
-              type="monotone"
-              dataKey="utenti"
-              stroke="var(--admin-accent)"
-              strokeWidth={2}
-              fill="url(#gradUtenti)"
-              dot={{ fill: "var(--admin-accent)", r: 3, strokeWidth: 0 }}
-              activeDot={{ r: 5, fill: "var(--admin-accent)" }}
-            />
-          </AreaChart>
-        </ResponsiveContainer>
+        <AreaChart
+          width={undefined}
+          height={220}
+          data={growthData}
+          margin={{ top: 4, right: 4, bottom: 0, left: -20 }}
+          style={{ width: "100%" }}
+        >
+          <defs>
+            <linearGradient id="gradUtenti" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="var(--admin-accent)" stopOpacity={0.18} />
+              <stop offset="95%" stopColor="var(--admin-accent)" stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--admin-divider)" />
+          <XAxis
+            dataKey="month"
+            tick={{ fontSize: 11, fill: "var(--admin-text-faint)" }}
+            axisLine={false}
+            tickLine={false}
+          />
+          <YAxis
+            tick={{ fontSize: 11, fill: "var(--admin-text-faint)" }}
+            axisLine={false}
+            tickLine={false}
+          />
+          <Tooltip
+            contentStyle={{
+              background: "var(--admin-sidebar-bg)",
+              border: "none",
+              borderRadius: 8,
+              color: "#fff",
+              fontSize: 12,
+            }}
+            cursor={{
+              stroke: "var(--admin-accent)",
+              strokeWidth: 1,
+              strokeDasharray: "4 4",
+            }}
+          />
+          <Area
+            type="monotone"
+            dataKey="utenti"
+            stroke="var(--admin-accent)"
+            strokeWidth={2}
+            fill="url(#gradUtenti)"
+            dot={{ fill: "var(--admin-accent)", r: 3, strokeWidth: 0 }}
+            activeDot={{ r: 5, fill: "var(--admin-accent)" }}
+          />
+        </AreaChart>
       </div>
 
       {/* Colonna destra: donut + bar CMS */}
@@ -132,22 +135,20 @@ export function DashboardCharts({
           </h3>
           <div className="flex items-center gap-4">
             <div className="relative shrink-0">
-              <ResponsiveContainer width={110} height={110}>
-                <PieChart>
-                  <Pie
-                    data={planData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={32}
-                    outerRadius={50}
-                    dataKey="value"
-                    strokeWidth={0}
-                  >
-                    <Cell fill="var(--admin-divider)" />
-                    <Cell fill="var(--admin-accent)" />
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
+              <PieChart width={110} height={110}>
+                <Pie
+                  data={planData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={32}
+                  outerRadius={50}
+                  dataKey="value"
+                  strokeWidth={0}
+                >
+                  <Cell fill="var(--admin-divider)" />
+                  <Cell fill="var(--admin-accent)" />
+                </Pie>
+              </PieChart>
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                 <span className="text-base font-bold" style={{ color: "var(--admin-text)" }}>
                   {premiumPct}%
@@ -193,37 +194,41 @@ export function DashboardCharts({
           <h3 className="text-sm font-semibold mb-3" style={{ color: "var(--admin-text)" }}>
             Stato contenuti
           </h3>
-          <ResponsiveContainer width="100%" height={90}>
-            <BarChart data={cmsData} margin={{ top: 0, right: 0, bottom: 0, left: -24 }}>
-              <XAxis
-                dataKey="label"
-                tick={{ fontSize: 10, fill: "var(--admin-text-faint)" }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <YAxis
-                tick={{ fontSize: 10, fill: "var(--admin-text-faint)" }}
-                axisLine={false}
-                tickLine={false}
-                allowDecimals={false}
-              />
-              <Tooltip
-                contentStyle={{
-                  background: "var(--admin-sidebar-bg)",
-                  border: "none",
-                  borderRadius: 8,
-                  color: "#fff",
-                  fontSize: 11,
-                }}
-                cursor={{ fill: "transparent" }}
-              />
-              <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                {cmsData.map((entry, i) => (
-                  <Cell key={i} fill={entry.fill} fillOpacity={0.85} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+          <BarChart
+            width={undefined}
+            height={90}
+            data={cmsData}
+            margin={{ top: 0, right: 0, bottom: 0, left: -24 }}
+            style={{ width: "100%" }}
+          >
+            <XAxis
+              dataKey="label"
+              tick={{ fontSize: 10, fill: "var(--admin-text-faint)" }}
+              axisLine={false}
+              tickLine={false}
+            />
+            <YAxis
+              tick={{ fontSize: 10, fill: "var(--admin-text-faint)" }}
+              axisLine={false}
+              tickLine={false}
+              allowDecimals={false}
+            />
+            <Tooltip
+              contentStyle={{
+                background: "var(--admin-sidebar-bg)",
+                border: "none",
+                borderRadius: 8,
+                color: "#fff",
+                fontSize: 11,
+              }}
+              cursor={{ fill: "transparent" }}
+            />
+            <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+              {cmsData.map((entry, i) => (
+                <Cell key={i} fill={entry.fill} fillOpacity={0.85} />
+              ))}
+            </Bar>
+          </BarChart>
         </div>
       </div>
     </div>
