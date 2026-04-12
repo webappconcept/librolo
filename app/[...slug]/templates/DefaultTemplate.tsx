@@ -5,10 +5,14 @@
 
 import type { CmsTemplateProps } from "../page";
 
-export default function DefaultTemplate({ page, resolvedContent }: CmsTemplateProps) {
+export default function DefaultTemplate({
+  page,
+  resolvedContent,
+}: CmsTemplateProps) {
   return (
     <main className="max-w-3xl mx-auto px-4 py-12 sm:py-16">
       <h1 className="text-3xl font-bold mb-8 text-gray-900 dark:text-white">
+        <div>template di default</div>
         {page.title}
       </h1>
       {resolvedContent ? (
