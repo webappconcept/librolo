@@ -1,5 +1,20 @@
 "use client";
 
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  Cell,
+  Pie,
+  PieChart,
+  Bar,
+  BarChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+
 interface DashboardChartsProps {
   growthData: { month: string; utenti: number }[];
   freeUsers: number;
@@ -19,20 +34,21 @@ export function DashboardCharts({
 }: DashboardChartsProps) {
   const total = freeUsers + premiumUsers;
   const premiumPct = total > 0 ? Math.round((premiumUsers / total) * 100) : 0;
-  const freePct = 100 - premiumPct;
 
-  const maxUtenti = Math.max(...growthData.map((d) => d.utenti), 1);
+  const planData = [
+    { name: "Free", value: freeUsers },
+    { name: "Premium", value: premiumUsers },
+  ];
 
   const cmsData = [
-    { label: "Pubblicate", value: pagesPublished, color: "#38bdf8" },
-    { label: "Bozze", value: pagesDraft, color: "#fb923c" },
-    { label: "Template", value: templatesCount, color: "#f472b6" },
+    { label: "Pubbl.", value: pagesPublished, fill: "#38bdf8" },
+    { label: "Bozze", value: pagesDraft, fill: "#fb923c" },
+    { label: "Template", value: templatesCount, fill: "#f472b6" },
   ];
-  const maxCms = Math.max(...cmsData.map((d) => d.value), 1);
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-      {/* Bar chart crescita utenti — CSS puro */}
+      {/* Area chart crescita utenti */}
       <div
         className="xl:col-span-2 rounded-xl p-5 shadow-sm"
         style={{
@@ -40,7 +56,7 @@ export function DashboardCharts({
           border: "1px solid var(--admin-card-border)",
         }}
       >
-        <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-semibold" style={{ color: "var(--admin-text)" }}>
             Crescita utenti
           </h3>
@@ -54,46 +70,56 @@ export function DashboardCharts({
             Ultimi 7 mesi
           </span>
         </div>
-        <div className="flex items-end gap-2 h-40">
-          {growthData.map((d) => {
-            const heightPct = (d.utenti / maxUtenti) * 100;
-            return (
-              <div key={d.month} className="flex-1 flex flex-col items-center gap-1.5">
-                <span
-                  className="text-[10px] font-medium"
-                  style={{ color: "var(--admin-text-faint)" }}
-                >
-                  {d.utenti}
-                </span>
-                <div
-                  className="w-full rounded-t-md transition-all"
-                  style={{
-                    height: `${Math.max(heightPct, 4)}%`,
-                    background: "var(--admin-accent)",
-                    opacity: 0.8,
-                    minHeight: 4,
-                  }}
-                />
-                <span
-                  className="text-[10px]"
-                  style={{ color: "var(--admin-text-faint)" }}
-                >
-                  {d.month}
-                </span>
-              </div>
-            );
-          })}
-          {growthData.length === 0 && (
-            <p className="text-xs m-auto" style={{ color: "var(--admin-text-faint)" }}>
-              Nessun dato disponibile
-            </p>
-          )}
-        </div>
+        <ResponsiveContainer width="100%" height={220}>
+          <AreaChart data={growthData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+            <defs>
+              <linearGradient id="gradUtenti" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="var(--admin-accent)" stopOpacity={0.18} />
+                <stop offset="95%" stopColor="var(--admin-accent)" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--admin-divider)" />
+            <XAxis
+              dataKey="month"
+              tick={{ fontSize: 11, fill: "var(--admin-text-faint)" }}
+              axisLine={false}
+              tickLine={false}
+            />
+            <YAxis
+              tick={{ fontSize: 11, fill: "var(--admin-text-faint)" }}
+              axisLine={false}
+              tickLine={false}
+            />
+            <Tooltip
+              contentStyle={{
+                background: "var(--admin-sidebar-bg)",
+                border: "none",
+                borderRadius: 8,
+                color: "#fff",
+                fontSize: 12,
+              }}
+              cursor={{
+                stroke: "var(--admin-accent)",
+                strokeWidth: 1,
+                strokeDasharray: "4 4",
+              }}
+            />
+            <Area
+              type="monotone"
+              dataKey="utenti"
+              stroke="var(--admin-accent)"
+              strokeWidth={2}
+              fill="url(#gradUtenti)"
+              dot={{ fill: "var(--admin-accent)", r: 3, strokeWidth: 0 }}
+              activeDot={{ r: 5, fill: "var(--admin-accent)" }}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
       </div>
 
-      {/* Colonna destra */}
+      {/* Colonna destra: donut + bar CMS */}
       <div className="flex flex-col gap-4">
-        {/* Donut-like — anello CSS */}
+        {/* Donut piano utenti */}
         <div
           className="rounded-xl p-5 shadow-sm flex-1"
           style={{
@@ -101,22 +127,29 @@ export function DashboardCharts({
             border: "1px solid var(--admin-card-border)",
           }}
         >
-          <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--admin-text)" }}>
+          <h3 className="text-sm font-semibold mb-3" style={{ color: "var(--admin-text)" }}>
             Free vs Premium
           </h3>
-          <div className="flex items-center gap-5">
-            {/* Cerchio conic-gradient */}
-            <div
-              className="shrink-0 w-[90px] h-[90px] rounded-full flex items-center justify-center"
-              style={{
-                background: `conic-gradient(var(--admin-accent) 0% ${premiumPct}%, var(--admin-divider) ${premiumPct}% 100%)`,
-              }}
-            >
-              <div
-                className="w-[60px] h-[60px] rounded-full flex flex-col items-center justify-center"
-                style={{ background: "var(--admin-card-bg)" }}
-              >
-                <span className="text-sm font-bold" style={{ color: "var(--admin-text)" }}>
+          <div className="flex items-center gap-4">
+            <div className="relative shrink-0">
+              <ResponsiveContainer width={110} height={110}>
+                <PieChart>
+                  <Pie
+                    data={planData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={32}
+                    outerRadius={50}
+                    dataKey="value"
+                    strokeWidth={0}
+                  >
+                    <Cell fill="var(--admin-divider)" />
+                    <Cell fill="var(--admin-accent)" />
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <span className="text-base font-bold" style={{ color: "var(--admin-text)" }}>
                   {premiumPct}%
                 </span>
                 <span className="text-[9px]" style={{ color: "var(--admin-text-faint)" }}>
@@ -127,27 +160,29 @@ export function DashboardCharts({
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <span
-                  className="w-2 h-2 rounded-full"
+                  className="w-2 h-2 rounded-full shrink-0"
                   style={{ background: "var(--admin-accent)" }}
                 />
                 <span className="text-xs" style={{ color: "var(--admin-text-muted)" }}>
-                  Premium <strong style={{ color: "var(--admin-text)" }}>{premiumUsers}</strong>
+                  Premium{" "}
+                  <strong style={{ color: "var(--admin-text)" }}>{premiumUsers}</strong>
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <span
-                  className="w-2 h-2 rounded-full"
+                  className="w-2 h-2 rounded-full shrink-0"
                   style={{ background: "var(--admin-divider)" }}
                 />
                 <span className="text-xs" style={{ color: "var(--admin-text-muted)" }}>
-                  Free <strong style={{ color: "var(--admin-text)" }}>{freeUsers}</strong>
+                  Free{" "}
+                  <strong style={{ color: "var(--admin-text)" }}>{freeUsers}</strong>
                 </span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Bar chart CMS — CSS puro */}
+        {/* Bar chart CMS */}
         <div
           className="rounded-xl p-5 shadow-sm flex-1"
           style={{
@@ -155,31 +190,40 @@ export function DashboardCharts({
             border: "1px solid var(--admin-card-border)",
           }}
         >
-          <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--admin-text)" }}>
+          <h3 className="text-sm font-semibold mb-3" style={{ color: "var(--admin-text)" }}>
             Stato contenuti
           </h3>
-          <div className="space-y-3">
-            {cmsData.map((item) => (
-              <div key={item.label}>
-                <div className="flex justify-between text-xs mb-1">
-                  <span style={{ color: "var(--admin-text-muted)" }}>{item.label}</span>
-                  <span style={{ color: "var(--admin-text)" }}>{item.value}</span>
-                </div>
-                <div
-                  className="h-1.5 rounded-full overflow-hidden"
-                  style={{ background: "var(--admin-divider)" }}
-                >
-                  <div
-                    className="h-full rounded-full transition-all"
-                    style={{
-                      width: `${(item.value / maxCms) * 100}%`,
-                      background: item.color,
-                    }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
+          <ResponsiveContainer width="100%" height={90}>
+            <BarChart data={cmsData} margin={{ top: 0, right: 0, bottom: 0, left: -24 }}>
+              <XAxis
+                dataKey="label"
+                tick={{ fontSize: 10, fill: "var(--admin-text-faint)" }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                tick={{ fontSize: 10, fill: "var(--admin-text-faint)" }}
+                axisLine={false}
+                tickLine={false}
+                allowDecimals={false}
+              />
+              <Tooltip
+                contentStyle={{
+                  background: "var(--admin-sidebar-bg)",
+                  border: "none",
+                  borderRadius: 8,
+                  color: "#fff",
+                  fontSize: 11,
+                }}
+                cursor={{ fill: "transparent" }}
+              />
+              <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                {cmsData.map((entry, i) => (
+                  <Cell key={i} fill={entry.fill} fillOpacity={0.85} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       </div>
     </div>

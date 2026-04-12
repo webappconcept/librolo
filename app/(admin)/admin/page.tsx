@@ -1,11 +1,14 @@
 // app/(admin)/admin/page.tsx
-import { getDashboardStats, getUserGrowthChart } from "@/lib/db/admin-queries";
+import {
+  getFullDashboardStats,
+  getUserGrowthChart,
+} from "@/lib/db/admin-queries";
 import { getAppSettings } from "@/lib/db/settings-queries";
 import {
   BookOpen,
   FileText,
   GitMerge,
-  PanelTop,
+  Layers,
   ShieldCheck,
   TrendingUp,
   UserCog,
@@ -13,42 +16,11 @@ import {
 } from "lucide-react";
 import { DashboardCharts } from "./_components/dashboard-charts";
 import KpiCard from "./_components/kpi-card";
-import { db } from "@/lib/db/drizzle";
-import { pages, pageTemplates, redirects } from "@/lib/db/schema";
-import { count, eq } from "drizzle-orm";
-
-async function getCmsStats() {
-  try {
-    const [pub, draft, tpl, red] = await Promise.all([
-      db.select({ count: count() }).from(pages).where(eq(pages.status, "published")),
-      db.select({ count: count() }).from(pages).where(eq(pages.status, "draft")),
-      db.select({ count: count() }).from(pageTemplates),
-      db.select({ count: count() }).from(redirects).where(eq(redirects.isActive, true)),
-    ]);
-    return {
-      pagesPublished: pub[0].count,
-      pagesDraft: draft[0].count,
-      templatesCount: tpl[0].count,
-      redirectsCount: red[0].count,
-    };
-  } catch {
-    return { pagesPublished: 0, pagesDraft: 0, templatesCount: 0, redirectsCount: 0 };
-  }
-}
-
-async function getGrowthSafe() {
-  try {
-    return await getUserGrowthChart();
-  } catch {
-    return [];
-  }
-}
 
 export default async function AdminDashboardPage() {
-  const [userStats, cmsStats, growthData, settings] = await Promise.all([
-    getDashboardStats(),
-    getCmsStats(),
-    getGrowthSafe(),
+  const [stats, growthData, settings] = await Promise.all([
+    getFullDashboardStats(),
+    getUserGrowthChart(),
     getAppSettings(),
   ]);
 
@@ -106,7 +78,7 @@ export default async function AdminDashboardPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           <KpiCard
             title="Utenti totali"
-            value={userStats.totalUsers}
+            value={stats.totalUsers}
             sub="utenti registrati"
             icon={Users}
             iconColor="#e07a3a"
@@ -114,23 +86,23 @@ export default async function AdminDashboardPage() {
           />
           <KpiCard
             title="Nuovi questo mese"
-            value={userStats.newUsersThisMonth}
-            trend={userStats.trendPercent}
+            value={stats.newUsersThisMonth}
+            trend={stats.trendPercent}
             icon={TrendingUp}
             iconColor="#22c55e"
             iconBg="color-mix(in oklch, #22c55e 12%, transparent)"
           />
           <KpiCard
             title="Utenti premium"
-            value={userStats.premiumUsers}
-            sub={`${userStats.conversionRate}% conversione`}
+            value={stats.premiumUsers}
+            sub={`${stats.conversionRate}% conversione`}
             icon={ShieldCheck}
             iconColor="var(--admin-accent)"
             iconBg="color-mix(in oklch, var(--admin-accent) 12%, transparent)"
           />
           <KpiCard
             title="Staff attivi"
-            value={0}
+            value={stats.staffCount}
             sub="con accesso admin"
             icon={UserCog}
             iconColor="#a78bfa"
@@ -149,7 +121,7 @@ export default async function AdminDashboardPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           <KpiCard
             title="Pagine pubblicate"
-            value={cmsStats.pagesPublished}
+            value={stats.pagesPublished}
             sub="visibili sul sito"
             icon={FileText}
             iconColor="#38bdf8"
@@ -157,7 +129,7 @@ export default async function AdminDashboardPage() {
           />
           <KpiCard
             title="Bozze"
-            value={cmsStats.pagesDraft}
+            value={stats.pagesDraft}
             sub="in attesa di pubblicazione"
             icon={BookOpen}
             iconColor="#fb923c"
@@ -165,15 +137,15 @@ export default async function AdminDashboardPage() {
           />
           <KpiCard
             title="Template"
-            value={cmsStats.templatesCount}
+            value={stats.templatesCount}
             sub="layout disponibili"
-            icon={PanelTop}
+            icon={Layers}
             iconColor="#f472b6"
             iconBg="color-mix(in oklch, #f472b6 12%, transparent)"
           />
           <KpiCard
             title="Redirect attivi"
-            value={cmsStats.redirectsCount}
+            value={stats.redirectsCount}
             sub="reindirizzamenti"
             icon={GitMerge}
             iconColor="#fbbf24"
@@ -185,11 +157,11 @@ export default async function AdminDashboardPage() {
       {/* Charts */}
       <DashboardCharts
         growthData={growthData}
-        freeUsers={userStats.freeUsers}
-        premiumUsers={userStats.premiumUsers}
-        pagesPublished={cmsStats.pagesPublished}
-        pagesDraft={cmsStats.pagesDraft}
-        templatesCount={cmsStats.templatesCount}
+        freeUsers={stats.freeUsers}
+        premiumUsers={stats.premiumUsers}
+        pagesPublished={stats.pagesPublished}
+        pagesDraft={stats.pagesDraft}
+        templatesCount={stats.templatesCount}
       />
     </div>
   );
