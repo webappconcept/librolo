@@ -13,7 +13,7 @@ import {
   Heading2, Heading3, Italic, Link2,
   List, ListOrdered, Minus, Pencil,
   RotateCcw, RotateCw, Search, UnderlineIcon,
-  GitBranch, AlertTriangle,
+  GitBranch, AlertTriangle, ShieldCheck, Lock,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef, useState } from "react";
@@ -249,7 +249,11 @@ function PubTab({ status, setStatus, publishedAt, setPublishedAt, expiresAt, set
   );
 }
 
-function StrutturaTab({ pages, templates, parentId, onParentChange, templateId, setTemplateId, setCustomFields, currentPageId }: {
+function StrutturaTab({
+  pages, templates, parentId, onParentChange,
+  templateId, setTemplateId, setCustomFields,
+  currentPageId, templateLocked,
+}: {
   pages: Page[];
   templates: TemplateWithFields[];
   parentId: number | null;
@@ -258,6 +262,7 @@ function StrutturaTab({ pages, templates, parentId, onParentChange, templateId, 
   setTemplateId: (v: number | null) => void;
   setCustomFields: (v: Record<string, string>) => void;
   currentPageId?: number;
+  templateLocked?: boolean;
 }) {
   const selectedTemplate = templates.find((t) => t.id === templateId) ?? null;
   return (
@@ -274,9 +279,33 @@ function StrutturaTab({ pages, templates, parentId, onParentChange, templateId, 
         </select>
         <p style={hintStyle}>Assegnare una pagina padre costruisce la gerarchia del sito (es. /servizi/consulenza).</p>
       </div>
+
       <div className="space-y-1.5">
         <label style={labelStyle}>Template (opzionale)</label>
-        {templates.length === 0 ? (
+
+        {/* Caso: template bloccato dalla regola del padre */}
+        {templateLocked && selectedTemplate ? (
+          <div className="rounded-lg px-4 py-3 flex items-center gap-3"
+            style={{
+              background: "color-mix(in srgb, var(--admin-accent) 8%, var(--admin-page-bg))",
+              border: "1px solid color-mix(in srgb, var(--admin-accent) 30%, transparent)",
+            }}>
+            <ShieldCheck size={16} style={{ color: "var(--admin-accent)", flexShrink: 0 }} />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium" style={{ color: "var(--admin-text)" }}>{selectedTemplate.name}</p>
+              <p className="text-xs font-mono" style={{ color: "var(--admin-text-faint)" }}>{selectedTemplate.slug}</p>
+            </div>
+            <Lock size={13} style={{ color: "var(--admin-text-faint)", flexShrink: 0 }} />
+          </div>
+        ) : templateLocked && !selectedTemplate ? (
+          // template locked ma id non trovato (raro) — fallback libero
+          <select value={templateId ?? ""}
+            onChange={(e) => { setTemplateId(e.target.value ? Number(e.target.value) : null); setCustomFields({}); }}
+            style={inputStyle}>
+            <option value="">— Nessun template —</option>
+            {templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+          </select>
+        ) : templates.length === 0 ? (
           <div className="rounded-lg px-4 py-3 text-sm"
             style={{ background: "var(--admin-page-bg)", border: "1px solid var(--admin-input-border)", color: "var(--admin-text-faint)" }}>
             Nessun template creato. <a href="/admin/template" className="underline" style={{ color: "var(--admin-accent)" }}>Crea un template</a> per aggiungere campi custom alla pagina.
@@ -298,13 +327,21 @@ function StrutturaTab({ pages, templates, parentId, onParentChange, templateId, 
             )}
           </>
         )}
+
+        {templateLocked && selectedTemplate && (
+          <p style={{ ...hintStyle, display: "flex", alignItems: "center", gap: "4px" }}>
+            <Lock size={11} />
+            Template imposto dalla regola del template padre — non modificabile.
+          </p>
+        )}
       </div>
     </div>
   );
 }
 
 export default function PageEditor({
-  page, seo, pages = [], templates = [], domain = "", appName = "", initialParentId = null,
+  page, seo, pages = [], templates = [], domain = "", appName = "",
+  initialParentId = null, initialTemplateId = null, templateLocked = false,
 }: {
   page?: Page | null;
   seo?: SeoPage | null;
@@ -313,6 +350,8 @@ export default function PageEditor({
   domain?: string;
   appName?: string;
   initialParentId?: number | null;
+  initialTemplateId?: number | null;
+  templateLocked?: boolean;
 }) {
   const router = useRouter();
   const isEdit = !!page;
@@ -326,7 +365,8 @@ export default function PageEditor({
   const [publishedAt, setPublishedAt] = useState(page?.publishedAt ? toDatetimeLocal(page.publishedAt) : "");
   const [expiresAt, setExpiresAt] = useState(page?.expiresAt ? toDatetimeLocal(page.expiresAt) : "");
   const [parentId, setParentId] = useState<number | null>(page?.parentId ?? initialParentId ?? null);
-  const [templateId, setTemplateId] = useState<number | null>(page?.templateId ?? null);
+  // templateId: se in modifica usa quello salvato, se nuova usa initialTemplateId (da URL)
+  const [templateId, setTemplateId] = useState<number | null>(page?.templateId ?? initialTemplateId ?? null);
   const [customFields, setCustomFields] = useState<Record<string, string>>(() => {
     try { return JSON.parse(page?.customFields ?? "{}"); } catch { return {}; }
   });
@@ -399,7 +439,6 @@ export default function PageEditor({
   const selectedTemplate = templates.find((t) => t.id === templateId) ?? null;
   const slugChanged = isEdit && slug !== originalSlug && slug.trim() !== "";
 
-  // Breadcrumb label corrente
   const currentLabel = isEdit
     ? (title || page?.title || "Modifica pagina")
     : (title ? title : "Nuova pagina");
@@ -439,7 +478,6 @@ export default function PageEditor({
         <input type="hidden" name="templateId" value={templateId ?? ""} />
         <input type="hidden" name="customFields" value={JSON.stringify(customFields)} />
 
-        {/* Header unificato */}
         <EditorPageHeader
           breadcrumbs={[
             { label: "Contenuti", href: "/admin/contenuti" },
@@ -524,9 +562,8 @@ export default function PageEditor({
             </TabBtn>
             <TabBtn active={activeTab === "struttura"} onClick={() => setActiveTab("struttura")}>
               <GitBranch size={14} />
-              <span className="hidden xs:inline">Struttura</span>
-              <span className="xs:hidden">Struttura</span>
-              {parentId && <span className="w-1.5 h-1.5 rounded-full ml-0.5" style={{ background: "var(--admin-accent)" }} />}
+              Struttura
+              {(parentId || templateId) && <span className="w-1.5 h-1.5 rounded-full ml-0.5" style={{ background: "var(--admin-accent)" }} />}
             </TabBtn>
             <TabBtn active={activeTab === "seo"} onClick={() => setActiveTab("seo")}>
               <Search size={14} />
@@ -573,9 +610,13 @@ export default function PageEditor({
           )}
           {activeTab === "struttura" && (
             <div className="p-5">
-              <StrutturaTab pages={pages} templates={templates} parentId={parentId}
-                onParentChange={handleParentChange} templateId={templateId}
-                setTemplateId={setTemplateId} setCustomFields={setCustomFields} currentPageId={page?.id} />
+              <StrutturaTab
+                pages={pages} templates={templates}
+                parentId={parentId} onParentChange={handleParentChange}
+                templateId={templateId} setTemplateId={setTemplateId}
+                setCustomFields={setCustomFields} currentPageId={page?.id}
+                templateLocked={templateLocked}
+              />
             </div>
           )}
           {activeTab === "seo" && (

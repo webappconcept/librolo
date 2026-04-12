@@ -9,7 +9,7 @@ export const metadata = { title: "Nuova pagina" };
 export default async function NewPagePage({
   searchParams,
 }: {
-  searchParams: Promise<{ parentId?: string }>;
+  searchParams: Promise<{ parentId?: string; templateId?: string; templateLocked?: string }>;
 }) {
   const [pages, templates, settings, params] = await Promise.all([
     getAllPages(),
@@ -20,6 +20,11 @@ export default async function NewPagePage({
 
   const initialParentId = params.parentId ? Number(params.parentId) : null;
 
+  // templateId passato via URL (da regola allowedChildTemplateIds)
+  const initialTemplateId = params.templateId ? Number(params.templateId) : null;
+  // templateLocked=1 significa che il template è imposto dalla regola del padre e non può essere cambiato
+  const templateLocked = params.templateLocked === "1";
+
   return (
     <div className="p-6 max-w-4xl">
       <PageEditor
@@ -28,6 +33,8 @@ export default async function NewPagePage({
         domain={settings?.app_domain ?? ""}
         appName={settings?.app_name ?? ""}
         initialParentId={initialParentId}
+        initialTemplateId={initialTemplateId}
+        templateLocked={templateLocked}
       />
     </div>
   );
