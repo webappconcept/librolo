@@ -282,8 +282,6 @@ function StrutturaTab({
 
       <div className="space-y-1.5">
         <label style={labelStyle}>Template (opzionale)</label>
-
-        {/* Caso: template bloccato dalla regola del padre */}
         {templateLocked && selectedTemplate ? (
           <div className="rounded-lg px-4 py-3 flex items-center gap-3"
             style={{
@@ -298,7 +296,6 @@ function StrutturaTab({
             <Lock size={13} style={{ color: "var(--admin-text-faint)", flexShrink: 0 }} />
           </div>
         ) : templateLocked && !selectedTemplate ? (
-          // template locked ma id non trovato (raro) — fallback libero
           <select value={templateId ?? ""}
             onChange={(e) => { setTemplateId(e.target.value ? Number(e.target.value) : null); setCustomFields({}); }}
             style={inputStyle}>
@@ -327,7 +324,6 @@ function StrutturaTab({
             )}
           </>
         )}
-
         {templateLocked && selectedTemplate && (
           <p style={{ ...hintStyle, display: "flex", alignItems: "center", gap: "4px" }}>
             <Lock size={11} />
@@ -337,6 +333,15 @@ function StrutturaTab({
       </div>
     </div>
   );
+}
+
+/** Normalizza il dominio: aggiunge https:// se mancante e rimuove lo slash finale */
+function buildPreviewUrl(domain: string, slug: string): string | null {
+  if (!domain || !slug) return null;
+  let base = domain.trim();
+  if (!base.startsWith("http")) base = `https://${base}`;
+  base = base.replace(/\/+$/, "");
+  return `${base}/${slug}`;
 }
 
 export default function PageEditor({
@@ -365,7 +370,6 @@ export default function PageEditor({
   const [publishedAt, setPublishedAt] = useState(page?.publishedAt ? toDatetimeLocal(page.publishedAt) : "");
   const [expiresAt, setExpiresAt] = useState(page?.expiresAt ? toDatetimeLocal(page.expiresAt) : "");
   const [parentId, setParentId] = useState<number | null>(page?.parentId ?? initialParentId ?? null);
-  // templateId: se in modifica usa quello salvato, se nuova usa initialTemplateId (da URL)
   const [templateId, setTemplateId] = useState<number | null>(page?.templateId ?? initialTemplateId ?? null);
   const [customFields, setCustomFields] = useState<Record<string, string>>(() => {
     try { return JSON.parse(page?.customFields ?? "{}"); } catch { return {}; }
@@ -376,6 +380,11 @@ export default function PageEditor({
   const parentPage = pages.find((p) => p.id === parentId) ?? null;
   const slugPrefix = parentPage ? `${parentPage.slug}/` : "";
   const slugLeaf = leafSlug(slug) || slug;
+
+  // URL anteprima: disponibile solo per pagine pubblicate in modifica
+  const previewUrl = isEdit && status === "published"
+    ? buildPreviewUrl(domain, slug)
+    : null;
 
   useEffect(() => {
     if (!state?.savedAt) return;
@@ -490,6 +499,7 @@ export default function PageEditor({
           isPending={isPending}
           savedAt={savedAt}
           error={state?.error}
+          previewUrl={previewUrl}
         />
 
         {/* Titolo + Slug */}

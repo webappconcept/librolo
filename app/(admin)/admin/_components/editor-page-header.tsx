@@ -1,7 +1,7 @@
 // app/(admin)/admin/_components/editor-page-header.tsx
 "use client";
 
-import { ArrowLeft, Check } from "lucide-react";
+import { ArrowLeft, Check, ExternalLink } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 export interface BreadcrumbSegment {
@@ -18,6 +18,9 @@ interface EditorPageHeaderProps {
   isPending?: boolean;
   savedAt?: string | null;
   error?: string | null;
+  /** URL di anteprima front-end (es. https://miosito.it/blog/articolo).
+   *  Se fornito, mostra il bottone anteprima accanto a Salva. */
+  previewUrl?: string | null;
 }
 
 export function EditorPageHeader({
@@ -29,6 +32,7 @@ export function EditorPageHeader({
   isPending = false,
   savedAt,
   error,
+  previewUrl,
 }: EditorPageHeaderProps) {
   const router = useRouter();
   const lastIdx = breadcrumbs.length - 1;
@@ -57,10 +61,7 @@ export function EditorPageHeader({
           className="flex items-center gap-1 min-w-0 flex-1 overflow-hidden"
         >
           {breadcrumbs.map((seg, i) => {
-            // Su mobile: mostra solo l'ultimo segmento genitore (lastIdx).
-            // Su desktop: mostra tutti i segmenti.
             const hiddenOnMobile = i < lastIdx;
-
             return (
               <span
                 key={i}
@@ -90,7 +91,7 @@ export function EditorPageHeader({
             );
           })}
 
-          {/* Segmento corrente — troncato se lungo */}
+          {/* Segmento corrente */}
           <span
             className="text-xs font-medium truncate"
             style={{ color: "var(--admin-text)" }}
@@ -100,7 +101,7 @@ export function EditorPageHeader({
           </span>
         </nav>
 
-        {/* Destra: feedback + bottone Salva */}
+        {/* Destra: feedback + anteprima + bottone Salva */}
         <div className="flex items-center gap-2 shrink-0">
           {savedAt && (
             <>
@@ -125,6 +126,33 @@ export function EditorPageHeader({
                 <Check size={13} />
               </span>
             </>
+          )}
+
+          {/* Bottone Anteprima — visibile solo se previewUrl è fornito */}
+          {previewUrl && (
+            <a
+              href={previewUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Anteprima pagina"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg font-medium transition-colors"
+              style={{
+                color: "var(--admin-text-muted)",
+                background: "var(--admin-card-bg)",
+                border: "1px solid var(--admin-card-border, var(--admin-border))",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = "var(--admin-text)";
+                e.currentTarget.style.borderColor = "var(--admin-text-muted)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = "var(--admin-text-muted)";
+                e.currentTarget.style.borderColor = "var(--admin-card-border, var(--admin-border))";
+              }}
+            >
+              <ExternalLink size={14} />
+              <span className="hidden sm:inline">Anteprima</span>
+            </a>
           )}
 
           <button
