@@ -1,15 +1,13 @@
 /**
  * DEPRECATO — non aggiungere nuove voci qui.
  *
- * Il sistema ora usa il dynamic loader basato su convenzione del nome file.
- * Vedi: app/(frontend)/_templates/loader.tsx
+ * Per aggiungere un nuovo template:
+ *   1. Crea il file TSX: Template{NomePascalCase}.tsx in questa cartella
+ *   2. Aggiungi UNA riga in loader.tsx → TEMPLATE_LAZY_MAP
+ *   3. Lo slug viene derivato automaticamente — niente chiavi manuali
  *
- * Come aggiungere un nuovo template:
- *   1. Crea il file TSX: Template{PascalCase(slug)}.tsx in questa cartella
- *      Es. slug "articolo-blog" → TemplateArticoloBlog.tsx
- *   2. Nessun registry da aggiornare — il loader lo trova automaticamente.
+ * Vedi: app/(frontend)/_templates/loader.tsx
  */
-
 import type { ComponentType } from "react";
 import type { TemplateProps } from "./types";
 import { TemplateDefault } from "./TemplateDefault";
