@@ -10,7 +10,12 @@ import { styleConfigToCssVars } from "./types";
  *   - readTime   (number)  — minuti di lettura stimati
  *   - intro      (textarea)— testo di introduzione sopra il body
  */
-export function TemplateArticle({ page, fields, styleConfig, isPreview }: TemplateProps) {
+export function TemplateArticle({
+  page,
+  fields,
+  styleConfig,
+  isPreview,
+}: TemplateProps) {
   const cssVars = styleConfigToCssVars(styleConfig);
 
   return (
@@ -21,8 +26,7 @@ export function TemplateArticle({ page, fields, styleConfig, isPreview }: Templa
         background: styleConfig.colorBg ?? "var(--color-bg, #fff)",
         color: styleConfig.colorText ?? "var(--color-text, #1a1a1a)",
         minHeight: "100vh",
-      }}
-    >
+      }}>
       {isPreview && (
         <div
           style={{
@@ -34,8 +38,7 @@ export function TemplateArticle({ page, fields, styleConfig, isPreview }: Templa
             fontWeight: 600,
             letterSpacing: "0.05em",
             textTransform: "uppercase",
-          }}
-        >
+          }}>
           ⚠️ Anteprima — non pubblicata
         </div>
       )}
@@ -48,8 +51,7 @@ export function TemplateArticle({ page, fields, styleConfig, isPreview }: Templa
             aspectRatio: "21/9",
             overflow: "hidden",
             background: "#e5e7eb",
-          }}
-        >
+          }}>
           <img
             src={fields.coverImage}
             alt={page.title}
@@ -58,7 +60,8 @@ export function TemplateArticle({ page, fields, styleConfig, isPreview }: Templa
         </div>
       )}
 
-      <main style={{ maxWidth: "720px", margin: "0 auto", padding: "3rem 1.5rem" }}>
+      <main
+        style={{ maxWidth: "720px", margin: "0 auto", padding: "3rem 1.5rem" }}>
         {/* Meta: categoria + tempo di lettura */}
         {(fields.category || fields.readTime) && (
           <div
@@ -71,22 +74,21 @@ export function TemplateArticle({ page, fields, styleConfig, isPreview }: Templa
               fontWeight: 600,
               textTransform: "uppercase",
               letterSpacing: "0.06em",
-            }}
-          >
+            }}>
             {fields.category && <span>{fields.category}</span>}
             {fields.readTime && <span>⏱ {fields.readTime} min</span>}
           </div>
         )}
-
+        <div>template articolo</div>
         <h1
           style={{
-            fontFamily: styleConfig.fontDisplay ?? styleConfig.fontBody ?? "inherit",
+            fontFamily:
+              styleConfig.fontDisplay ?? styleConfig.fontBody ?? "inherit",
             fontSize: "clamp(1.875rem, 5vw, 3rem)",
             fontWeight: 700,
             lineHeight: 1.15,
             marginBottom: "1rem",
-          }}
-        >
+          }}>
           {page.title}
         </h1>
 
@@ -97,11 +99,16 @@ export function TemplateArticle({ page, fields, styleConfig, isPreview }: Templa
               fontSize: "0.875rem",
               color: "#6b7280",
               marginBottom: "1.5rem",
-            }}
-          >
+            }}>
             Di <strong>{fields.author}</strong>
             {page.publishedAt && (
-              <> — {new Date(page.publishedAt).toLocaleDateString("it-IT", { dateStyle: "long" })}</>
+              <>
+                {" "}
+                —{" "}
+                {new Date(page.publishedAt).toLocaleDateString("it-IT", {
+                  dateStyle: "long",
+                })}
+              </>
             )}
           </p>
         )}
@@ -117,8 +124,7 @@ export function TemplateArticle({ page, fields, styleConfig, isPreview }: Templa
               paddingLeft: "1rem",
               marginBottom: "2rem",
               fontStyle: "italic",
-            }}
-          >
+            }}>
             {fields.intro}
           </p>
         )}
