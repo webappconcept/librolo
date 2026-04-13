@@ -12,7 +12,27 @@ export type SettingKey =
   | "default_role"
   | "resend_api_key"
   | "email_from_name"
-  | "email_from_address";
+  | "email_from_address"
+  // Welcome email
+  | "email_welcome_subject"
+  | "email_welcome_bcc"
+  | "email_welcome_body"
+  | "email_welcome_footer"
+  // Signup verification
+  | "email_signup_subject"
+  | "email_signup_bcc"
+  | "email_signup_body"
+  | "email_signup_footer"
+  // Password reset
+  | "email_reset_subject"
+  | "email_reset_bcc"
+  | "email_reset_body"
+  | "email_reset_footer"
+  // User deleted
+  | "email_deleted_subject"
+  | "email_deleted_bcc"
+  | "email_deleted_body"
+  | "email_deleted_footer";
 
 export type AppSettings = {
   app_name: string;
@@ -24,6 +44,26 @@ export type AppSettings = {
   resend_api_key: string | null;
   email_from_name: string | null;
   email_from_address: string | null;
+  // Welcome
+  email_welcome_subject: string | null;
+  email_welcome_bcc: string | null;
+  email_welcome_body: string | null;
+  email_welcome_footer: string | null;
+  // Signup verification
+  email_signup_subject: string | null;
+  email_signup_bcc: string | null;
+  email_signup_body: string | null;
+  email_signup_footer: string | null;
+  // Password reset
+  email_reset_subject: string | null;
+  email_reset_bcc: string | null;
+  email_reset_body: string | null;
+  email_reset_footer: string | null;
+  // User deleted
+  email_deleted_subject: string | null;
+  email_deleted_bcc: string | null;
+  email_deleted_body: string | null;
+  email_deleted_footer: string | null;
 };
 
 const DEFAULTS: AppSettings = {
@@ -36,6 +76,22 @@ const DEFAULTS: AppSettings = {
   resend_api_key: null,
   email_from_name: null,
   email_from_address: null,
+  email_welcome_subject: null,
+  email_welcome_bcc: null,
+  email_welcome_body: null,
+  email_welcome_footer: null,
+  email_signup_subject: null,
+  email_signup_bcc: null,
+  email_signup_body: null,
+  email_signup_footer: null,
+  email_reset_subject: null,
+  email_reset_bcc: null,
+  email_reset_body: null,
+  email_reset_footer: null,
+  email_deleted_subject: null,
+  email_deleted_bcc: null,
+  email_deleted_body: null,
+  email_deleted_footer: null,
 };
 
 async function fetchAppSettings(): Promise<AppSettings> {

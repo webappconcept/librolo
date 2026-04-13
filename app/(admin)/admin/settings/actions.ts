@@ -8,7 +8,7 @@ import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 // ---------------------------------------------------------------------------
-// ActionState (usato dai tab esistenti con useActionState)
+// ActionState (usato dai tab con useActionState)
 // ---------------------------------------------------------------------------
 export type ActionState =
   | {}
@@ -62,9 +62,9 @@ export async function saveBehaviourSettings(
 }
 
 // ---------------------------------------------------------------------------
-// Email  (email-tab.tsx → saveEmailSettings)
+// Sender  (sender-tab.tsx → saveSenderSettings)
 // ---------------------------------------------------------------------------
-export async function saveEmailSettings(
+export async function saveSenderSettings(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
@@ -73,7 +73,36 @@ export async function saveEmailSettings(
     await updateAppSetting("email_from_name", formData.get("email_from_name") as string);
     await updateAppSetting("email_from_address", formData.get("email_from_address") as string);
     revalidatePath("/admin/settings");
-    return { success: "Impostazioni email salvate.", timestamp: Date.now() };
+    return { success: "Impostazioni mittente salvate.", timestamp: Date.now() };
+  } catch {
+    return { error: "Errore durante il salvataggio.", timestamp: Date.now() };
+  }
+}
+
+// Alias retrocompatibilità
+export const saveEmailSettings = saveSenderSettings;
+
+// ---------------------------------------------------------------------------
+// Email Templates  (email-templates-tab.tsx → saveEmailTemplateSettings)
+// ---------------------------------------------------------------------------
+export async function saveEmailTemplateSettings(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  try {
+    const keys = [
+      "email_welcome_subject", "email_welcome_bcc", "email_welcome_body", "email_welcome_footer",
+      "email_signup_subject",  "email_signup_bcc",  "email_signup_body",  "email_signup_footer",
+      "email_reset_subject",   "email_reset_bcc",   "email_reset_body",   "email_reset_footer",
+      "email_deleted_subject", "email_deleted_bcc", "email_deleted_body", "email_deleted_footer",
+    ] as const;
+
+    for (const key of keys) {
+      const val = (formData.get(key) as string | null) ?? "";
+      await updateAppSetting(key, val.trim() || null);
+    }
+    revalidatePath("/admin/settings");
+    return { success: "Template email salvati.", timestamp: Date.now() };
   } catch {
     return { error: "Errore durante il salvataggio.", timestamp: Date.now() };
   }
@@ -103,14 +132,13 @@ export async function saveUsersSettings(
 // ---------------------------------------------------------------------------
 export const saveGeneralSettingsAction = saveAppSettings;
 export const saveBehaviourSettingsAction = saveBehaviourSettings;
-export const saveEmailSettingsAction = saveEmailSettings;
+export const saveEmailSettingsAction = saveSenderSettings;
 export const saveUsersSettingsAction = saveUsersSettings;
 
 // ---------------------------------------------------------------------------
 // Snippets CRUD
 // ---------------------------------------------------------------------------
 
-/** Invalida la cache degli snippet su tutte le pagine frontend. */
 function invalidateSnippets() {
   revalidatePath("/", "layout");
 }

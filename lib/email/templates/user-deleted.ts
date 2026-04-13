@@ -8,7 +8,8 @@ export async function sendUserDeletedEmail(
   firstName: string | null,
   deletedAt: Date,
 ) {
-  const { app_name } = await getAppSettings();
+  const settings = await getAppSettings();
+  const { app_name } = settings;
   const greeting = firstName ? `Ciao ${firstName},` : "Ciao,";
   const formattedDate = deletedAt.toLocaleDateString("it-IT", {
     day: "2-digit",
@@ -16,18 +17,74 @@ export async function sendUserDeletedEmail(
     year: "numeric",
   });
 
+  const vars = {
+    appName: app_name,
+    userEmail: to,
+    userName: firstName ?? "",
+    deletedDate: formattedDate,
+  };
+
+  const subject = resolveTemplate(
+    settings.email_deleted_subject,
+    `Il tuo account è stato eliminato — ${app_name}`,
+    vars,
+  );
+  const bcc = settings.email_deleted_bcc ?? undefined;
+  const bodyText = resolveTemplate(settings.email_deleted_body, null, vars);
+  const footerText = resolveTemplate(
+    settings.email_deleted_footer,
+    `© ${new Date().getFullYear()} ${app_name} · Tutti i diritti riservati`,
+    vars,
+  );
+
   await sendEmail({
     to,
-    subject: `Il tuo account è stato eliminato — ${app_name}`,
-    html: buildHtml(greeting, formattedDate, app_name),
+    bcc,
+    subject,
+    html: buildHtml({ greeting, formattedDate, bodyText, footerText, appName: app_name }),
   });
 }
 
-function buildHtml(
-  greeting: string,
-  formattedDate: string,
-  appName = "Librolo",
+function resolveTemplate(
+  stored: string | null,
+  fallback: string | null,
+  vars: Record<string, string>,
 ): string {
+  const tpl = stored?.trim() || fallback || "";
+  return tpl.replace(/\{\{(\w+)\}\}/g, (_, k) => vars[k] ?? `{{${k}}}`);
+}
+
+function buildHtml({
+  greeting,
+  formattedDate,
+  bodyText,
+  footerText,
+  appName,
+}: {
+  greeting: string;
+  formattedDate: string;
+  bodyText: string;
+  footerText: string;
+  appName: string;
+}): string {
+  const bodyHtml = bodyText
+    ? bodyText
+        .split("\n")
+        .map((l) => l.trim())
+        .filter(Boolean)
+        .map((l) => `<p style="margin:0 0 12px;color:${t.textMuted};font-size:15px;line-height:1.6;">${l}</p>`)
+        .join("")
+    : `
+      <p style="margin:0 0 24px;color:${t.textMuted};font-size:15px;line-height:1.6;">
+        Ti informiamo che il tuo account <strong>${appName}</strong> è stato
+        <strong>eliminato definitivamente</strong> in data
+        <strong>${formattedDate}</strong> da un amministratore della piattaforma.
+      </p>
+      <p style="margin:0 0 32px;color:${t.textMuted};font-size:15px;line-height:1.6;">
+        I tuoi dati personali sono stati rimossi dai sistemi attivi.
+        Se ritieni che questa operazione sia avvenuta per errore, contatta il nostro supporto.
+      </p>`;
+
   return `
 <!DOCTYPE html>
 <html lang="it">
@@ -56,15 +113,7 @@ function buildHtml(
           <tr>
             <td style="padding:40px;">
               <p style="margin:0 0 8px;color:${t.textPrimary};font-size:16px;">${greeting}</p>
-              <p style="margin:0 0 24px;color:${t.textMuted};font-size:15px;line-height:1.6;">
-                Ti informiamo che il tuo account <strong>${appName}</strong> è stato
-                <strong>eliminato definitivamente</strong> in data
-                <strong>${formattedDate}</strong> da un amministratore della piattaforma.
-              </p>
-              <p style="margin:0 0 32px;color:${t.textMuted};font-size:15px;line-height:1.6;">
-                I tuoi dati personali sono stati rimossi dai sistemi attivi.
-                Se ritieni che questa operazione sia avvenuta per errore, contatta il nostro supporto.
-              </p>
+              ${bodyHtml}
 
               <!-- Alert box -->
               <table width="100%" cellpadding="0" cellspacing="0">
@@ -83,9 +132,7 @@ function buildHtml(
           <!-- Footer -->
           <tr>
             <td style="background:${t.bgPage};padding:20px 40px;border-top:1px solid ${t.border};">
-              <p style="margin:0;color:${t.textLight};font-size:12px;">
-                © ${new Date().getFullYear()} ${appName} · Tutti i diritti riservati
-              </p>
+              <p style="margin:0;color:${t.textLight};font-size:12px;">${footerText}</p>
             </td>
           </tr>
 
