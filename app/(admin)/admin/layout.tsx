@@ -8,8 +8,19 @@ import { getAppSettings } from "@/lib/db/settings-queries";
 import { getUserPermissions } from "@/lib/rbac/can";
 import { headers } from "next/headers";
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import AdminShellClient from "./_components/admin-shell-client";
 import AdminHeaderRight from "./_components/header";
+
+// Template metadata: ogni page.tsx esporta solo il titolo specifico
+// es. export const metadata = { title: "Utenti" }
+// risultato nel tab: "Utenti | Admin"
+export const metadata: Metadata = {
+  title: {
+    template: "%s | Admin",
+    default: "Admin",
+  },
+};
 
 async function AdminShell({ children }: { children: React.ReactNode }) {
   const headersList = await headers();
