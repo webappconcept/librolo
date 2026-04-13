@@ -2,7 +2,6 @@
 import { db } from "@/lib/db/drizzle";
 import { activityLogs, pageTemplates, pages, permissions, redirects, rolePermissions, roles, users } from "@/lib/db/schema";
 import { and, count, desc, eq, isNotNull, isNull, sql } from "drizzle-orm";
-import { unstable_noStore as noStore } from "next/cache";
 import "server-only";
 
 // ---------------------------------------------------------------------------
@@ -74,12 +73,15 @@ export async function getDashboardStats() {
 }
 
 /**
- * Stats complete per la nuova dashboard — utenti, CMS, ruoli, redirect, attività recente.
+ * Stats complete per la dashboard — utenti, CMS, ruoli, redirect, attività recente.
  * Tutti i conteggi vengono eseguiti in parallelo con Promise.all.
+ *
+ * NON usa noStore(): la route /admin è già dinamica per definizione
+ * (headers(), cookies(), requireAdminPage() nel layout). Aggiungere noStore()
+ * qui causerebbe un conflitto con la cache React del RootLayout che risolve
+ * getAppSettings() in parallelo, generando un hang della pagina.
  */
 export async function getFullDashboardStats() {
-  noStore();
-
   const [
     userStats,
     pagesPublished,
@@ -125,8 +127,12 @@ export async function getFullDashboardStats() {
   };
 }
 
+/**
+ * Dati per il grafico crescita utenti degli ultimi 7 mesi.
+ *
+ * NON usa noStore(): stessa ragione di getFullDashboardStats.
+ */
 export async function getUserGrowthChart() {
-  noStore();
   const rows = await db.execute(sql`
     SELECT TO_CHAR(DATE_TRUNC('month', created_at), 'Mon') AS month, COUNT(*) AS total
     FROM users
@@ -463,3 +469,6 @@ export async function getActivityLogs({
     totalPages: Math.ceil(totalCount[0].count / perPage),
   };
 }
+
+// noStore import mantenuto solo per getAdminUsers, getStaffUsers, getActivityLogs
+import { unstable_noStore as noStore } from "next/cache";
