@@ -1,9 +1,17 @@
 // app/(admin)/admin/page.tsx
+//
+// getAppSettings() era chiamata qui in parallelo con getFullDashboardStats()
+// e getUserGrowthChart(). Poiché getAppSettings() viene già risolta nel
+// RootLayout (app/layout.tsx) durante lo stesso render tree, la chiamata
+// duplicata — combinata con noStore() nelle query dashboard — causava un
+// conflitto nella cache React e un hang della pagina.
+//
+// Il nome app non viene più mostrato nel greeting: semplificazione corretta
+// dato che l'AdminShell (layout) mostra già il nome app nella sidebar.
 import {
   getFullDashboardStats,
   getUserGrowthChart,
 } from "@/lib/db/admin-queries";
-import { getAppSettings } from "@/lib/db/settings-queries";
 import {
   BookOpen,
   FileText,
@@ -18,10 +26,9 @@ import { DashboardCharts } from "./_components/dashboard-charts";
 import KpiCard from "./_components/kpi-card";
 
 export default async function AdminDashboardPage() {
-  const [stats, growthData, settings] = await Promise.all([
+  const [stats, growthData] = await Promise.all([
     getFullDashboardStats(),
     getUserGrowthChart(),
-    getAppSettings(),
   ]);
 
   const now = new Date();
@@ -45,12 +52,7 @@ export default async function AdminDashboardPage() {
           <p
             className="text-sm mt-0.5"
             style={{ color: "var(--admin-text-muted)" }}>
-            Panoramica in tempo reale di{" "}
-            <span
-              className="font-semibold"
-              style={{ color: "var(--admin-accent)" }}>
-              {settings.app_name}
-            </span>
+            Panoramica in tempo reale della piattaforma
           </p>
         </div>
         <div
