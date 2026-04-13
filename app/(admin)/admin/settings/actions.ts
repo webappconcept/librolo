@@ -31,6 +31,7 @@ export async function saveAppSettings(
     await updateAppSetting("app_name", formData.get("app_name") as string);
     await updateAppSetting("app_description", formData.get("app_description") as string);
     await updateAppSetting("app_domain", domain ? `https://${domain}` : "");
+    revalidatePath("/admin/settings");
     return { success: "Impostazioni salvate.", timestamp: Date.now() };
   } catch {
     return { error: "Errore durante il salvataggio.", timestamp: Date.now() };
@@ -53,6 +54,7 @@ export async function saveBehaviourSettings(
       "maintenance_mode",
       formData.get("maintenance_mode") as string,
     );
+    revalidatePath("/admin/settings");
     return { success: "Impostazioni comportamento salvate.", timestamp: Date.now() };
   } catch {
     return { error: "Errore durante il salvataggio.", timestamp: Date.now() };
@@ -70,6 +72,7 @@ export async function saveEmailSettings(
     await updateAppSetting("resend_api_key", formData.get("resend_api_key") as string);
     await updateAppSetting("email_from_name", formData.get("email_from_name") as string);
     await updateAppSetting("email_from_address", formData.get("email_from_address") as string);
+    revalidatePath("/admin/settings");
     return { success: "Impostazioni email salvate.", timestamp: Date.now() };
   } catch {
     return { error: "Errore durante il salvataggio.", timestamp: Date.now() };
@@ -88,6 +91,7 @@ export async function saveUsersSettings(
       "default_role",
       formData.get("default_role") as string,
     );
+    revalidatePath("/admin/settings");
     return { success: "Impostazioni utenti salvate.", timestamp: Date.now() };
   } catch {
     return { error: "Errore durante il salvataggio.", timestamp: Date.now() };
