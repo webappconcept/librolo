@@ -20,9 +20,7 @@ function getStaticAppRoutes(): string[] {
     ...USER_MENU_ITEMS.map((i) => i.href),
     ...FOOTER_LINKS.map((i) => i.href),
   ]);
-  return [...paths]
-    .filter((p) => !p.startsWith("/admin"))
-    .sort();
+  return [...paths].filter((p) => !p.startsWith("/admin")).sort();
 }
 
 async function SeoContent() {
@@ -62,24 +60,24 @@ export default function MetaTagsPage() {
         <div
           className="w-9 h-9 rounded-xl flex items-center justify-center"
           style={{
-            background: "color-mix(in srgb, var(--admin-accent) 12%, var(--admin-card-bg))",
-            border: "1px solid color-mix(in srgb, var(--admin-accent) 25%, transparent)",
-          }}
-        >
+            background:
+              "color-mix(in srgb, var(--admin-accent) 12%, var(--admin-card-bg))",
+            border:
+              "1px solid color-mix(in srgb, var(--admin-accent) 25%, transparent)",
+          }}>
           <SearchCheck size={18} style={{ color: "var(--admin-accent)" }} />
         </div>
         <div>
           <h2
             className="text-xl font-bold"
-            style={{ color: "var(--admin-text)" }}
-          >
+            style={{ color: "var(--admin-text)" }}>
             Meta Tags
           </h2>
           <p
             className="text-sm mt-0.5"
-            style={{ color: "var(--admin-text-muted)" }}
-          >
-            Gestisci i meta tag delle pagine dell&apos;app.
+            style={{ color: "var(--admin-text-muted)" }}>
+            Gestisci i meta tag delle pagine predefinite e dei contenuti
+            dell&apos;app.
           </p>
         </div>
       </div>
@@ -89,8 +87,7 @@ export default function MetaTagsPage() {
         style={{
           background: "var(--admin-card-bg)",
           border: "1px solid var(--admin-card-border)",
-        }}
-      >
+        }}>
         <Suspense
           fallback={
             <div className="flex items-center justify-center h-32">
@@ -102,8 +99,7 @@ export default function MetaTagsPage() {
                 }}
               />
             </div>
-          }
-        >
+          }>
           <SeoContent />
         </Suspense>
       </div>
