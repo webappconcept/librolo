@@ -6,12 +6,11 @@ import { roles, users, activityLogs } from "@/lib/db/schema";
 import { requireAdmin } from "@/lib/rbac/guards";
 import { can } from "@/lib/rbac/can";
 import { ActivityType } from "@/lib/db/schema";
+import { getAppSettings } from "@/lib/db/settings-queries";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { Resend } from "resend";
 import UserDeletedEmail from "@/emails/user-deleted";
-
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function banUser(userId: number, reason?: string) {
   await requireAdmin();
@@ -66,7 +65,7 @@ export async function deleteUser(userId: number) {
 
   if (!target) throw new Error("Utente non trovato.");
   if (target.isAdmin) throw new Error("Non puoi eliminare un account admin.");
-  if (target.deletedAt) throw new Error("Utente già eliminato.");
+  if (target.deletedAt) throw new Error("Utente gi\u00e0 eliminato.");
 
   const deletedAt = new Date();
 
@@ -83,17 +82,27 @@ export async function deleteUser(userId: number) {
     timestamp: deletedAt,
   });
 
-  // 6. Email notifica all'utente eliminato
+  // 6. Email notifica — mittente letto dal DB (Impostazioni > Email)
   try {
-    await resend.emails.send({
-      from: process.env.RESEND_FROM_EMAIL ?? "noreply@librolo.it",
-      to: target.email,
-      subject: "Il tuo account Librolo è stato eliminato",
-      react: UserDeletedEmail({
-        firstName: target.firstName ?? "Utente",
-        deletedAt,
-      }),
-    });
+    const settings = await getAppSettings();
+    const apiKey = settings.resend_api_key ?? process.env.RESEND_API_KEY;
+    if (apiKey) {
+      const resend = new Resend(apiKey);
+      const fromName = settings.email_from_name ?? "Librolo";
+      const fromAddress =
+        settings.email_from_address ?? "noreply@librolo.it";
+      const from = `${fromName} <${fromAddress}>`;
+
+      await resend.emails.send({
+        from,
+        to: target.email,
+        subject: "Il tuo account Librolo \u00e8 stato eliminato",
+        react: UserDeletedEmail({
+          firstName: target.firstName ?? "Utente",
+          deletedAt,
+        }),
+      });
+    }
   } catch (emailError) {
     // Non bloccare l'operazione se l'email fallisce
     console.error("[deleteUser] Errore invio email Resend:", emailError);
