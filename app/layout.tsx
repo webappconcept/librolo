@@ -1,5 +1,6 @@
 import { DynamicWrapper } from "@/components/dynamic-wrapper";
 import { JsonLdScript } from "@/components/json-ld-script";
+import MaintenancePage from "@/components/maintenance-page";
 import { getAppSettings } from "@/lib/db/settings-queries";
 import { getActiveSnippets } from "@/lib/db/snippets-queries";
 import type { SiteSnippet, SnippetType } from "@/lib/db/schema";
@@ -101,72 +102,13 @@ function BodyEndSnippets({ snippets }: { snippets: SiteSnippet[] }) {
 }
 
 // ---------------------------------------------------------------------------
-// Maintenance overlay
-// ---------------------------------------------------------------------------
-
-async function MaintenanceOverlay() {
-  const headersList = await headers();
-  const pathname = headersList.get("x-pathname") ?? "/";
-
-  const skipOverlay =
-    pathname === "/sign-in" ||
-    pathname.startsWith("/sign-in/") ||
-    pathname === "/sign-up" ||
-    pathname.startsWith("/sign-up/") ||
-    pathname === "/admin" ||
-    pathname.startsWith("/admin/");
-
-  if (skipOverlay) return null;
-
-  const settings = await getAppSettings();
-  if (settings.maintenance_mode !== "true") return null;
-
-  return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 9999,
-        backdropFilter: "blur(6px)",
-        WebkitBackdropFilter: "blur(6px)",
-        backgroundColor: "rgba(0,0,0,0.45)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "1rem",
-      }}>
-      <div
-        style={{
-          background: "#fff",
-          borderRadius: "1rem",
-          padding: "2.5rem 2rem",
-          maxWidth: "420px",
-          width: "100%",
-          textAlign: "center",
-          boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
-        }}>
-        <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>🔧</div>
-        <h2
-          style={{
-            fontSize: "1.25rem",
-            fontWeight: 700,
-            color: "#111",
-            marginBottom: "0.5rem",
-          }}>
-          Sito in manutenzione
-        </h2>
-        <p style={{ fontSize: "0.95rem", color: "#555", lineHeight: 1.6 }}>
-          Stiamo lavorando per migliorare la tua esperienza.
-          <br />
-          Torna a trovarci a breve.
-        </p>
-      </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Root layout — async per risolvere gli snippet prima del render
+// Root layout — async per risolvere snippet + settings in un unico Promise.all.
+//
+// Logica manutenzione:
+// - Se maintenance_mode = "true" E la route NON è /admin* → mostra MaintenancePage
+// - MaintenancePage è un componente statico (zero query DB)
+// - Il check è sincrono nel render: nessun componente async annidato,
+//   nessun Suspense aggiuntivo, zero overhead se la manutenzione è disattiva.
 // ---------------------------------------------------------------------------
 
 export default async function RootLayout({
@@ -174,15 +116,30 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Fetch unico: suddividiamo per position dopo
-  const allSnippets = await getActiveSnippets();
+  const headersList = await headers();
+  const pathname = headersList.get("x-pathname") ?? "/";
+
+  const isAdminRoute =
+    pathname === "/admin" || pathname.startsWith("/admin/");
+
+  // Fetch unico: snippet + settings in parallelo
+  const [allSnippets, settings] = await Promise.all([
+    getActiveSnippets(),
+    getAppSettings(),
+  ]);
+
   const headSnippets = allSnippets.filter((s) => s.position === "head");
   const bodySnippets = allSnippets.filter((s) => s.position === "body_end");
+
+  const isMaintenance =
+    settings.maintenance_mode === "true" && !isAdminRoute;
 
   return (
     <html
       lang="en"
-      className={`bg-white dark:bg-gray-950 text-black dark:text-white ${manrope.className}`}>
+      className={`bg-white dark:bg-gray-950 text-black dark:text-white ${
+        manrope.className
+      }`}>
       <head>
         {/*
          * JsonLdScript rimane in Suspense: è opzionale e non urgente.
@@ -195,10 +152,13 @@ export default async function RootLayout({
         <HeadSnippets snippets={headSnippets} />
       </head>
       <body className="min-h-[100dvh] bg-gray-50">
-        <Suspense>
-          <DynamicWrapper>{children}</DynamicWrapper>
-          <MaintenanceOverlay />
-        </Suspense>
+        {isMaintenance ? (
+          <MaintenancePage />
+        ) : (
+          <Suspense fallback={null}>
+            <DynamicWrapper>{children}</DynamicWrapper>
+          </Suspense>
+        )}
         {/* Snippet position="body_end" — afterInteractive, va bene nel body */}
         <BodyEndSnippets snippets={bodySnippets} />
       </body>
