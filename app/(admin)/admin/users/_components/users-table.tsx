@@ -2,12 +2,11 @@
 "use client";
 
 import type { AdminUser } from "@/lib/db/admin-queries";
-import { ShieldBan, ShieldCheck, Trash2 } from "lucide-react";
+import { ShieldBan, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { unbanUser } from "../actions";
 import BanModal from "./ban-modal";
-import DeleteModal from "./delete-modal";
 
 /** Badge ruolo colorato — il colore viene passato dal server tramite roleColor */
 function RoleBadge({ label, color }: { label: string; color: string }) {
@@ -36,16 +35,9 @@ function PlanBadge({ status }: { status: string | null }) {
   );
 }
 
-function UserRow({
-  user,
-  canDelete,
-}: {
-  user: AdminUser;
-  canDelete: boolean;
-}) {
+function UserRow({ user }: { user: AdminUser }) {
   const [pending, startTransition] = useTransition();
   const [showBanModal, setShowBanModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const isBanned = !!user.bannedAt;
   const isDeleted = !!user.deletedAt;
   const initials =
@@ -53,9 +45,6 @@ function UserRow({
       .filter(Boolean)
       .map((n) => n![0].toUpperCase())
       .join("") || user.email[0].toUpperCase();
-
-  const fullName =
-    [user.firstName, user.lastName].filter(Boolean).join(" ") || initials;
 
   return (
     <tr
@@ -167,18 +156,6 @@ function UserRow({
                 <ShieldBan size={13} /> Ban
               </button>
             )}
-
-            {/* Elimina — solo con permesso users:delete, non admin, non già eliminato */}
-            {canDelete && !isDeleted && (
-              <button
-                onClick={() => setShowDeleteModal(true)}
-                title="Elimina utente"
-                aria-label="Elimina utente"
-                className="flex items-center gap-1 text-xs font-medium p-1.5 rounded-lg transition-colors text-red-700 hover:bg-red-100"
-                style={{ background: "transparent" }}>
-                <Trash2 size={14} />
-              </button>
-            )}
           </div>
         )}
 
@@ -189,27 +166,12 @@ function UserRow({
             onClose={() => setShowBanModal(false)}
           />
         )}
-
-        {showDeleteModal && (
-          <DeleteModal
-            userId={user.id}
-            userName={fullName}
-            userEmail={user.email}
-            onClose={() => setShowDeleteModal(false)}
-          />
-        )}
       </td>
     </tr>
   );
 }
 
-export default function UsersTable({
-  users,
-  canDelete,
-}: {
-  users: AdminUser[];
-  canDelete: boolean;
-}) {
+export default function UsersTable({ users }: { users: AdminUser[] }) {
   if (users.length === 0) {
     return (
       <div
@@ -241,7 +203,7 @@ export default function UsersTable({
         </thead>
         <tbody>
           {users.map((u) => (
-            <UserRow key={u.id} user={u} canDelete={canDelete} />
+            <UserRow key={u.id} user={u} />
           ))}
         </tbody>
       </table>
