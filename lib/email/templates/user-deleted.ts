@@ -26,14 +26,14 @@ export async function sendUserDeletedEmail(
 
   const subject = resolveTemplate(
     settings.email_deleted_subject,
-    `Il tuo account è stato eliminato — ${app_name}`,
+    `Il tuo account \u00e8 stato eliminato \u2014 ${app_name}`,
     vars,
   );
   const bcc = settings.email_deleted_bcc ?? undefined;
   const bodyText = resolveTemplate(settings.email_deleted_body, null, vars);
   const footerText = resolveTemplate(
     settings.email_deleted_footer,
-    `© ${new Date().getFullYear()} ${app_name} · Tutti i diritti riservati`,
+    `\u00a9 ${new Date().getFullYear()} ${app_name} \u00b7 Tutti i diritti riservati`,
     vars,
   );
 
@@ -76,7 +76,7 @@ function buildHtml({
         .join("")
     : `
       <p style="margin:0 0 24px;color:${t.textMuted};font-size:15px;line-height:1.6;">
-        Ti informiamo che il tuo account <strong>${appName}</strong> è stato
+        Ti informiamo che il tuo account <strong>${appName}</strong> \u00e8 stato
         <strong>eliminato definitivamente</strong> in data
         <strong>${formattedDate}</strong> da un amministratore della piattaforma.
       </p>
@@ -99,23 +99,17 @@ function buildHtml({
       <td align="center">
         <table width="520" cellpadding="0" cellspacing="0"
           style="background:${t.bgCard};border-radius:${t.radiusXl};overflow:hidden;border:1px solid ${t.border};">
-
-          <!-- Header -->
           <tr>
             <td style="background:${t.brandPrimary};padding:32px 40px;">
               <h1 style="margin:0;color:${t.textInverse};font-size:22px;font-weight:700;letter-spacing:-0.3px;">
-                📚 ${appName}
+                \uD83D\uDCDA ${appName}
               </h1>
             </td>
           </tr>
-
-          <!-- Body -->
           <tr>
             <td style="padding:40px;">
               <p style="margin:0 0 8px;color:${t.textPrimary};font-size:16px;">${greeting}</p>
               ${bodyHtml}
-
-              <!-- Alert box -->
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td style="background:#fff5f5;border:1px solid #fecaca;border-radius:8px;padding:14px 16px;">
@@ -128,14 +122,11 @@ function buildHtml({
               </table>
             </td>
           </tr>
-
-          <!-- Footer -->
           <tr>
             <td style="background:${t.bgPage};padding:20px 40px;border-top:1px solid ${t.border};">
               <p style="margin:0;color:${t.textLight};font-size:12px;">${footerText}</p>
             </td>
           </tr>
-
         </table>
       </td>
     </tr>

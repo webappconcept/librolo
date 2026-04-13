@@ -9,21 +9,19 @@ export async function sendWelcomeEmail(to: string, userName?: string) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
   const greeting = userName ? `Ciao ${userName},` : "Ciao,";
 
+  const vars = { appName: app_name, userEmail: to, userName: userName ?? "", appUrl };
+
   const subject = resolveTemplate(
     settings.email_welcome_subject,
     `Benvenuto in ${app_name}`,
-    { appName: app_name, userEmail: to, userName: userName ?? "", appUrl },
+    vars,
   );
   const bcc = settings.email_welcome_bcc ?? undefined;
-  const bodyText = resolveTemplate(
-    settings.email_welcome_body,
-    null,
-    { appName: app_name, userEmail: to, userName: userName ?? "", appUrl },
-  );
+  const bodyText = resolveTemplate(settings.email_welcome_body, null, vars);
   const footerText = resolveTemplate(
     settings.email_welcome_footer,
-    `© ${new Date().getFullYear()} ${app_name} · Tutti i diritti riservati`,
-    { appName: app_name, userEmail: to, userName: userName ?? "", appUrl },
+    `\u00a9 ${new Date().getFullYear()} ${app_name} \u00b7 Tutti i diritti riservati`,
+    vars,
   );
 
   await sendEmail({
@@ -77,17 +75,13 @@ function buildHtml({
       <td align="center">
         <table width="520" cellpadding="0" cellspacing="0"
           style="background:${t.bgCard};border-radius:${t.radiusXl};overflow:hidden;border:1px solid ${t.border};">
-
-          <!-- Header -->
           <tr>
             <td style="background:${t.brandPrimary};padding:32px 40px;">
               <h1 style="margin:0;color:${t.textInverse};font-size:22px;font-weight:700;letter-spacing:-0.3px;">
-                📚 ${appName}
+                \uD83D\uDCDA ${appName}
               </h1>
             </td>
           </tr>
-
-          <!-- Body -->
           <tr>
             <td style="padding:40px;">
               <p style="margin:0 0 20px;color:${t.textPrimary};font-size:16px;">${greeting}</p>
@@ -105,14 +99,11 @@ function buildHtml({
               </table>` : ""}
             </td>
           </tr>
-
-          <!-- Footer -->
           <tr>
             <td style="background:${t.bgPage};padding:20px 40px;border-top:1px solid ${t.border};">
               <p style="margin:0;color:${t.textLight};font-size:12px;">${footerText}</p>
             </td>
           </tr>
-
         </table>
       </td>
     </tr>

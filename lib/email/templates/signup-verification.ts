@@ -16,14 +16,14 @@ export async function sendSignupVerificationEmail(
 
   const subject = resolveTemplate(
     settings.email_signup_subject,
-    `Verifica la tua email — ${app_name}`,
+    `Verifica la tua email \u2014 ${app_name}`,
     vars,
   );
   const bcc = settings.email_signup_bcc ?? undefined;
   const bodyText = resolveTemplate(settings.email_signup_body, null, vars);
   const footerText = resolveTemplate(
     settings.email_signup_footer,
-    `© ${new Date().getFullYear()} ${app_name} · Tutti i diritti riservati`,
+    `\u00a9 ${new Date().getFullYear()} ${app_name} \u00b7 Tutti i diritti riservati`,
     vars,
   );
 
@@ -66,7 +66,7 @@ function buildHtml({
         .join("")
     : `<p style="margin:0 0 32px;color:${t.textMuted};font-size:15px;line-height:1.6;">
         Usa il codice qui sotto per verificare il tuo account.
-        Il codice è valido per <strong>15 minuti</strong>.
+        Il codice \u00e8 valido per <strong>15 minuti</strong>.
        </p>`;
 
   return `
@@ -83,23 +83,17 @@ function buildHtml({
       <td align="center">
         <table width="520" cellpadding="0" cellspacing="0"
           style="background:${t.bgCard};border-radius:${t.radiusXl};overflow:hidden;border:1px solid ${t.border};">
-
-          <!-- Header -->
           <tr>
             <td style="background:${t.brandPrimary};padding:32px 40px;">
               <h1 style="margin:0;color:${t.textInverse};font-size:22px;font-weight:700;letter-spacing:-0.3px;">
-                📚 ${appName}
+                \uD83D\uDCDA ${appName}
               </h1>
             </td>
           </tr>
-
-          <!-- Body -->
           <tr>
             <td style="padding:40px;">
               <p style="margin:0 0 8px;color:${t.textPrimary};font-size:16px;">${greeting}</p>
               ${bodyHtml}
-
-              <!-- OTP Box -->
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td align="center" style="padding:16px 0 32px;">
@@ -109,21 +103,17 @@ function buildHtml({
                   </td>
                 </tr>
               </table>
-
               <p style="margin:0;color:${t.textLight};font-size:13px;line-height:1.5;">
                 Se non hai creato un account, puoi ignorare questa email.<br/>
                 Non condividere questo codice con nessuno.
               </p>
             </td>
           </tr>
-
-          <!-- Footer -->
           <tr>
             <td style="background:${t.bgPage};padding:20px 40px;border-top:1px solid ${t.border};">
               <p style="margin:0;color:${t.textLight};font-size:12px;">${footerText}</p>
             </td>
           </tr>
-
         </table>
       </td>
     </tr>
