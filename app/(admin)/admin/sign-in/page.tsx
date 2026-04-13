@@ -1,7 +1,9 @@
 // app/(admin)/admin/sign-in/page.tsx
-// Pagina di login dedicata agli amministratori.
-import { AdminLogin } from "@/app/(admin)/admin/sign-in/admin-login";
+import type { Metadata } from "next";
+import AdminLoginForm from "./_components/admin-login-form";
+
+export const metadata: Metadata = { title: "Accesso" };
 
 export default function AdminSignInPage() {
-  return <AdminLogin />;
+  return <AdminLoginForm />;
 }

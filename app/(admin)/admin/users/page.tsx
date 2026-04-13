@@ -1,9 +1,12 @@
 // app/(admin)/admin/users/page.tsx
+import type { Metadata } from "next";
 import { getAdminUsers } from "@/lib/db/admin-queries";
 import { getAdminRoles } from "@/lib/db/roles-queries";
 import { Search, Users } from "lucide-react";
 import { Suspense } from "react";
 import UsersTable from "./_components/users-table";
+
+export const metadata: Metadata = { title: "Utenti" };
 
 async function UsersContent({
   search,
@@ -142,7 +145,6 @@ export default async function AdminUsersPage({
         </div>
       </div>
 
-      {/* Filtri */}
       <div
         className="rounded-xl shadow-sm p-4"
         style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-card-border)" }}>

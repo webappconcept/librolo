@@ -1,6 +1,10 @@
 // app/(admin)/admin/page.tsx
 // TEMPORANEO — pagina svuotata per debug.
-// Nessuna query DB, nessun import pesante.
+// Nessuna query DB, nessun componente.
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "Dashboard" };
+
 export default function AdminDashboardPage() {
   return (
     <div style={{ padding: "2rem" }}>
