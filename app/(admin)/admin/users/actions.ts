@@ -10,7 +10,7 @@ import { getAppSettings } from "@/lib/db/settings-queries";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { Resend } from "resend";
-import UserDeletedEmail from "@/emails/user-deleted";
+import { renderUserDeletedEmail } from "@/emails/user-deleted";
 
 export async function banUser(userId: number, reason?: string) {
   await requireAdmin();
@@ -65,7 +65,7 @@ export async function deleteUser(userId: number) {
 
   if (!target) throw new Error("Utente non trovato.");
   if (target.isAdmin) throw new Error("Non puoi eliminare un account admin.");
-  if (target.deletedAt) throw new Error("Utente gi\u00e0 eliminato.");
+  if (target.deletedAt) throw new Error("Utente già eliminato.");
 
   const deletedAt = new Date();
 
@@ -96,8 +96,8 @@ export async function deleteUser(userId: number) {
       await resend.emails.send({
         from,
         to: target.email,
-        subject: "Il tuo account Librolo \u00e8 stato eliminato",
-        react: UserDeletedEmail({
+        subject: "Il tuo account Librolo è stato eliminato",
+        html: renderUserDeletedEmail({
           firstName: target.firstName ?? "Utente",
           deletedAt,
         }),
