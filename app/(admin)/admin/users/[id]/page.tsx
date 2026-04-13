@@ -5,6 +5,8 @@ import { getAllPermissions, getPermissionsByRole, getUserPermissionOverrides, pu
 import { db } from "@/lib/db/drizzle";
 import { roles } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import { getUser } from "@/lib/db/queries";
+import { can } from "@/lib/rbac/can";
 import {
   Activity,
   ArrowLeft,
@@ -18,7 +20,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { ActivityList } from "./_components/activity-list";
-import { BanButton, RoleSelector } from "./_components/user-detail-client";
+import { BanButton, DeleteButton, RoleSelector } from "./_components/user-detail-client";
 import { UserAccessTab } from "./_components/user-access-tab";
 import { UserDetailTabs } from "./_components/user-detail-tabs";
 
@@ -36,7 +38,7 @@ function StatusBadge({ user }: { user: Awaited<ReturnType<typeof getAdminUserByI
   return <span className="px-2.5 py-1 text-xs font-semibold bg-emerald-100 text-emerald-700 rounded-full">Attivo</span>;
 }
 
-async function UserContent({ id }: { id: number }) {
+async function UserContent({ id, canDelete }: { id: number; canDelete: boolean }) {
   const [user, activity, availableRoles, allPermissions] = await Promise.all([
     getAdminUserById(id),
     getAdminUserActivity(id),
@@ -161,6 +163,7 @@ async function UserContent({ id }: { id: number }) {
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <BanButton user={user} />
+          <DeleteButton user={user} canDelete={canDelete} />
         </div>
       </div>
 
@@ -184,6 +187,12 @@ export default async function AdminUserPage({
   const userId = Number(id);
   if (!userId || isNaN(userId)) notFound();
 
+  // Calcola canDelete per l'admin corrente
+  const currentUser = await getUser();
+  const canDelete = currentUser
+    ? currentUser.isAdmin || (await can(currentUser, "users:delete"))
+    : false;
+
   return (
     <div className="space-y-6">
       <Link
@@ -200,7 +209,7 @@ export default async function AdminUserPage({
             <div className="h-64 rounded-xl" style={{ background: "var(--admin-hover-bg)" }} />
           </div>
         }>
-        <UserContent id={userId} />
+        <UserContent id={userId} canDelete={canDelete} />
       </Suspense>
     </div>
   );

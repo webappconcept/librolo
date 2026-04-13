@@ -3,13 +3,14 @@
 
 import type { AdminUserDetail } from "@/lib/db/admin-queries";
 import type { RoleRow } from "@/lib/db/roles-queries";
-import { Check, Shield, ShieldBan, ShieldCheck } from "lucide-react";
+import { Check, Shield, ShieldBan, ShieldCheck, Trash2 } from "lucide-react";
 import { useState, useTransition } from "react";
 import BanModal from "../../_components/ban-modal";
+import DeleteModal from "../../_components/delete-modal";
 import { unbanUser } from "../../actions";
 import { setUserRole } from "../../../roles/actions";
 
-// ─── BanButton (invariato) ────────────────────────────────────────────
+// ─── BanButton ────────────────────────────────────────────────────────
 export function BanButton({ user }: { user: AdminUserDetail }) {
   const [showModal, setShowModal] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -42,6 +43,48 @@ export function BanButton({ user }: { user: AdminUserDetail }) {
       )}
       {showModal && (
         <BanModal userId={user.id} userName={userName} onClose={() => setShowModal(false)} />
+      )}
+    </>
+  );
+}
+
+// ─── DeleteButton ─────────────────────────────────────────────────────
+export function DeleteButton({
+  user,
+  canDelete,
+}: {
+  user: AdminUserDetail;
+  canDelete: boolean;
+}) {
+  const [showModal, setShowModal] = useState(false);
+
+  // Non mostrare nulla se: non ha permesso, è già eliminato, o è admin
+  if (!canDelete || !!user.deletedAt || user.isAdmin) return null;
+
+  const fullName =
+    [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email;
+
+  return (
+    <>
+      <button
+        onClick={() => setShowModal(true)}
+        title="Elimina utente"
+        aria-label="Elimina utente"
+        className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors"
+        style={{
+          background: "var(--admin-hover-bg)",
+          color: "var(--color-error, #a12c7b)",
+        }}>
+        <Trash2 size={15} />
+        Elimina account
+      </button>
+      {showModal && (
+        <DeleteModal
+          userId={user.id}
+          userName={fullName}
+          userEmail={user.email}
+          onClose={() => setShowModal(false)}
+        />
       )}
     </>
   );
@@ -95,9 +138,7 @@ export function RoleSelector({
               {/* Icona */}
               <div
                 className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                style={{
-                  background: role.color + "20",
-                }}>
+                style={{ background: role.color + "20" }}>
                 <Shield size={14} style={{ color: role.color }} />
               </div>
               {/* Info */}
