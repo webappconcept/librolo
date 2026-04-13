@@ -25,13 +25,14 @@
 
   /* Superfici */
   --admin-card-bg: #ffffff;
-  --admin-card-border: #f3f4f6;
+  --admin-card-border: #e5e7eb;
   --admin-text: #1f2937;
   --admin-text-muted: #6b7280;
   --admin-text-faint: #9ca3af;
   --admin-divider: #f3f4f6;
-  --admin-input-bg: #f1f5f9;
-  --admin-input-border: #e5e7eb;
+  /* input-bg = bianco puro in light → contrasto netto su --admin-page-bg (#f1f5f9) */
+  --admin-input-bg: #ffffff;
+  --admin-input-border: #d1d5db;
   --admin-hover-bg: #f9fafb;
   --admin-icon-color: #6b7280;
 }

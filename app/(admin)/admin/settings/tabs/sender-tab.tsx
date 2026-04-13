@@ -36,7 +36,7 @@ function SenderTabInner({ settings }: { settings: AppSettings }) {
   }, [state]);
 
   const inputStyle = {
-    background: "var(--admin-page-bg)",
+    background: "var(--admin-input-bg)",
     border: "1px solid var(--admin-input-border)",
     color: "var(--admin-text)",
   };

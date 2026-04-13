@@ -9,7 +9,7 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { saveEmailTemplateSettings, type ActionState } from "../actions";
 
 // ---------------------------------------------------------------------------
-// Placeholder chips per tipo di email
+// Placeholder chips
 // ---------------------------------------------------------------------------
 const PLACEHOLDERS: Record<string, { label: string; value: string }[]> = {
   welcome: [
@@ -38,9 +38,6 @@ const PLACEHOLDERS: Record<string, { label: string; value: string }[]> = {
   ],
 };
 
-// ---------------------------------------------------------------------------
-// Definizione dei 4 template
-// ---------------------------------------------------------------------------
 const TEMPLATES = [
   {
     id: "welcome",
@@ -141,7 +138,6 @@ function TemplatePanel({
     const start = el.selectionStart ?? el.value.length;
     const end = el.selectionEnd ?? el.value.length;
     const newVal = el.value.slice(0, start) + value + el.value.slice(end);
-    // Update natively so React controlled state stays in sync
     const nativeSetter = Object.getOwnPropertyDescriptor(
       el.nodeName === "TEXTAREA" ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype,
       "value",
@@ -152,8 +148,10 @@ function TemplatePanel({
     el.setSelectionRange(start + value.length, start + value.length);
   }
 
+  // Le input usano --admin-input-bg (#fff in light, scuro in dark)
+  // che contrasta con --admin-page-bg (#f1f5f9) usato come sfondo sezione aperta
   const inputStyle = {
-    background: "var(--admin-page-bg)",
+    background: "var(--admin-input-bg)",
     border: "1px solid var(--admin-input-border)",
     color: "var(--admin-text)",
   };
@@ -163,18 +161,13 @@ function TemplatePanel({
   return (
     <div
       className="rounded-xl overflow-hidden"
-      style={{
-        border: "1px solid var(--admin-card-border)",
-      }}>
+      style={{ border: "1px solid var(--admin-card-border)" }}>
       {/* Header */}
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         className="w-full flex items-center justify-between px-5 py-4 text-left transition-colors"
-        style={{
-          background: open ? "var(--admin-card-bg)" : "var(--admin-card-bg)",
-          color: "var(--admin-text)",
-        }}>
+        style={{ background: "var(--admin-card-bg)", color: "var(--admin-text)" }}>
         <span className="text-sm font-semibold">{template.label}</span>
         <div className="flex items-center gap-2">
           {(currentSubject || currentBody) && (
@@ -198,7 +191,7 @@ function TemplatePanel({
         </div>
       </button>
 
-      {/* Body */}
+      {/* Body — sfondo --admin-page-bg così le input bianche spiccano */}
       {open && (
         <div
           className="px-5 py-5 space-y-5"
@@ -220,7 +213,6 @@ function TemplatePanel({
                   label={chip.label}
                   value={chip.value}
                   onInsert={(v) => {
-                    // Try to insert into last focused ref — focus order: subject > body > footer
                     const active = document.activeElement;
                     if (active === subjectRef.current)
                       insertPlaceholder(subjectRef as React.RefObject<HTMLInputElement>, v);
