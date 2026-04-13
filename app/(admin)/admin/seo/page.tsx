@@ -1,4 +1,7 @@
-// app/(admin)/admin/seo/page.tsx — aggiunto metadata
-import type { Metadata } from "next";
-export { default } from "./seo-page";
-export const metadata: Metadata = { title: "SEO" };
+// app/(admin)/admin/seo/page.tsx
+// Redirect automatico a /admin/seo/meta-tags (prima tab)
+import { redirect } from "next/navigation";
+
+export default function SeoIndexPage() {
+  redirect("/admin/seo/meta-tags");
+}
