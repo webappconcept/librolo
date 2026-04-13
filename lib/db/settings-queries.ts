@@ -42,8 +42,8 @@ async function fetchAppSettings(): Promise<AppSettings> {
   const rows = await db.select().from(appSettings);
   const result: AppSettings = { ...DEFAULTS };
   for (const row of rows) {
-    if (row.key in result) {
-      (result as Record<string, string | null>)[row.key] = row.value ?? null;
+    if (row.key in result && row.value !== null) {
+      (result as Record<string, string | null>)[row.key] = row.value;
     }
   }
   return result;
