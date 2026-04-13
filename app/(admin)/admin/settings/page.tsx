@@ -1,10 +1,13 @@
 // app/(admin)/admin/settings/page.tsx
+import type { Metadata } from "next";
 import { db } from "@/lib/db/drizzle";
 import { roles } from "@/lib/db/schema";
 import { getAppSettings } from "@/lib/db/settings-queries";
 import { getAllSnippets } from "@/lib/db/snippets-queries";
 import { asc } from "drizzle-orm";
 import { SettingsTabs } from "./settings-tabs";
+
+export const metadata: Metadata = { title: "Impostazioni" };
 
 export default async function SettingsPage() {
   const [settings, snippets, allRoles] = await Promise.all([

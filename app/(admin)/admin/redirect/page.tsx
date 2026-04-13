@@ -1,17 +1,4 @@
-import { getRedirects } from "@/lib/db/redirects-queries";
-import { redirect } from "next/navigation";
-import { deleteRedirectAction, upsertRedirectAction } from "./actions";
-import RedirectsClient from "./_components/redirects-client";
-
-export const metadata = { title: "Redirect | Admin" };
-
-export default async function RedirectsPage() {
-  const rows = await getRedirects();
-  return (
-    <RedirectsClient
-      rows={rows}
-      deleteAction={deleteRedirectAction}
-      upsertAction={upsertRedirectAction}
-    />
-  );
-}
+// app/(admin)/admin/redirect/page.tsx — aggiunto metadata
+import type { Metadata } from "next";
+export { default } from "./redirect-page";
+export const metadata: Metadata = { title: "Redirect" };
