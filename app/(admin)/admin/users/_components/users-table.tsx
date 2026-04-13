@@ -2,11 +2,12 @@
 "use client";
 
 import type { AdminUser } from "@/lib/db/admin-queries";
-import { ShieldBan, ShieldCheck } from "lucide-react";
+import { ShieldBan, ShieldCheck, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { unbanUser } from "../actions";
 import BanModal from "./ban-modal";
+import DeleteModal from "./delete-modal";
 
 /** Badge ruolo colorato — il colore viene passato dal server tramite roleColor */
 function RoleBadge({ label, color }: { label: string; color: string }) {
@@ -35,24 +36,41 @@ function PlanBadge({ status }: { status: string | null }) {
   );
 }
 
-function UserRow({ user }: { user: AdminUser }) {
+function UserRow({
+  user,
+  canDelete,
+}: {
+  user: AdminUser;
+  canDelete: boolean;
+}) {
   const [pending, startTransition] = useTransition();
   const [showBanModal, setShowBanModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const isBanned = !!user.bannedAt;
+  const isDeleted = !!user.deletedAt;
   const initials =
     [user.firstName, user.lastName]
       .filter(Boolean)
       .map((n) => n![0].toUpperCase())
       .join("") || user.email[0].toUpperCase();
 
+  const fullName =
+    [user.firstName, user.lastName].filter(Boolean).join(" ") || initials;
+
   return (
     <tr
-      className={`transition-colors ${isBanned ? "opacity-50" : ""}`}
+      className={`transition-colors ${
+        isBanned || isDeleted ? "opacity-50" : ""
+      }`}
       style={{ borderBottom: "1px solid var(--admin-divider)" }}
-      onMouseEnter={(e) => (e.currentTarget.style.background = "var(--admin-hover-bg)")}
-      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+      onMouseEnter={(e) =>
+        (e.currentTarget.style.background = "var(--admin-hover-bg)")
+      }
+      onMouseLeave={(e) =>
+        (e.currentTarget.style.background = "transparent")
+      }>
 
-      {/* Avatar + nome — cliccabile per aprire la scheda */}
+      {/* Avatar + nome */}
       <td className="px-4 py-3">
         <div className="flex items-center gap-3">
           <div
@@ -67,14 +85,16 @@ function UserRow({ user }: { user: AdminUser }) {
               style={{ color: "var(--admin-text)" }}>
               {user.firstName} {user.lastName}
             </Link>
-            <p className="text-xs mt-0.5" style={{ color: "var(--admin-text-faint)" }}>
+            <p
+              className="text-xs mt-0.5"
+              style={{ color: "var(--admin-text-faint)" }}>
               {user.email}
             </p>
           </div>
         </div>
       </td>
 
-      {/* Ruolo — read-only badge */}
+      {/* Ruolo */}
       <td className="px-4 py-3">
         <RoleBadge
           label={user.roleLabel ?? user.role}
@@ -100,43 +120,66 @@ function UserRow({ user }: { user: AdminUser }) {
 
       {/* Data iscrizione */}
       <td className="px-4 py-3 hidden lg:table-cell">
-        <span className="text-xs" style={{ color: "var(--admin-text-faint)" }}>
+        <span
+          className="text-xs"
+          style={{ color: "var(--admin-text-faint)" }}>
           {new Date(user.createdAt).toLocaleDateString("it-IT")}
         </span>
       </td>
 
-      {/* Azioni — solo ban/unban, niente cambio ruolo */}
+      {/* Azioni */}
       <td className="px-4 py-3">
         {user.isAdmin ? (
-          <span className="text-xs italic" style={{ color: "var(--admin-text-faint)" }}>—</span>
-        ) : isBanned ? (
-          <div className="flex items-center gap-2">
-            {user.bannedReason && (
-              <div className="relative group">
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 hidden group-hover:block w-max max-w-[220px]">
-                  <div className="bg-gray-900 text-white text-xs rounded-lg px-3 py-2 shadow-lg">
-                    {user.bannedReason}
-                  </div>
-                  <div className="w-2 h-2 bg-gray-900 rotate-45 mx-auto -mt-1" />
-                </div>
-                <span className="text-[11px] font-medium text-red-500 bg-red-50 px-2 py-0.5 rounded-full cursor-help">
-                  ⚠ motivo
-                </span>
-              </div>
-            )}
-            <button
-              disabled={pending}
-              onClick={() => startTransition(() => unbanUser(user.id))}
-              className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-lg transition-colors disabled:opacity-50 bg-emerald-50 text-emerald-700 hover:bg-emerald-100">
-              <ShieldCheck size={13} /> Riattiva
-            </button>
-          </div>
+          <span
+            className="text-xs italic"
+            style={{ color: "var(--admin-text-faint)" }}>
+            —
+          </span>
         ) : (
-          <button
-            onClick={() => setShowBanModal(true)}
-            className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-lg transition-colors bg-red-50 text-red-600 hover:bg-red-100">
-            <ShieldBan size={13} /> Ban
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Ban / Unban */}
+            {isBanned ? (
+              <div className="flex items-center gap-2">
+                {user.bannedReason && (
+                  <div className="relative group">
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 hidden group-hover:block w-max max-w-[220px]">
+                      <div className="bg-gray-900 text-white text-xs rounded-lg px-3 py-2 shadow-lg">
+                        {user.bannedReason}
+                      </div>
+                      <div className="w-2 h-2 bg-gray-900 rotate-45 mx-auto -mt-1" />
+                    </div>
+                    <span className="text-[11px] font-medium text-red-500 bg-red-50 px-2 py-0.5 rounded-full cursor-help">
+                      ⚠ motivo
+                    </span>
+                  </div>
+                )}
+                <button
+                  disabled={pending}
+                  onClick={() => startTransition(() => unbanUser(user.id))}
+                  className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-lg transition-colors disabled:opacity-50 bg-emerald-50 text-emerald-700 hover:bg-emerald-100">
+                  <ShieldCheck size={13} /> Riattiva
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowBanModal(true)}
+                className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-lg transition-colors bg-red-50 text-red-600 hover:bg-red-100">
+                <ShieldBan size={13} /> Ban
+              </button>
+            )}
+
+            {/* Elimina — solo con permesso users:delete, non admin, non già eliminato */}
+            {canDelete && !isDeleted && (
+              <button
+                onClick={() => setShowDeleteModal(true)}
+                title="Elimina utente"
+                aria-label="Elimina utente"
+                className="flex items-center gap-1 text-xs font-medium p-1.5 rounded-lg transition-colors text-red-700 hover:bg-red-100"
+                style={{ background: "transparent" }}>
+                <Trash2 size={14} />
+              </button>
+            )}
+          </div>
         )}
 
         {showBanModal && (
@@ -146,15 +189,32 @@ function UserRow({ user }: { user: AdminUser }) {
             onClose={() => setShowBanModal(false)}
           />
         )}
+
+        {showDeleteModal && (
+          <DeleteModal
+            userId={user.id}
+            userName={fullName}
+            userEmail={user.email}
+            onClose={() => setShowDeleteModal(false)}
+          />
+        )}
       </td>
     </tr>
   );
 }
 
-export default function UsersTable({ users }: { users: AdminUser[] }) {
+export default function UsersTable({
+  users,
+  canDelete,
+}: {
+  users: AdminUser[];
+  canDelete: boolean;
+}) {
   if (users.length === 0) {
     return (
-      <div className="text-center py-16 text-sm" style={{ color: "var(--admin-text-faint)" }}>
+      <div
+        className="text-center py-16 text-sm"
+        style={{ color: "var(--admin-text-faint)" }}>
         Nessun utente trovato.
       </div>
     );
@@ -165,21 +225,23 @@ export default function UsersTable({ users }: { users: AdminUser[] }) {
       <table className="w-full min-w-[640px]">
         <thead>
           <tr style={{ borderBottom: "1px solid var(--admin-divider)" }}>
-            {["Utente", "Ruolo", "Piano", "Email", "Iscritto il", "Azioni"].map((h, i) => (
-              <th
-                key={h}
-                className={`px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide ${
-                  i >= 3 && i <= 4 ? "hidden lg:table-cell" : ""
-                }`}
-                style={{ color: "var(--admin-text-faint)" }}>
-                {h}
-              </th>
-            ))}
+            {["Utente", "Ruolo", "Piano", "Email", "Iscritto il", "Azioni"].map(
+              (h, i) => (
+                <th
+                  key={h}
+                  className={`px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide ${
+                    i >= 3 && i <= 4 ? "hidden lg:table-cell" : ""
+                  }`}
+                  style={{ color: "var(--admin-text-faint)" }}>
+                  {h}
+                </th>
+              )
+            )}
           </tr>
         </thead>
         <tbody>
           {users.map((u) => (
-            <UserRow key={u.id} user={u} />
+            <UserRow key={u.id} user={u} canDelete={canDelete} />
           ))}
         </tbody>
       </table>
