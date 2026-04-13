@@ -56,14 +56,14 @@ function BehaviourTabInner({ settings }: { settings: AppSettings }) {
             <SettingToggle
               name="registrations_enabled"
               label="Registrazioni aperte"
-              description="Permetti a nuovi utenti di registrarsi"
+              description="Registrazione Utenti abilitata"
               defaultValue={settings.registrations_enabled === "true"}
               activeColor="bg-green-500"
             />
             <SettingToggle
               name="maintenance_mode"
               label="Modalità manutenzione"
-              description="Gli utenti vedranno una pagina di manutenzione"
+              description="Modalità manutenzione"
               defaultValue={settings.maintenance_mode === "true"}
               activeColor="bg-red-500"
             />
