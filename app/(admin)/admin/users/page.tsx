@@ -2,8 +2,6 @@
 import type { Metadata } from "next";
 import { getAdminUsers } from "@/lib/db/admin-queries";
 import { getAdminRoles } from "@/lib/db/roles-queries";
-import { getUser } from "@/lib/db/queries";
-import { can } from "@/lib/rbac/can";
 import { Search, Users } from "lucide-react";
 import { Suspense } from "react";
 import UsersTable from "./_components/users-table";
@@ -16,14 +14,12 @@ async function UsersContent({
   plan,
   verified,
   page,
-  canDelete,
 }: {
   search: string;
   role: string;
   plan: string;
   verified: string;
   page: number;
-  canDelete: boolean;
 }) {
   const { users, total } = await getAdminUsers({ search, role, plan, verified, page });
   const totalPages = Math.ceil(total / 20);
@@ -51,7 +47,7 @@ async function UsersContent({
           background: "var(--admin-card-bg)",
           border: "1px solid var(--admin-card-border)",
         }}>
-        <UsersTable users={users} canDelete={canDelete} />
+        <UsersTable users={users} />
 
         {totalPages > 1 && (
           <div
@@ -128,13 +124,6 @@ export default async function AdminUsersPage({
   const page = Number(params.page ?? 1);
 
   const allRoles = await getAdminRoles();
-
-  // Calcola canDelete per l'admin corrente
-  const currentUser = await getUser();
-  const canDelete = currentUser
-    ? currentUser.isAdmin || (await can(currentUser, "users:delete"))
-    : false;
-
   const hasFilters = !!(search || role || plan || verified);
 
   return (
@@ -248,7 +237,6 @@ export default async function AdminUsersPage({
           plan={plan}
           verified={verified}
           page={page}
-          canDelete={canDelete}
         />
       </Suspense>
     </div>
