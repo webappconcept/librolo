@@ -7,6 +7,7 @@ import {
   ChevronDown,
   ClipboardList,
   FileText,
+  FlaskConical,
   GitMerge,
   Globe,
   KeyRound,
@@ -45,6 +46,7 @@ const ICON_MAP: Record<string, React.ElementType> = {
   Settings,
   ClipboardList,
   ArrowRight,
+  FlaskConical,
 };
 
 interface AdminSidebarProps {

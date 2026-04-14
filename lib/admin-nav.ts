@@ -1,24 +1,5 @@
 /**
  * ADMIN NAV REGISTRY
- *
- * Fonte di verità unica per tutta la navigazione del pannello admin.
- * Ogni voce dichiara:
- *  - href        : percorso della sezione
- *  - label       : testo nel menu
- *  - icon        : nome icona Lucide (stringa)
- *  - permission  : permesso RBAC richiesto per vedere/accedere alla voce
- *  - exact?      : true se il match dell'active state deve essere esatto
- *  - children?   : sottovoci (gruppo espandibile nella sidebar)
- *  - comingSoon? : true = voce visibile ma disabilitata (badge "Prossimamente")
- *
- * La sidebar legge questo registro e filtra automaticamente le voci
- * in base al Set<string> dei permessi dell'utente corrente.
- *
- * Per aggiungere una nuova sezione:
- *  1. Aggiungi la voce qui (rimuovi comingSoon quando pronta)
- *  2. Aggiungi il permesso in permissions-seed.ts ed esegui il seed
- *  3. Crea app/(admin)/admin/<sezione>/layout.tsx con requireAdminSectionPage()
- *  4. Fine — sidebar, filtro e guard si aggiornano da soli
  */
 
 export interface NavChild {
@@ -126,7 +107,7 @@ export const ADMIN_NAV: NavItem[] = [
   {
     key: "tests",
     href: "/admin/tests",
-    label: "Test Auth",
+    label: "Test Suite",
     icon: "FlaskConical",
     permission: "admin:access",
   },
