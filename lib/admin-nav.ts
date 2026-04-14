@@ -124,6 +124,13 @@ export const ADMIN_NAV: NavItem[] = [
     permission: "admin:settings",
   },
   {
+    key: "tests",
+    href: "/admin/tests",
+    label: "Test Auth",
+    icon: "FlaskConical",
+    permission: "admin:access",
+  },
+  {
     key: "logs",
     href: "/admin/logs",
     label: "Log attività",
