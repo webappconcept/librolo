@@ -1,19 +1,22 @@
 // app/(admin)/admin/tests/page.tsx
-// Pannello visuale per eseguire i test auth direttamente dall'admin.
-// Accessibile solo ai super admin (admin:access).
 import type { Metadata } from "next";
 import { requireAdminPage } from "@/lib/rbac/guards";
 import { FlaskConical } from "lucide-react";
 import { TestsClient } from "./_components/tests-client";
 
-export const metadata: Metadata = { title: "Test Auth" };
+export const metadata: Metadata = { title: "Test" };
 
-export default async function AdminTestsPage() {
+export default async function AdminTestsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
   await requireAdminPage();
+  const params = await searchParams;
+  const tab = params.tab ?? "auth";
 
   return (
     <div className="space-y-5">
-      {/* Header sezione */}
       <div className="flex items-center gap-3">
         <div
           className="w-9 h-9 rounded-xl flex items-center justify-center"
@@ -26,15 +29,15 @@ export default async function AdminTestsPage() {
         </div>
         <div>
           <h2 className="text-lg font-bold" style={{ color: "var(--admin-text)" }}>
-            Test Auth
+            Test suite
           </h2>
           <p className="text-sm mt-0.5" style={{ color: "var(--admin-text-faint)" }}>
-            Pannello visuale per verificare le procedure di autenticazione
+            Pannello visuale per verificare le funzionalità dell&apos;applicazione
           </p>
         </div>
       </div>
 
-      <TestsClient />
+      <TestsClient initialTab={tab} />
     </div>
   );
 }
