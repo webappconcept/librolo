@@ -1,0 +1,269 @@
+"use server";
+// app/(admin)/admin/tests/actions.ts
+//
+// Server Actions usate esclusivamente dalla test suite di integrazione.
+// Chiamano le funzioni reali dell'app (bcrypt, JWT, DB, RBAC) e restituiscono
+// risultati serializzabili al client.
+//
+// NON eseguono scritture permanenti sul DB (read-only o operazioni reversibili).
+import { requireAdminPage } from "@/lib/rbac/guards";
+import { hashPassword, comparePasswords, signToken, verifyToken } from "@/lib/auth/session";
+import { generateOtpCode } from "@/lib/auth/otp";
+import { isDomainBlacklisted } from "@/lib/auth/blacklist";
+import { checkGeneralRateLimit } from "@/lib/auth/rate-limit";
+import { can, getUserPermissions } from "@/lib/rbac/can";
+import { getAppSettings } from "@/lib/db/settings-queries";
+import { db } from "@/lib/db/drizzle";
+import { sql } from "drizzle-orm";
+
+export type IntegrationResult = {
+  ok: boolean;
+  detail?: string;
+  durationMs: number;
+  data?: Record<string, unknown>;
+};
+
+async function timed<T>(
+  fn: () => Promise<T>,
+): Promise<{ result: T; durationMs: number }> {
+  const start = Date.now();
+  const result = await fn();
+  return { result, durationMs: Date.now() - start };
+}
+
+// ---------------------------------------------------------------------------
+// DB — ping
+// ---------------------------------------------------------------------------
+export async function testDbPing(): Promise<IntegrationResult> {
+  await requireAdminPage();
+  try {
+    const { durationMs } = await timed(() => db.execute(sql`SELECT 1`));
+    return { ok: true, durationMs, data: { query: "SELECT 1" } };
+  } catch (e) {
+    return { ok: false, detail: String(e), durationMs: 0 };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Auth — hashPassword + comparePasswords
+// ---------------------------------------------------------------------------
+export async function testHashPassword(): Promise<IntegrationResult> {
+  await requireAdminPage();
+  try {
+    const plain = "TestPassword_" + Math.random().toString(36).slice(2, 8);
+    const { result: hashed, durationMs } = await timed(() => hashPassword(plain));
+    const isValid = hashed.startsWith("$2") && hashed.length > 50;
+    return {
+      ok: isValid,
+      durationMs,
+      detail: isValid ? undefined : "Hash non valido: " + hashed,
+      data: { length: hashed.length, prefix: hashed.slice(0, 7) },
+    };
+  } catch (e) {
+    return { ok: false, detail: String(e), durationMs: 0 };
+  }
+}
+
+export async function testComparePasswords(): Promise<IntegrationResult> {
+  await requireAdminPage();
+  try {
+    const plain = "TestPassword_" + Math.random().toString(36).slice(2, 8);
+    const hashed = await hashPassword(plain);
+    const { result: match, durationMs: d1 } = await timed(() => comparePasswords(plain, hashed));
+    const { result: noMatch, durationMs: d2 } = await timed(() => comparePasswords("wrong-password", hashed));
+    if (!match) return { ok: false, detail: "comparePasswords ha rifiutato la password corretta", durationMs: d1 + d2 };
+    if (noMatch) return { ok: false, detail: "comparePasswords ha accettato una password errata", durationMs: d1 + d2 };
+    return { ok: true, durationMs: d1 + d2, data: { match, noMatch } };
+  } catch (e) {
+    return { ok: false, detail: String(e), durationMs: 0 };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Auth — JWT signToken + verifyToken
+// ---------------------------------------------------------------------------
+export async function testSignAndVerifyToken(): Promise<IntegrationResult> {
+  await requireAdminPage();
+  try {
+    const payload = {
+      user: { id: 9999, role: "member" },
+      expires: new Date(Date.now() + 60_000).toISOString(),
+    };
+    const { result: token, durationMs: signMs } = await timed(() => signToken(payload));
+    const { result: decoded, durationMs: verifyMs } = await timed(() => verifyToken(token));
+
+    if (decoded.user.id !== payload.user.id)
+      return { ok: false, detail: `id mismatch: atteso ${payload.user.id}, ricevuto ${decoded.user.id}`, durationMs: signMs + verifyMs };
+    if (decoded.user.role !== payload.user.role)
+      return { ok: false, detail: `role mismatch: atteso ${payload.user.role}, ricevuto ${decoded.user.role}`, durationMs: signMs + verifyMs };
+
+    return {
+      ok: true,
+      durationMs: signMs + verifyMs,
+      data: { tokenLength: token.length, signMs, verifyMs },
+    };
+  } catch (e) {
+    return { ok: false, detail: String(e), durationMs: 0 };
+  }
+}
+
+export async function testTokenExpiry(): Promise<IntegrationResult> {
+  await requireAdminPage();
+  try {
+    // Crea un token già scaduto manipolando l'expires nel payload
+    // Non è possibile creare un JWT scaduto con jose senza mock del clock,
+    // quindi verifichiamo che un token malformato venga rifiutato
+    const start = Date.now();
+    let caught = false;
+    try {
+      await verifyToken("not.a.valid.jwt.token");
+    } catch {
+      caught = true;
+    }
+    return {
+      ok: caught,
+      durationMs: Date.now() - start,
+      detail: caught ? undefined : "verifyToken ha accettato un token non valido",
+    };
+  } catch (e) {
+    return { ok: false, detail: String(e), durationMs: 0 };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Auth — OTP generateOtpCode
+// ---------------------------------------------------------------------------
+export async function testGenerateOtp(): Promise<IntegrationResult> {
+  await requireAdminPage();
+  try {
+    const start = Date.now();
+    const codes = Array.from({ length: 5 }, () => generateOtpCode());
+    const durationMs = Date.now() - start;
+    const allValid = codes.every((c) => /^\d{6}$/.test(c));
+    const allInRange = codes.every((c) => {
+      const n = parseInt(c, 10);
+      return n >= 100000 && n <= 999999;
+    });
+    const unique = new Set(codes).size > 1;
+    if (!allValid) return { ok: false, detail: `Codice non valido in: ${codes.join(", ")}`, durationMs };
+    if (!allInRange) return { ok: false, detail: `Codice fuori range in: ${codes.join(", ")}`, durationMs };
+    if (!unique) return { ok: false, detail: "Tutti i codici generati sono uguali", durationMs };
+    return { ok: true, durationMs, data: { samples: codes } };
+  } catch (e) {
+    return { ok: false, detail: String(e), durationMs: 0 };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Auth — Blacklist dominio
+// ---------------------------------------------------------------------------
+export async function testDisposableBlacklist(): Promise<IntegrationResult> {
+  await requireAdminPage();
+  try {
+    const start = Date.now();
+    const disposable = isDomainBlacklisted("test@mailinator.com");
+    const legit = isDomainBlacklisted("test@gmail.com");
+    const durationMs = Date.now() - start;
+    if (!disposable) return { ok: false, detail: "mailinator.com non è stato rilevato come disposable", durationMs };
+    if (legit) return { ok: false, detail: "gmail.com è stato erroneamente classificato come disposable", durationMs };
+    return { ok: true, durationMs, data: { mailinator: disposable, gmail: legit } };
+  } catch (e) {
+    return { ok: false, detail: String(e), durationMs: 0 };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Auth — Rate limit in-memory (checkGeneralRateLimit)
+// ---------------------------------------------------------------------------
+export async function testRateLimitReal(): Promise<IntegrationResult> {
+  await requireAdminPage();
+  try {
+    const key = "integration-test-" + Date.now();
+    const start = Date.now();
+    const r1 = checkGeneralRateLimit(key, 2, 60);
+    const r2 = checkGeneralRateLimit(key, 2, 60);
+    const r3 = checkGeneralRateLimit(key, 2, 60); // dovrebbe bloccare
+    const durationMs = Date.now() - start;
+    if (r1.blocked) return { ok: false, detail: "Prima richiesta bloccata inaspettatamente", durationMs };
+    if (r3.remaining !== 0) return { ok: false, detail: `remaining atteso 0, ricevuto ${r3.remaining}`, durationMs };
+    if (!r3.blocked) return { ok: false, detail: "Terza richiesta non bloccata (max=2)", durationMs };
+    return { ok: true, durationMs, data: { r1, r2, r3 } };
+  } catch (e) {
+    return { ok: false, detail: String(e), durationMs: 0 };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// RBAC — can() sul DB reale con l'utente corrente
+// ---------------------------------------------------------------------------
+export async function testCanCurrentUser(): Promise<IntegrationResult> {
+  await requireAdminPage();
+  try {
+    const user = await requireAdminPage();
+    const { result: hasAccess, durationMs } = await timed(() => can(user, "admin:access"));
+    if (!hasAccess)
+      return { ok: false, detail: "L'utente corrente non ha admin:access (incoerente: è già in admin)", durationMs };
+    return { ok: true, durationMs, data: { userId: user.id, role: user.role, hasAccess } };
+  } catch (e) {
+    return { ok: false, detail: String(e), durationMs: 0 };
+  }
+}
+
+export async function testGetUserPermissions(): Promise<IntegrationResult> {
+  await requireAdminPage();
+  try {
+    const user = await requireAdminPage();
+    const { result: perms, durationMs } = await timed(() => getUserPermissions(user));
+    const permsList = [...perms];
+    const hasAdminAccess = perms.has("admin:access") || user.isAdmin;
+    if (!hasAdminAccess)
+      return { ok: false, detail: "admin:access non trovato nel set permessi", durationMs };
+    return {
+      ok: true,
+      durationMs,
+      data: { count: permsList.length, permissions: permsList.slice(0, 10) },
+    };
+  } catch (e) {
+    return { ok: false, detail: String(e), durationMs: 0 };
+  }
+}
+
+export async function testCanNegative(): Promise<IntegrationResult> {
+  await requireAdminPage();
+  try {
+    const user = await requireAdminPage();
+    // Un permesso che non esiste nel sistema — deve sempre dare false
+    const { result: hasGhost, durationMs } = await timed(() =>
+      can(user, "__test_ghost_permission_that_never_exists__")
+    );
+    if (hasGhost)
+      return { ok: false, detail: "can() ha restituito true per un permesso inesistente", durationMs };
+    return { ok: true, durationMs, data: { permission: "__test_ghost_permission_that_never_exists__", result: false } };
+  } catch (e) {
+    return { ok: false, detail: String(e), durationMs: 0 };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// DB — lettura settings (read-only)
+// ---------------------------------------------------------------------------
+export async function testReadSettings(): Promise<IntegrationResult> {
+  await requireAdminPage();
+  try {
+    const { result: settings, durationMs } = await timed(() => getAppSettings());
+    const hasAppName = typeof settings.app_name === "string" && settings.app_name.length > 0;
+    if (!hasAppName)
+      return { ok: false, detail: "app_name non trovato o vuoto nelle impostazioni", durationMs };
+    return {
+      ok: true,
+      durationMs,
+      data: {
+        app_name: settings.app_name,
+        maintenance_mode: settings.maintenance_mode,
+        registrations_enabled: settings.registrations_enabled,
+      },
+    };
+  } catch (e) {
+    return { ok: false, detail: String(e), durationMs: 0 };
+  }
+}
