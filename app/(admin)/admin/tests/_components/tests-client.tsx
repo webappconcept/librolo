@@ -5,7 +5,7 @@
 //  - Tab orizzontali di sezione: Auth | RBAC | SEO | Contenuti
 //  - Dentro ogni sezione: pill  Unit | Live   (modalità di esecuzione)
 //  - Unit  → test in-memory, istantanei, nessuna dipendenza esterna
-//  - Live  → chiama Server Actions reali (bcrypt, JWT, DB, RBAC)
+//  - Live  → chiama Server Actions reali (bcrypt, JWT, DB, RBAC, SEO, Contenuti)
 
 import { useState, useCallback } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
@@ -20,6 +20,10 @@ import {
   testDisposableBlacklist, testRateLimitReal,
   testCanCurrentUser, testGetUserPermissions, testCanNegative,
   testReadSettings,
+  testSeoDbPing, testSeoGetAllPages, testSeoUpsertAndDelete,
+  testSeoRobotsConstraint, testSeoJsonLdToggle,
+  testContenutiDbPing, testContenutiGetAllPages, testContenutiGetBySlugMiss,
+  testContenutiToggleStatus, testContenutiCascadeDelete,
 } from "../actions";
 import { z } from "zod";
 
@@ -304,6 +308,22 @@ const RBAC_LIVE: LiveRunner[] = [
   { name: "getUserPermissions — set completo dal DB",         fn: testGetUserPermissions },
 ];
 
+const SEO_LIVE: LiveRunner[] = [
+  { name: "DB ping (SELECT 1)",                              fn: testSeoDbPing },
+  { name: "getAllSeoPages — lettura tabella seo_pages",       fn: testSeoGetAllPages },
+  { name: "upsertSeoPage + update + deleteSeoPage (ciclo)",  fn: testSeoUpsertAndDelete },
+  { name: "robots constraint — valore salvato correttamente", fn: testSeoRobotsConstraint },
+  { name: "jsonLdEnabled toggle — booleano + jsonLdType",     fn: testSeoJsonLdToggle },
+];
+
+const CONTENUTI_LIVE: LiveRunner[] = [
+  { name: "DB ping (SELECT 1)",                                     fn: testContenutiDbPing },
+  { name: "getAllPages — lettura tabella pages",                     fn: testContenutiGetAllPages },
+  { name: "getPageBySlug — slug inesistente → undefined",           fn: testContenutiGetBySlugMiss },
+  { name: "togglePageStatus — toggle doppio + ripristino",          fn: testContenutiToggleStatus },
+  { name: "deletePageCascade — crea padre+figlio, elimina tutto",   fn: testContenutiCascadeDelete },
+];
+
 async function runLiveGroups(
   runners: LiveRunner[],
   onUpdate: (tests: TestResult[]) => void,
@@ -328,10 +348,10 @@ async function runLiveGroups(
 // inferisca `liveRunners: []` come `readonly []` (non assegnabile a LiveRunner[]).
 // ---------------------------------------------------------------------------
 const SECTIONS: SectionDef[] = [
-  { id: "auth",      label: "Auth",      Icon: LogIn,       buildUnit: buildAuthUnitGroups,      liveRunners: AUTH_LIVE,  hasLive: true  },
-  { id: "rbac",      label: "RBAC",      Icon: ShieldCheck,  buildUnit: buildRbacUnitGroups,      liveRunners: RBAC_LIVE,  hasLive: true  },
-  { id: "seo",       label: "SEO",       Icon: Search,       buildUnit: buildSeoUnitGroups,       liveRunners: [],         hasLive: false },
-  { id: "contenuti", label: "Contenuti", Icon: FileText,     buildUnit: buildContenutiUnitGroups, liveRunners: [],         hasLive: false },
+  { id: "auth",      label: "Auth",      Icon: LogIn,       buildUnit: buildAuthUnitGroups,      liveRunners: AUTH_LIVE,      hasLive: true },
+  { id: "rbac",      label: "RBAC",      Icon: ShieldCheck,  buildUnit: buildRbacUnitGroups,      liveRunners: RBAC_LIVE,      hasLive: true },
+  { id: "seo",       label: "SEO",       Icon: Search,       buildUnit: buildSeoUnitGroups,       liveRunners: SEO_LIVE,       hasLive: true },
+  { id: "contenuti", label: "Contenuti", Icon: FileText,     buildUnit: buildContenutiUnitGroups, liveRunners: CONTENUTI_LIVE, hasLive: true },
 ];
 
 type SectionId = "auth" | "rbac" | "seo" | "contenuti";
@@ -504,20 +524,8 @@ export function TestsClient({ initialTab }: { initialTab: string }) {
           style={{ background: "color-mix(in srgb, var(--admin-accent) 8%, var(--admin-card-bg))", border: "1px solid color-mix(in srgb, var(--admin-accent) 20%, transparent)" }}>
           <Plug size={15} style={{ color: "var(--admin-accent)", marginTop: 2, flexShrink: 0 }} />
           <span style={{ color: "var(--admin-text-muted)" }}>
-            I test <strong style={{ color: "var(--admin-text)" }}>live</strong> chiamano le funzioni reali dell&apos;applicazione (bcrypt, JWT, DB, RBAC).
-            Nessuna scrittura permanente viene eseguita.
-          </span>
-        </div>
-      )}
-
-      {/* ── Banner solo-unit per SEO / Contenuti ── */}
-      {!section.hasLive && (
-        <div className="flex items-start gap-2 px-4 py-3 rounded-xl text-sm"
-          style={{ background: "color-mix(in srgb, var(--admin-accent) 5%, var(--admin-card-bg))", border: "1px solid color-mix(in srgb, var(--admin-accent) 15%, transparent)" }}>
-          <Zap size={15} style={{ color: "var(--admin-accent)", marginTop: 2, flexShrink: 0 }} />
-          <span style={{ color: "var(--admin-text-muted)" }}>
-            I test <strong style={{ color: "var(--admin-text)" }}>Unit</strong> per questa sezione validano la logica di business e i vincoli degli schema
-            direttamente in-memory — nessuna chiamata al DB.
+            I test <strong style={{ color: "var(--admin-text)" }}>live</strong> chiamano le funzioni reali dell&apos;applicazione.
+            Le operazioni di scrittura sono reversibili: ogni test esegue cleanup al termine.
           </span>
         </div>
       )}
