@@ -32,7 +32,7 @@ export async function getPermissionsByRole(roleId: number) {
 }
 
 /** Override individuali di un utente (attivi e scaduti) */
-export async function getUserPermissionOverrides(userId: number) {
+export async function getUserPermissionOverrides(userId: string) {
   return db
     .select({
       id: userPermissions.id,
@@ -56,7 +56,7 @@ export async function getUserPermissionOverrides(userId: number) {
  * Elimina tutti gli override scaduti di un utente specifico.
  * Restituisce il numero di righe eliminate.
  */
-export async function purgeExpiredOverrides(userId: number): Promise<number> {
+export async function purgeExpiredOverrides(userId: string): Promise<number> {
   const now = new Date();
   const result = await db
     .delete(userPermissions)
@@ -118,7 +118,7 @@ export async function getUsersWithPermission(permissionKey: string) {
     .limit(USERS_WITH_PERMISSION_LIMIT);
 
   // Deduplicazione per id (override ha priorità)
-  const map = new Map<number, (typeof viaRole)[0]>();
+  const map = new Map<string, (typeof viaRole)[0]>();
   for (const u of viaRole) map.set(u.id, u);
   for (const u of viaOverride) map.set(u.id, u);
 
@@ -155,10 +155,10 @@ export async function removePermissionFromRole(roleId: number, permissionId: num
  * In questo modo non si creano mai righe duplicate per la stessa coppia.
  */
 export async function addUserPermissionOverride(data: {
-  userId: number;
+  userId: string;
   permissionId: number;
   granted: boolean;
-  grantedBy: number;
+  grantedBy: string;
   reason?: string;
   expiresAt?: Date | null;
 }) {

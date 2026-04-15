@@ -10,7 +10,7 @@ import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { sendUserDeletedEmail } from "@/lib/email/templates/user-deleted";
 
-export async function banUser(userId: number, reason?: string) {
+export async function banUser(userId: string, reason?: string) {
   await requireAdmin();
 
   const [target] = await db
@@ -30,7 +30,7 @@ export async function banUser(userId: number, reason?: string) {
   revalidatePath("/admin/users");
 }
 
-export async function unbanUser(userId: number) {
+export async function unbanUser(userId: string) {
   await requireAdmin();
   await db
     .update(users)
@@ -39,7 +39,7 @@ export async function unbanUser(userId: number) {
   revalidatePath("/admin/users");
 }
 
-export async function deleteUser(userId: number) {
+export async function deleteUser(userId: string) {
   // 1. Guard base: deve essere admin
   const adminUser = await requireAdmin();
 
@@ -62,7 +62,7 @@ export async function deleteUser(userId: number) {
 
   if (!target) throw new Error("Utente non trovato.");
   if (target.isAdmin) throw new Error("Non puoi eliminare un account admin.");
-  if (target.deletedAt) throw new Error("Utente gi\u00e0 eliminato.");
+  if (target.deletedAt) throw new Error("Utente già eliminato.");
 
   const deletedAt = new Date();
 
@@ -90,7 +90,7 @@ export async function deleteUser(userId: number) {
 }
 
 /** @deprecated Usa setUserRole in /admin/roles/actions.ts */
-export async function changeUserRole(userId: number, roleName: string) {
+export async function changeUserRole(userId: string, roleName: string) {
   await requireAdmin();
 
   const [role] = await db
