@@ -72,15 +72,6 @@ export async function getDashboardStats() {
   return { totalUsers: total, newUsersThisMonth: newThis, trendPercent, premiumUsers: premium, freeUsers: free, verifiedUsers: verified, conversionRate: total > 0 ? Math.round((premium / total) * 100) : 0 };
 }
 
-/**
- * Stats complete per la dashboard — utenti, CMS, ruoli, redirect, attività recente.
- * Tutti i conteggi vengono eseguiti in parallelo con Promise.all.
- *
- * NON usa noStore(): la route /admin è già dinamica per definizione
- * (headers(), cookies(), requireAdminPage() nel layout). Aggiungere noStore()
- * qui causerebbe un conflitto con la cache React del RootLayout che risolve
- * getAppSettings() in parallelo, generando un hang della pagina.
- */
 export async function getFullDashboardStats() {
   const [
     userStats,
@@ -127,11 +118,6 @@ export async function getFullDashboardStats() {
   };
 }
 
-/**
- * Dati per il grafico crescita utenti degli ultimi 7 mesi.
- *
- * NON usa noStore(): stessa ragione di getFullDashboardStats.
- */
 export async function getUserGrowthChart() {
   const rows = await db.execute(sql`
     SELECT TO_CHAR(DATE_TRUNC('month', created_at), 'Mon') AS month, COUNT(*) AS total
@@ -153,7 +139,7 @@ export async function getUserGrowthChart() {
 }
 
 export type AdminUser = {
-  id: number;
+  id: string;
   firstName: string | null;
   lastName: string | null;
   email: string;
@@ -329,7 +315,7 @@ export async function getStaffUsers({
   };
 }
 
-export async function getAdminUserById(id: number) {
+export async function getAdminUserById(id: string) {
   const [user] = await db
     .select({
       id: users.id,
@@ -363,7 +349,7 @@ export type AdminUserActivity = {
   timestamp: Date;
 };
 
-export async function getAdminUserActivity(userId: number): Promise<AdminUserActivity[]> {
+export async function getAdminUserActivity(userId: string): Promise<AdminUserActivity[]> {
   const result = await db
     .select({
       id: activityLogs.id,
@@ -379,10 +365,6 @@ export async function getAdminUserActivity(userId: number): Promise<AdminUserAct
   return result;
 }
 
-/**
- * Recupera gli activity log globali con email dell'utente — paginati lato server.
- * Tab supportati: "rbac" | "auth" | "contenuti"
- */
 export async function getActivityLogs({
   page = 1,
   perPage = 20,
@@ -470,5 +452,4 @@ export async function getActivityLogs({
   };
 }
 
-// noStore import mantenuto solo per getAdminUsers, getStaffUsers, getActivityLogs
 import { unstable_noStore as noStore } from "next/cache";

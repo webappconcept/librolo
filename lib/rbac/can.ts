@@ -21,7 +21,7 @@ import { redirect } from "next/navigation";
 import { getUser } from "@/lib/db/queries";
 import "server-only";
 
-export type UserLike = { id: number; role: string };
+export type UserLike = { id: string; role: string };
 
 // ---------------------------------------------------------------------------
 // Core — singolo permesso
@@ -38,9 +38,6 @@ export type UserLike = { id: number; role: string };
 export async function can(user: UserLike, permissionKey: string): Promise<boolean> {
   const now = new Date();
 
-  // 1. Override individuale (non scaduto) — ha sempre la priorità.
-  // orderBy DESC + LIMIT 1 garantisce che, se esistono righe duplicate legacy,
-  // vinca sempre la più recente.
   const override = await db
     .select({ granted: userPermissions.granted })
     .from(userPermissions)
@@ -57,7 +54,6 @@ export async function can(user: UserLike, permissionKey: string): Promise<boolea
 
   if (override.length > 0) return override[0].granted;
 
-  // 2. Permesso dal ruolo
   const roleMatch = await db
     .select({ id: rolePermissions.permissionId })
     .from(rolePermissions)
@@ -84,7 +80,6 @@ export async function can(user: UserLike, permissionKey: string): Promise<boolea
 export async function getUserPermissions(user: UserLike): Promise<Set<string>> {
   const now = new Date();
 
-  // Permessi dal ruolo
   const rolePerms = await db
     .select({ key: permissions.key })
     .from(rolePermissions)
@@ -94,10 +89,6 @@ export async function getUserPermissions(user: UserLike): Promise<Set<string>> {
 
   const set = new Set(rolePerms.map((p) => p.key));
 
-  // Override individuali (non scaduti) — vincono sul ruolo.
-  // orderBy DESC garantisce che, in caso di righe duplicate residue (prima
-  // dell'upsert), la riga più recente sia la prima e venga usata come valore.
-  // La Map deduplica: per ogni permissionKey vince il primo incontrato (= più recente).
   const overrides = await db
     .select({ key: permissions.key, granted: userPermissions.granted, createdAt: userPermissions.createdAt })
     .from(userPermissions)
@@ -110,7 +101,6 @@ export async function getUserPermissions(user: UserLike): Promise<Set<string>> {
     )
     .orderBy(desc(userPermissions.createdAt));
 
-  // Deduplicazione: teniamo solo la riga più recente per ogni permesso
   const seenOverrides = new Map<string, boolean>();
   for (const o of overrides) {
     if (!seenOverrides.has(o.key)) seenOverrides.set(o.key, o.granted);
@@ -127,23 +117,11 @@ export async function getUserPermissions(user: UserLike): Promise<Set<string>> {
 // Composizione — canAny / canAll
 // ---------------------------------------------------------------------------
 
-/**
- * Restituisce true se l'utente ha ALMENO UNO dei permessi.
- *
- * @example
- * const allowed = await canAny(user, ["posts:edit", "posts:publish"]);
- */
 export async function canAny(user: UserLike, keys: string[]): Promise<boolean> {
   const perms = await getUserPermissions(user);
   return keys.some((k) => perms.has(k));
 }
 
-/**
- * Restituisce true se l'utente ha TUTTI i permessi.
- *
- * @example
- * const allowed = await canAll(user, ["posts:edit", "posts:publish"]);
- */
 export async function canAll(user: UserLike, keys: string[]): Promise<boolean> {
   const perms = await getUserPermissions(user);
   return keys.every((k) => perms.has(k));
@@ -153,18 +131,6 @@ export async function canAll(user: UserLike, keys: string[]): Promise<boolean> {
 // Server Action wrapper — withPermission
 // ---------------------------------------------------------------------------
 
-/**
- * Wrappa una Server Action con un controllo di permesso.
- * Legge l'utente dalla sessione corrente, lancia Error se non autorizzato.
- *
- * @example
- * export const publishPost = withPermission(
- *   "posts:publish",
- *   async (postId: number) => {
- *     // ... logica sicura
- *   }
- * );
- */
 export function withPermission<TArgs extends unknown[], TReturn>(
   permissionKey: string,
   action: (...args: TArgs) => Promise<TReturn>,
@@ -184,17 +150,6 @@ export function withPermission<TArgs extends unknown[], TReturn>(
 // Page guard — requirePermission
 // ---------------------------------------------------------------------------
 
-/**
- * Guard per pagine (Server Components / layout).
- * Redirige a /unauthorized se il permesso manca.
- * Restituisce l'utente se autorizzato.
- *
- * @example
- * export default async function PublishPage() {
- *   const user = await requirePermission("posts:publish");
- *   // ...
- * }
- */
 export async function requirePermission(
   permissionKey: string,
   redirectTo = "/unauthorized",
@@ -208,14 +163,6 @@ export async function requirePermission(
   return user;
 }
 
-/**
- * Variante di requirePermission per uso admin.
- * Redirige a /admin/sign-in se non autenticato,
- * a /admin se autenticato ma senza permesso.
- *
- * @example
- * const user = await requireAdminPermission("users:ban");
- */
 export async function requireAdminPermission(permissionKey: string) {
   const user = await getUser();
   if (!user) redirect("/admin/sign-in");
