@@ -1,121 +1,123 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // ---------------------------------------------------------------------------
-// Mock DB — intercetta tutte le query drizzle senza toccare il DB reale
+// Struttura query in can.ts:
+//
+//  can() query 1:              .where().orderBy().limit(1)  ← terminale
+//  can() query 2:              .where().limit(1)            ← terminale
+//  getUserPermissions() q1:    .where()                    ← thenable terminale
+//  getUserPermissions() q2:    .where().orderBy()          ← thenable terminale
+//
+// Ogni chiamata a db.select() deve produrre una chain INDIPENDENTE
+// con i propri rows, in modo che sequenze di query multiple funzionino.
 // ---------------------------------------------------------------------------
+
 const mockSelect = vi.fn()
 
 vi.mock('@/lib/db/drizzle', () => ({
   db: { select: mockSelect },
 }))
 
-// Mock next/navigation (redirect lancia, lo catturiamo)
 vi.mock('next/navigation', () => ({
   redirect: vi.fn((url: string) => { throw new Error(`REDIRECT:${url}`) }),
 }))
 
-// Mock server-only
 vi.mock('server-only', () => ({}))
 
-// Mock getUser — controllato per-test
 const mockGetUser = vi.fn()
 vi.mock('@/lib/db/queries', () => ({ getUser: mockGetUser }))
 
-// ---------------------------------------------------------------------------
-// Helper: costruisce la catena fluente di drizzle
-//   db.select().from().where().orderBy().limit()  → rows
-//   db.select().from().where().limit()            → rows
-//   db.select().from().where()                    → rows
-// ---------------------------------------------------------------------------
-function mockDbChain(rows: unknown[]) {
-  const chain: Record<string, unknown> = {}
+/**
+ * Costruisce UNA chain drizzle indipendente che risolve con `rows`.
+ * Tutti i metodi restituiscono la stessa chain (fluid interface).
+ * `.limit()` e la chain stessa sono thenable -> Promise.resolve(rows)
+ */
+function oneChain(rows: unknown[]) {
+  const p = Promise.resolve(rows)
   const terminal = vi.fn().mockResolvedValue(rows)
-  chain.limit    = terminal
-  chain.orderBy  = vi.fn(() => ({ limit: terminal }))
-  chain.where    = vi.fn(() => chain)
-  chain.innerJoin = vi.fn(() => chain)
-  chain.from     = vi.fn(() => chain)
-  mockSelect.mockReturnValue(chain)
+
+  // orderBy: thenable + ha .limit()
+  const orderBy = Object.assign(
+    vi.fn().mockImplementation(() => orderBy),
+    { ...p, then: p.then.bind(p), catch: p.catch.bind(p), finally: p.finally.bind(p), limit: terminal },
+  )
+
+  // where: thenable + ha .limit() + .orderBy() + .innerJoin()
+  const where = Object.assign(
+    vi.fn().mockImplementation(() => where),
+    { ...p, then: p.then.bind(p), catch: p.catch.bind(p), finally: p.finally.bind(p), limit: terminal, orderBy, innerJoin: vi.fn() },
+  )
+
+  const chain: Record<string, unknown> = {
+    from:      vi.fn().mockImplementation(() => chain),
+    innerJoin: vi.fn().mockImplementation(() => chain),
+    where,
+    orderBy,
+    limit:     terminal,
+    then:      p.then.bind(p),
+    catch:     p.catch.bind(p),
+    finally:   p.finally.bind(p),
+  }
+
   return chain
 }
 
-// Sequenza di chiamate DB: prima override check, poi role check (o viceversa)
-function mockDbSequence(sequences: unknown[][]) {
+/**
+ * Imposta il mock in modo che ogni chiamata successiva a db.select()
+ * usi la slice corrispondente di `sequences`.
+ */
+function seq(...sequences: unknown[][]) {
   let call = 0
-  mockSelect.mockImplementation(() => {
-    const rows = sequences[call] ?? []
-    call++
-    const terminal = vi.fn().mockResolvedValue(rows)
-    const chain: Record<string, unknown> = {}
-    chain.limit     = terminal
-    chain.orderBy   = vi.fn(() => ({ limit: terminal }))
-    chain.where     = vi.fn(() => chain)
-    chain.innerJoin = vi.fn(() => chain)
-    chain.from      = vi.fn(() => chain)
-    return chain
-  })
+  mockSelect.mockImplementation(() => oneChain(sequences[call++] ?? []))
 }
 
 // ---------------------------------------------------------------------------
 // SECTION 1 — can()
+// can() esegue 2 query:  q1=override (.orderBy().limit), q2=role (.limit)
 // ---------------------------------------------------------------------------
 describe('can()', () => {
   beforeEach(() => { vi.clearAllMocks() })
 
   it('ritorna true se esiste un override individuale granted=true', async () => {
-    // Prima query (override): 1 riga con granted=true
-    // Seconda query (ruolo): non raggiunta
-    mockDbSequence([[{ granted: true }], []])
+    seq([{ granted: true }], [])
     const { can } = await import('@/lib/rbac/can')
-    const result = await can({ id: 1, role: 'member' }, 'admin:access')
-    expect(result).toBe(true)
+    expect(await can({ id: 1, role: 'member' }, 'admin:access')).toBe(true)
   })
 
   it('ritorna false se esiste un override individuale granted=false', async () => {
-    mockDbSequence([[{ granted: false }], []])
+    seq([{ granted: false }], [])
     const { can } = await import('@/lib/rbac/can')
-    const result = await can({ id: 1, role: 'admin' }, 'admin:users')
-    expect(result).toBe(false)
+    expect(await can({ id: 1, role: 'admin' }, 'admin:users')).toBe(false)
   })
 
   it('ritorna true se nessun override ma il ruolo ha il permesso', async () => {
-    // Prima query (override): [] → nessun override
-    // Seconda query (ruolo): 1 riga → permesso trovato
-    mockDbSequence([[], [{ id: 5 }]])
+    seq([], [{ id: 5 }])
     const { can } = await import('@/lib/rbac/can')
-    const result = await can({ id: 2, role: 'admin' }, 'admin:access')
-    expect(result).toBe(true)
+    expect(await can({ id: 2, role: 'admin' }, 'admin:access')).toBe(true)
   })
 
   it('ritorna false se nessun override e il ruolo non ha il permesso', async () => {
-    mockDbSequence([[], []])
+    seq([], [])
     const { can } = await import('@/lib/rbac/can')
-    const result = await can({ id: 3, role: 'member' }, 'admin:access')
-    expect(result).toBe(false)
+    expect(await can({ id: 3, role: 'member' }, 'admin:access')).toBe(false)
   })
 
-  it('override ha priorità sul ruolo anche se il ruolo avrebbe accesso', async () => {
-    // override granted=false → blocca, anche se ruolo avrebbe il permesso
-    mockDbSequence([[{ granted: false }], [{ id: 5 }]])
+  it('override ha priorita sul ruolo anche se il ruolo avrebbe accesso', async () => {
+    seq([{ granted: false }], [{ id: 5 }])
     const { can } = await import('@/lib/rbac/can')
-    const result = await can({ id: 4, role: 'admin' }, 'admin:access')
-    expect(result).toBe(false)
+    expect(await can({ id: 4, role: 'admin' }, 'admin:access')).toBe(false)
   })
 })
 
 // ---------------------------------------------------------------------------
 // SECTION 2 — getUserPermissions()
+// q1 = rolePerms (.where() thenable), q2 = overrides (.where().orderBy() thenable)
 // ---------------------------------------------------------------------------
 describe('getUserPermissions()', () => {
   beforeEach(() => { vi.clearAllMocks() })
 
   it('restituisce i permessi del ruolo come Set', async () => {
-    // Prima query: permessi ruolo
-    // Seconda query: nessun override
-    mockDbSequence([
-      [{ key: 'admin:access' }, { key: 'admin:users' }],
-      [],
-    ])
+    seq([{ key: 'admin:access' }, { key: 'admin:users' }], [])
     const { getUserPermissions } = await import('@/lib/rbac/can')
     const perms = await getUserPermissions({ id: 1, role: 'admin' })
     expect(perms.has('admin:access')).toBe(true)
@@ -124,10 +126,10 @@ describe('getUserPermissions()', () => {
   })
 
   it('applica override grant: aggiunge permesso non nel ruolo', async () => {
-    mockDbSequence([
-      [{ key: 'content:read' }],                              // ruolo: solo content:read
-      [{ key: 'admin:content', granted: true, createdAt: new Date() }], // override +
-    ])
+    seq(
+      [{ key: 'content:read' }],
+      [{ key: 'admin:content', granted: true, createdAt: new Date() }],
+    )
     const { getUserPermissions } = await import('@/lib/rbac/can')
     const perms = await getUserPermissions({ id: 2, role: 'member' })
     expect(perms.has('content:read')).toBe(true)
@@ -135,33 +137,33 @@ describe('getUserPermissions()', () => {
   })
 
   it('applica override revoke: rimuove permesso presente nel ruolo', async () => {
-    mockDbSequence([
+    seq(
       [{ key: 'admin:access' }, { key: 'admin:users' }],
-      [{ key: 'admin:users', granted: false, createdAt: new Date() }], // revoke
-    ])
+      [{ key: 'admin:users', granted: false, createdAt: new Date() }],
+    )
     const { getUserPermissions } = await import('@/lib/rbac/can')
     const perms = await getUserPermissions({ id: 3, role: 'admin' })
     expect(perms.has('admin:access')).toBe(true)
-    expect(perms.has('admin:users')).toBe(false)  // revocato
+    expect(perms.has('admin:users')).toBe(false)
   })
 
-  it('deduplicazione: vince la riga più recente in caso di duplicati', async () => {
+  it('deduplicazione: vince la riga piu recente in caso di duplicati', async () => {
     const now   = new Date()
     const older = new Date(now.getTime() - 5000)
-    mockDbSequence([
+    seq(
       [{ key: 'admin:access' }],
       [
-        { key: 'admin:access', granted: false, createdAt: now },   // più recente: revoca
-        { key: 'admin:access', granted: true,  createdAt: older }, // più vecchio: grant
+        { key: 'admin:access', granted: false, createdAt: now },
+        { key: 'admin:access', granted: true,  createdAt: older },
       ],
-    ])
+    )
     const { getUserPermissions } = await import('@/lib/rbac/can')
     const perms = await getUserPermissions({ id: 4, role: 'admin' })
-    expect(perms.has('admin:access')).toBe(false) // vince la revoca più recente
+    expect(perms.has('admin:access')).toBe(false)
   })
 
   it('utente senza ruolo riconosciuto ha Set vuoto (no override)', async () => {
-    mockDbSequence([[], []])
+    seq([], [])
     const { getUserPermissions } = await import('@/lib/rbac/can')
     const perms = await getUserPermissions({ id: 99, role: 'ghost' })
     expect(perms.size).toBe(0)
@@ -170,50 +172,49 @@ describe('getUserPermissions()', () => {
 
 // ---------------------------------------------------------------------------
 // SECTION 3 — canAny() / canAll()
+// Ognuna chiama getUserPermissions → 2 db.select()
 // ---------------------------------------------------------------------------
 describe('canAny() / canAll()', () => {
   beforeEach(() => { vi.clearAllMocks() })
 
-  it('canAny: true se almeno uno dei permessi è presente', async () => {
-    mockDbSequence([
-      [{ key: 'admin:access' }], // ruolo
-      [],                        // override
-    ])
+  it('canAny: true se almeno uno dei permessi e presente', async () => {
+    seq([{ key: 'admin:access' }], [])
     const { canAny } = await import('@/lib/rbac/can')
-    const result = await canAny({ id: 1, role: 'admin' }, ['admin:access', 'admin:billing'])
-    expect(result).toBe(true)
+    expect(await canAny({ id: 1, role: 'admin' }, ['admin:access', 'admin:billing'])).toBe(true)
   })
 
-  it('canAny: false se nessuno dei permessi è presente', async () => {
-    mockDbSequence([[], []])
+  it('canAny: false se nessuno dei permessi e presente', async () => {
+    seq([], [])
     const { canAny } = await import('@/lib/rbac/can')
-    const result = await canAny({ id: 2, role: 'member' }, ['admin:access', 'admin:billing'])
-    expect(result).toBe(false)
+    expect(await canAny({ id: 2, role: 'member' }, ['admin:access', 'admin:billing'])).toBe(false)
   })
 
   it('canAll: true se tutti i permessi sono presenti', async () => {
-    mockDbSequence([
-      [{ key: 'admin:access' }, { key: 'admin:users' }],
-      [],
-    ])
+    seq([{ key: 'admin:access' }, { key: 'admin:users' }], [])
     const { canAll } = await import('@/lib/rbac/can')
-    const result = await canAll({ id: 1, role: 'admin' }, ['admin:access', 'admin:users'])
-    expect(result).toBe(true)
+    expect(await canAll({ id: 1, role: 'admin' }, ['admin:access', 'admin:users'])).toBe(true)
   })
 
   it('canAll: false se anche solo un permesso manca', async () => {
-    mockDbSequence([
-      [{ key: 'admin:access' }], // admin:billing mancante
-      [],
-    ])
+    seq([{ key: 'admin:access' }], [])
     const { canAll } = await import('@/lib/rbac/can')
-    const result = await canAll({ id: 1, role: 'admin' }, ['admin:access', 'admin:billing'])
-    expect(result).toBe(false)
+    expect(await canAll({ id: 1, role: 'admin' }, ['admin:access', 'admin:billing'])).toBe(false)
   })
 })
 
 // ---------------------------------------------------------------------------
-// SECTION 4 — guards.ts: requireAdminPage / requireAdminSectionPage
+// SECTION 4 — guards.ts
+//
+// requireAdminPage():
+//   isAdmin=false → chiama can(user,'admin:access') → 2 db.select() [q1=override, q2=role]
+//   isAdmin=true  → nessuna query
+//
+// requireAdminSectionPage():
+//   isAdmin=true  → nessuna query
+//   altrimenti:
+//     can(user,'admin:access') → 2 db.select()
+//     can(user, sectionKey)   → 2 db.select()
+//   totale per utente non-super: 4 db.select()
 // ---------------------------------------------------------------------------
 describe('guards.ts', () => {
   beforeEach(() => {
@@ -224,43 +225,39 @@ describe('guards.ts', () => {
   describe('requireAdminPage()', () => {
     it('redirige a /admin/sign-in se utente non autenticato', async () => {
       mockGetUser.mockResolvedValue(null)
-      mockDbChain([])
       const { requireAdminPage } = await import('@/lib/rbac/guards')
       await expect(requireAdminPage()).rejects.toThrow('REDIRECT:/admin/sign-in')
     })
 
     it('redirige a /admin/sign-in se autenticato ma senza admin:access', async () => {
       mockGetUser.mockResolvedValue({ id: 1, role: 'member', isAdmin: false })
-      // can() → override: [], ruolo: []
-      mockDbSequence([[], []])
+      // can() q1=override[], q2=role[] → false → redirect
+      seq([], [])
       const { requireAdminPage } = await import('@/lib/rbac/guards')
       await expect(requireAdminPage()).rejects.toThrow('REDIRECT:/admin/sign-in')
     })
 
-    it('ritorna l'utente se ha admin:access via ruolo', async () => {
+    it('ritorna utente se ha admin:access via ruolo', async () => {
       const user = { id: 2, role: 'admin', isAdmin: false }
       mockGetUser.mockResolvedValue(user)
-      // can('admin:access') → override: [], ruolo: trovato
-      mockDbSequence([[], [{ id: 1 }]])
+      // can() q1=override[], q2=role[{ id:1 }] → true
+      seq([], [{ id: 1 }])
       const { requireAdminPage } = await import('@/lib/rbac/guards')
-      const result = await requireAdminPage()
-      expect(result).toEqual(user)
+      expect(await requireAdminPage()).toEqual(user)
     })
 
-    it('ritorna l'utente se isAdmin=true (bypassa RBAC)', async () => {
+    it('ritorna utente se isAdmin=true (bypassa RBAC)', async () => {
       const user = { id: 10, role: 'member', isAdmin: true }
       mockGetUser.mockResolvedValue(user)
-      // nessuna query DB attesa
+      // hasAdminAccess ritorna subito true senza query
       const { requireAdminPage } = await import('@/lib/rbac/guards')
-      const result = await requireAdminPage()
-      expect(result).toEqual(user)
+      expect(await requireAdminPage()).toEqual(user)
     })
   })
 
   describe('requireAdminSectionPage()', () => {
     it('redirige a /admin/sign-in se non autenticato', async () => {
       mockGetUser.mockResolvedValue(null)
-      mockDbChain([])
       const { requireAdminSectionPage } = await import('@/lib/rbac/guards')
       await expect(requireAdminSectionPage('admin:users')).rejects.toThrow('REDIRECT:/admin/sign-in')
     })
@@ -269,25 +266,22 @@ describe('guards.ts', () => {
       const user = { id: 10, role: 'member', isAdmin: true }
       mockGetUser.mockResolvedValue(user)
       const { requireAdminSectionPage } = await import('@/lib/rbac/guards')
-      const result = await requireAdminSectionPage('admin:users')
-      expect(result).toEqual(user)
+      expect(await requireAdminSectionPage('admin:users')).toEqual(user)
     })
 
     it('redirige a /admin/sign-in se non ha admin:access', async () => {
       mockGetUser.mockResolvedValue({ id: 3, role: 'member', isAdmin: false })
-      // can('admin:access') → niente
-      mockDbSequence([[], []])
+      // can(user,'admin:access'): q1=[], q2=[] → false → redirect sign-in
+      seq([], [])
       const { requireAdminSectionPage } = await import('@/lib/rbac/guards')
       await expect(requireAdminSectionPage('admin:users')).rejects.toThrow('REDIRECT:/admin/sign-in')
     })
 
     it('redirige a /admin se ha admin:access ma non il permesso della sezione', async () => {
       mockGetUser.mockResolvedValue({ id: 4, role: 'staff', isAdmin: false })
-      // can('admin:access') → trovato | can('admin:users') → non trovato
-      mockDbSequence([
-        [], [{ id: 1 }], // admin:access: no override, ruolo ok
-        [], [],          // admin:users:  no override, ruolo no
-      ])
+      // can(user,'admin:access'): q1=[], q2=[{ id:1 }] → true
+      // can(user,'admin:users'):  q1=[], q2=[]         → false → redirect /admin
+      seq([], [{ id: 1 }], [], [])
       const { requireAdminSectionPage } = await import('@/lib/rbac/guards')
       await expect(requireAdminSectionPage('admin:users')).rejects.toThrow('REDIRECT:/admin')
     })
@@ -295,13 +289,11 @@ describe('guards.ts', () => {
     it('ritorna utente se ha sia admin:access sia il permesso della sezione', async () => {
       const user = { id: 5, role: 'admin', isAdmin: false }
       mockGetUser.mockResolvedValue(user)
-      mockDbSequence([
-        [], [{ id: 1 }], // admin:access ok
-        [], [{ id: 2 }], // admin:users ok
-      ])
+      // can(user,'admin:access'): q1=[], q2=[{ id:1 }] → true
+      // can(user,'admin:users'):  q1=[], q2=[{ id:2 }] → true
+      seq([], [{ id: 1 }], [], [{ id: 2 }])
       const { requireAdminSectionPage } = await import('@/lib/rbac/guards')
-      const result = await requireAdminSectionPage('admin:users')
-      expect(result).toEqual(user)
+      expect(await requireAdminSectionPage('admin:users')).toEqual(user)
     })
   })
 })
