@@ -16,8 +16,6 @@ import { slugify } from "@/lib/utils/slugify";
 export async function saveTemplateAction(formData: FormData) {
   const id = formData.get("id") ? Number(formData.get("id")) : undefined;
   const name = (formData.get("name") as string).trim();
-  // Re-sanitizzazione server-side: anche se il client invia già lo slug corretto,
-  // ri-applichiamo slugify come difesa contro manipolazioni dirette della request.
   const rawSlug = (formData.get("slug") as string).trim();
   const slug = slugify(rawSlug);
   const description = (formData.get("description") as string | null)?.trim() || null;
@@ -53,15 +51,15 @@ export async function saveTemplateAction(formData: FormData) {
     }
   }
 
+  // id è passato separatamente; templateData non include più id
   const templateData: NewPageTemplate = {
-    ...(id ? { id } : {}),
     name,
     slug,
     description,
     styleConfig: JSON.stringify(styleConfig),
   };
 
-  await upsertTemplate(templateData, fields);
+  await upsertTemplate(id, templateData, fields);
 
   const user = await getUser();
   const detail = `slug: ${slug} | nome: ${name}`;
