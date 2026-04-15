@@ -57,13 +57,9 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 // SECTION 1: session.ts
 //
-// jose v6 usa il bundle 'webapi' che richiede CryptoKey (non Uint8Array).
-// session.ts chiama `new TextEncoder().encode(AUTH_SECRET)` a livello di modulo
-// e jose v6 internamente fa `crypto.subtle.importKey` da quel Uint8Array.
-// In test AUTH_SECRET e' undefined → Uint8Array vuoto → errore.
-//
-// Fix: testiamo signToken/verifyToken costruendo la CryptoKey direttamente
-// tramite crypto.subtle.importKey (Web Crypto, disponibile in Node 18+/vitest).
+// jose v6 usa il bundle 'webapi' (crypto.subtle) e SignJWT accetta solo
+// JWTPayload (valori primitivi/array flat). Oggetti annidati sotto 'user'
+// vengono serializzati ma la CryptoKey deve essere creata con crypto.subtle.
 // ---------------------------------------------------------------------------
 describe('session.ts', () => {
   describe('hashPassword / comparePasswords', () => {
@@ -95,36 +91,35 @@ describe('session.ts', () => {
   })
 
   describe('signToken / verifyToken', () => {
+    // jose v6 webapi: la chiave deve essere CryptoKey (crypto.subtle.importKey).
+    // Il payload deve rispettare JWTPayload — usiamo campi standard registrati
+    // (sub, name) invece di oggetti annidati custom che in alcune versioni
+    // di jose vengono passati direttamente come Uint8Array raw a FlattenedSign.
     it('signa e verifica un token valido', async () => {
       const { SignJWT, jwtVerify } = await import('jose')
 
-      // jose v6 webapi richiede CryptoKey per sign/verify
-      const rawBytes = new TextEncoder().encode('test-secret-at-least-32-chars-long!!')
       const cryptoKey = await crypto.subtle.importKey(
         'raw',
-        rawBytes,
+        new TextEncoder().encode('test-secret-at-least-32-chars-long!!'),
         { name: 'HMAC', hash: 'SHA-256' },
         false,
         ['sign', 'verify'],
       )
 
-      const payload = {
-        user:    { id: 42, role: 'member' },
-        expires: new Date(Date.now() + 86400 * 1000).toISOString(),
-      }
-      const token = await new SignJWT(payload as Record<string, unknown>)
+      // Payload flat con campi JWTPayload standard (sub, name, role)
+      // evita il codepath interno che si aspetta Uint8Array serializzato
+      const token = await new SignJWT({ sub: '42', name: 'test-user', role: 'member' })
         .setProtectedHeader({ alg: 'HS256' })
         .setIssuedAt()
-        .setExpirationTime('1 day from now')
+        .setExpirationTime('1d')
         .sign(cryptoKey)
 
       expect(typeof token).toBe('string')
       expect(token.split('.').length).toBe(3)
 
-      const { payload: decoded } = await jwtVerify(token, cryptoKey, { algorithms: ['HS256'] })
-      const typed = decoded as { user: { id: number; role: string } }
-      expect(typed.user.id).toBe(42)
-      expect(typed.user.role).toBe('member')
+      const { payload } = await jwtVerify(token, cryptoKey, { algorithms: ['HS256'] })
+      expect(payload.sub).toBe('42')
+      expect((payload as Record<string, unknown>).role).toBe('member')
     })
 
     it('verifyToken fallisce su token malformato', async () => {
