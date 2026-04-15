@@ -24,6 +24,10 @@ import { BanButton, DeleteButton, RoleSelector } from "./_components/user-detail
 import { UserAccessTab } from "./_components/user-access-tab";
 import { UserDetailTabs } from "./_components/user-detail-tabs";
 
+// UUID v4 regex — es. "550e8400-e29b-41d4-a716-446655440000"
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 function StatusBadge({ user }: { user: Awaited<ReturnType<typeof getAdminUserById>> }) {
   if (!user) return null;
   if (user.bannedAt)
@@ -38,7 +42,7 @@ function StatusBadge({ user }: { user: Awaited<ReturnType<typeof getAdminUserByI
   return <span className="px-2.5 py-1 text-xs font-semibold bg-emerald-100 text-emerald-700 rounded-full">Attivo</span>;
 }
 
-async function UserContent({ id, canDelete }: { id: number; canDelete: boolean }) {
+async function UserContent({ id, canDelete }: { id: string; canDelete: boolean }) {
   const [user, activity, availableRoles, allPermissions] = await Promise.all([
     getAdminUserById(id),
     getAdminUserActivity(id),
@@ -158,7 +162,7 @@ async function UserContent({ id, canDelete }: { id: number; canDelete: boolean }
             <StatusBadge user={user} />
           </div>
           <p className="text-sm mt-0.5" style={{ color: "var(--admin-text-muted)" }}>
-            {user.email} · ID #{user.id}
+            {user.email} · ID {user.id}
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -184,8 +188,9 @@ export default async function AdminUserPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const userId = Number(id);
-  if (!userId || isNaN(userId)) notFound();
+
+  // Valida che il parametro sia un UUID valido prima di interrogare il DB
+  if (!UUID_REGEX.test(id)) notFound();
 
   // Calcola canDelete per l'admin corrente
   const currentUser = await getUser();
@@ -209,7 +214,7 @@ export default async function AdminUserPage({
             <div className="h-64 rounded-xl" style={{ background: "var(--admin-hover-bg)" }} />
           </div>
         }>
-        <UserContent id={userId} canDelete={canDelete} />
+        <UserContent id={id} canDelete={canDelete} />
       </Suspense>
     </div>
   );
