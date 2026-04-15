@@ -2,7 +2,7 @@
 // app/(admin)/admin/tests/_components/tests-client.tsx
 //
 // Struttura UI:
-//  - Tab orizzontali di sezione: Auth | RBAC | SEO | Contenuti
+//  - Tab orizzontali di sezione: Auth | RBAC | SEO | Contenuti | Template
 //  - Dentro ogni sezione: pill  Unit | Live   (modalità di esecuzione)
 //  - Unit  → test in-memory, istantanei, nessuna dipendenza esterna
 //  - Live  → chiama Server Actions reali (bcrypt, JWT, DB, RBAC, SEO, Contenuti)
@@ -12,6 +12,7 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import {
   FlaskConical, CheckCircle2, XCircle, ChevronDown, ChevronUp,
   Loader2, RotateCcw, LogIn, ShieldCheck, Plug, Zap, Search, FileText,
+  Layout,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -287,6 +288,133 @@ function buildContenutiUnitGroups(): TestGroup[] {
 }
 
 // ---------------------------------------------------------------------------
+// Template — Unit groups
+// ---------------------------------------------------------------------------
+function buildTemplateUnitGroups(): TestGroup[] {
+  // -- slugify (replica della logica in actions.ts) --
+  const slugify = (str: string): string =>
+    str
+      .toLowerCase()
+      .trim()
+      .replace(/[^\w\s-]/g, "")
+      .replace(/[\s_-]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+
+  // -- allowedChildTemplateIds parsing --
+  const parseAllowedChildIds = (json: string | null): number[] => {
+    if (!json) return [];
+    try {
+      const parsed = JSON.parse(json);
+      if (Array.isArray(parsed)) return parsed.map(Number).filter(Boolean);
+      return [];
+    } catch {
+      return [];
+    }
+  };
+
+  // -- styleConfig --
+  type StyleConfig = {
+    fontBody: string | null;
+    fontDisplay: string | null;
+    colorPrimary: string | null;
+    colorBg: string | null;
+    colorText: string | null;
+    spacing: string;
+    borderRadius: string;
+    allowedChildTemplateIds: number[];
+  };
+  const buildStyleConfig = (overrides: Partial<StyleConfig> = {}): StyleConfig => ({
+    fontBody: null,
+    fontDisplay: null,
+    colorPrimary: null,
+    colorBg: null,
+    colorText: null,
+    spacing: "normal",
+    borderRadius: "medium",
+    allowedChildTemplateIds: [],
+    ...overrides,
+  });
+
+  // -- fieldsJson parsing --
+  type TemplateField = {
+    name: string;
+    label: string;
+    type: string;
+    required?: boolean;
+    defaultValue?: string;
+    sortOrder?: number;
+  };
+  const parseFieldsJson = (json: string | null): TemplateField[] => {
+    if (!json) return [];
+    try {
+      const parsed = JSON.parse(json);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  };
+
+  // -- validazione name e slug --
+  const validateNameSlug = (name: string, slug: string): string | null => {
+    if (!name.trim()) return "Il nome del template è obbligatorio";
+    if (!slug.trim()) return "Lo slug è obbligatorio";
+    if (name.length > 255) return "Il nome supera i 255 caratteri";
+    if (slug.length > 255) return "Lo slug supera i 255 caratteri";
+    return null;
+  };
+
+  return [
+    { key: "tmpl-slug", label: "slugify", emoji: "🔤", open: true, tests: [
+      run("converte spazi in trattini",                 () => assert(slugify("Chi Siamo") === "chi-siamo", "fail")),
+      run("lowercasifica tutto",                        () => assert(slugify("HOMEPAGE") === "homepage", "fail")),
+      run("rimuove caratteri speciali",                 () => assert(slugify("Blog & News!") === "blog-news", "fail")),
+      run("collassa spazi multipli in un trattino",     () => assert(slugify("  chi   siamo  ") === "chi-siamo", "fail")),
+      run("rimuove trattini iniziali e finali",         () => assert(slugify("-test-") === "test", "fail")),
+      run("stringa già valida senza modifiche",         () => assert(slugify("blog-post-1") === "blog-post-1", "fail")),
+      run("stringa vuota → stringa vuota",              () => assert(slugify("") === "", "fail")),
+      run("caratteri accentati vengono rimossi",        () => assert(slugify("città") === "citt", "fail")),
+      run("underscore convertiti in trattino",          () => assert(slugify("my_template_name") === "my-template-name", "fail")),
+    ]},
+    { key: "tmpl-child-ids", label: "allowedChildTemplateIds parsing", emoji: "🔗", open: true, tests: [
+      run("null → array vuoto",                         () => assert(JSON.stringify(parseAllowedChildIds(null)) === "[]", "fail")),
+      run("stringa vuota → array vuoto",                () => assert(JSON.stringify(parseAllowedChildIds("")) === "[]", "fail")),
+      run("array numerico valido",                      () => { const r = parseAllowedChildIds("[1,2,3]"); assert(r.length === 3 && r[0] === 1, "fail"); }),
+      run("filtra gli zero (falsy)",                    () => { const r = parseAllowedChildIds("[0,1,2]"); assert(r.length === 2 && !r.includes(0), "fail"); }),
+      run("converte stringhe numeriche in numeri",      () => { const r = parseAllowedChildIds('["1","2"]'); assert(r[0] === 1 && r[1] === 2, "fail"); }),
+      run("JSON non valido → array vuoto",              () => assert(JSON.stringify(parseAllowedChildIds("{ bad }")) === "[]", "fail")),
+      run("JSON oggetto (non array) → array vuoto",     () => assert(JSON.stringify(parseAllowedChildIds('{"id":1}')) === "[]", "fail")),
+      run("array misto con NaN viene filtrato",         () => { const r = parseAllowedChildIds('[1,null,"abc",3]'); assert(r.length === 2 && r[0] === 1 && r[1] === 3, "fail"); }),
+    ]},
+    { key: "tmpl-style", label: "styleConfig", emoji: "🎨", open: true, tests: [
+      run("valori default corretti",                    () => { const cfg = buildStyleConfig(); assert(cfg.spacing === "normal" && cfg.borderRadius === "medium" && cfg.allowedChildTemplateIds.length === 0, "fail"); }),
+      run("override singolo campo",                     () => { const cfg = buildStyleConfig({ spacing: "compact" }); assert(cfg.spacing === "compact" && cfg.borderRadius === "medium", "fail"); }),
+      run("serializza correttamente in JSON",           () => { const cfg = buildStyleConfig({ colorPrimary: "#ff0000" }); const parsed = JSON.parse(JSON.stringify(cfg)) as StyleConfig; assert(parsed.colorPrimary === "#ff0000" && parsed.spacing === "normal", "fail"); }),
+      run("JSON round-trip è idempotente",              () => { const cfg = buildStyleConfig({ fontBody: "Inter", fontDisplay: "Playfair Display", allowedChildTemplateIds: [1, 2, 3] }); const rt = JSON.parse(JSON.stringify(cfg)) as StyleConfig; assert(JSON.stringify(rt) === JSON.stringify(cfg), "fail"); }),
+      run("colorPrimary null rimane null",              () => assert(buildStyleConfig().colorPrimary === null, "fail")),
+      run("accetta colorPrimary come hex valido",       () => assert(/^#[0-9a-f]{6}$/i.test(buildStyleConfig({ colorPrimary: "#01696f" }).colorPrimary!), "fail")),
+    ]},
+    { key: "tmpl-fields", label: "fieldsJson parsing", emoji: "🗂️", open: true, tests: [
+      run("null → array vuoto",                         () => assert(parseFieldsJson(null).length === 0, "fail")),
+      run("JSON non valido → array vuoto",              () => assert(parseFieldsJson("{ bad json }").length === 0, "fail")),
+      run("array vuoto → array vuoto",                  () => assert(parseFieldsJson("[]").length === 0, "fail")),
+      run("un campo valido viene parsato",              () => { const f = parseFieldsJson(JSON.stringify([{ name: "hero_title", label: "Titolo Hero", type: "text", required: true }])); assert(f.length === 1 && f[0].name === "hero_title" && f[0].type === "text", "fail"); }),
+      run("più campi vengono parsati tutti",            () => { const fields = [{ name: "title", label: "Titolo", type: "text" }, { name: "body", label: "Corpo", type: "richtext" }, { name: "cover", label: "Immagine", type: "image" }]; assert(parseFieldsJson(JSON.stringify(fields)).length === 3, "fail"); }),
+      run("JSON oggetto (non array) → array vuoto",     () => assert(parseFieldsJson('{"name":"test"}').length === 0, "fail")),
+      run("sortOrder viene preservato",                 () => { const f = parseFieldsJson(JSON.stringify([{ name: "a", label: "A", type: "text", sortOrder: 2 }, { name: "b", label: "B", type: "text", sortOrder: 1 }])); assert(f[0].sortOrder === 2 && f[1].sortOrder === 1, "fail"); }),
+    ]},
+    { key: "tmpl-validate", label: "Validazione name e slug", emoji: "✅", open: true, tests: [
+      run("name e slug validi → nessun errore",         () => assert(validateNameSlug("Homepage", "homepage") === null, "fail")),
+      run("name vuoto → errore",                        () => assert(validateNameSlug("", "homepage") === "Il nome del template è obbligatorio", "fail")),
+      run("name solo spazi → errore",                   () => assert(validateNameSlug("   ", "homepage") === "Il nome del template è obbligatorio", "fail")),
+      run("slug vuoto → errore",                        () => assert(validateNameSlug("Homepage", "") === "Lo slug è obbligatorio", "fail")),
+      run("name oltre 255 caratteri → errore",          () => assert(validateNameSlug("a".repeat(256), "homepage") === "Il nome supera i 255 caratteri", "fail")),
+      run("name di esattamente 255 caratteri → ok",     () => assert(validateNameSlug("a".repeat(255), "homepage") === null, "fail")),
+      run("slug oltre 255 caratteri → errore",          () => assert(validateNameSlug("Homepage", "a".repeat(256)) === "Lo slug supera i 255 caratteri", "fail")),
+    ]},
+  ];
+}
+
+// ---------------------------------------------------------------------------
 // Live runners
 // ---------------------------------------------------------------------------
 const AUTH_LIVE: LiveRunner[] = [
@@ -352,9 +480,10 @@ const SECTIONS: SectionDef[] = [
   { id: "rbac",      label: "RBAC",      Icon: ShieldCheck,  buildUnit: buildRbacUnitGroups,      liveRunners: RBAC_LIVE,      hasLive: true },
   { id: "seo",       label: "SEO",       Icon: Search,       buildUnit: buildSeoUnitGroups,       liveRunners: SEO_LIVE,       hasLive: true },
   { id: "contenuti", label: "Contenuti", Icon: FileText,     buildUnit: buildContenutiUnitGroups, liveRunners: CONTENUTI_LIVE, hasLive: true },
+  { id: "template",  label: "Template",  Icon: Layout,       buildUnit: buildTemplateUnitGroups,  liveRunners: [],             hasLive: false },
 ];
 
-type SectionId = "auth" | "rbac" | "seo" | "contenuti";
+type SectionId = "auth" | "rbac" | "seo" | "contenuti" | "template";
 
 function buildLiveGroups(runners: LiveRunner[]): TestGroup[] {
   return [{ key: "live", label: "Test sul server reale", emoji: "🔌", open: true, tests: runners.map((r) => ({ name: r.name, status: "idle" as TestStatus })) }];
