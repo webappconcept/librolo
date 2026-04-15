@@ -16,7 +16,7 @@ async function getUserInternal() {
   if (
     !sessionData ||
     !sessionData.user ||
-    typeof sessionData.user.id !== "number"
+    typeof sessionData.user.id !== "string"
   ) {
     return null;
   }
@@ -32,7 +32,7 @@ async function getUserInternal() {
       and(
         eq(users.id, sessionData.user.id),
         isNull(users.deletedAt),
-        isNull(users.bannedAt), // ← aggiungi
+        isNull(users.bannedAt),
       ),
     )
     .limit(1);
@@ -57,7 +57,7 @@ export async function getUserByStripeCustomerId(customerId: string) {
 }
 
 export async function updateUserSubscription(
-  userId: number,
+  userId: string,
   subscriptionData: {
     stripeSubscriptionId: string | null;
     stripeProductId: string | null;

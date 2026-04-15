@@ -19,7 +19,7 @@ export async function comparePasswords(
 }
 
 type SessionData = {
-  user: { id: number; role: string };
+  user: { id: string; role: string };
   expires: string;
 };
 

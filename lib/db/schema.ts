@@ -3,16 +3,16 @@ import {
   integer,
   pgTable,
   primaryKey,
-  serial,
   text,
   timestamp,
   uniqueIndex,
+  uuid,
   varchar,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
 export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
+  id: uuid("id").primaryKey().defaultRandom(),
   firstName: varchar("first_name", { length: 100 }),
   lastName: varchar("last_name", { length: 100 }),
   email: varchar("email", { length: 255 }).notNull().unique(),
@@ -33,7 +33,7 @@ export const users = pgTable("users", {
 });
 
 export const roles = pgTable("roles", {
-  id: serial("id").primaryKey(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   name: varchar("name", { length: 50 }).notNull().unique(),
   label: varchar("label", { length: 100 }).notNull(),
   color: varchar("color", { length: 20 }).notNull().default("#6b7280"),
@@ -48,7 +48,7 @@ export const roles = pgTable("roles", {
 });
 
 export const permissions = pgTable("permissions", {
-  id: serial("id").primaryKey(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   key: varchar("key", { length: 100 }).notNull().unique(),
   label: varchar("label", { length: 150 }).notNull(),
   description: text("description"),
@@ -73,15 +73,15 @@ export const rolePermissions = pgTable(
 export const userPermissions = pgTable(
   "user_permissions",
   {
-    id: serial("id").primaryKey(),
-    userId: integer("user_id")
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     permissionId: integer("permission_id")
       .notNull()
       .references(() => permissions.id, { onDelete: "cascade" }),
     granted: boolean("granted").notNull().default(true),
-    grantedBy: integer("granted_by").references(() => users.id),
+    grantedBy: uuid("granted_by").references(() => users.id),
     reason: text("reason"),
     expiresAt: timestamp("expires_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -106,7 +106,7 @@ export type FieldType =
   | "number";
 
 export const pageTemplates = pgTable("page_templates", {
-  id: serial("id").primaryKey(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   name: varchar("name", { length: 100 }).notNull(),
   slug: varchar("slug", { length: 100 }).notNull().unique(),
   description: text("description"),
@@ -118,7 +118,7 @@ export const pageTemplates = pgTable("page_templates", {
 });
 
 export const templateFields = pgTable("template_fields", {
-  id: serial("id").primaryKey(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   templateId: integer("template_id")
     .notNull()
     .references(() => pageTemplates.id, { onDelete: "cascade" }),
@@ -147,7 +147,7 @@ export const templateFieldsRelations = relations(templateFields, ({ one }) => ({
 // CMS — Pagine statiche
 // ---------------------------------------------------------------------------
 export const pages = pgTable("pages", {
-  id: serial("id").primaryKey(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   slug: varchar("slug", { length: 255 }).notNull().unique(),
   title: varchar("title", { length: 255 }).notNull(),
   content: text("content").notNull().default(""),
@@ -182,7 +182,7 @@ export const pagesRelations = relations(pages, ({ one, many }) => ({
 // CMS — Redirect 301/302
 // ---------------------------------------------------------------------------
 export const redirects = pgTable("redirects", {
-  id: serial("id").primaryKey(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   /** Percorso sorgente, es. /vecchio-slug */
   fromPath: varchar("from_path", { length: 500 }).notNull().unique(),
   /** Percorso destinazione, es. /nuovo-slug */
@@ -217,7 +217,7 @@ export type SnippetType = "link_css" | "style" | "script_src" | "script" | "raw"
 export type SnippetPosition = "head" | "body_end";
 
 export const siteSnippets = pgTable("site_snippets", {
-  id: serial("id").primaryKey(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   /** Label visibile solo in admin */
   name: varchar("name", { length: 150 }).notNull(),
   /** link_css | style | script_src | script | raw */
@@ -238,22 +238,22 @@ export const siteSnippets = pgTable("site_snippets", {
 // Resto delle tabelle
 // ---------------------------------------------------------------------------
 export const activityLogs = pgTable("activity_logs", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: uuid("user_id").references(() => users.id),
   action: text("action").notNull(),
   timestamp: timestamp("timestamp").notNull().defaultNow(),
   ipAddress: varchar("ip_address", { length: 45 }),
 });
 
 export const ipBlacklist = pgTable("ip_blacklist", {
-  id: serial("id").primaryKey(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   ip: varchar("ip", { length: 45 }).notNull().unique(),
   reason: text("reason"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 export const loginAttempts = pgTable("login_attempts", {
-  id: serial("id").primaryKey(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   email: varchar("email", { length: 255 }).notNull(),
   ip: varchar("ip", { length: 45 }).notNull(),
   attemptedAt: timestamp("attempted_at").notNull().defaultNow(),
@@ -261,8 +261,8 @@ export const loginAttempts = pgTable("login_attempts", {
 });
 
 export const emailVerifications = pgTable("email_verifications", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id")
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: uuid("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   code: varchar("code", { length: 6 }).notNull(),
@@ -271,8 +271,8 @@ export const emailVerifications = pgTable("email_verifications", {
 });
 
 export const passwordResetTokens = pgTable("password_reset_tokens", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id")
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: uuid("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   token: varchar("token", { length: 64 }).notNull().unique(),
