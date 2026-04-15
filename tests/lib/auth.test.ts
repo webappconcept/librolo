@@ -1,1 +1,266 @@
-aW1wb3J0IHsgZGVzY3JpYmUsIGl0LCBleHBlY3QsIHZpLCBiZWZvcmVFYWNoIH0gZnJvbSAndml0ZXN0JwoKLy8gLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KLy8gTW9jayBEQiAtLSBldml0YSBjb25uZXNzaW9uaSByZWFsaSBpbiB0ZXN0Ci8vIC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCnZpLm1vY2soJ0Avb2Mvb2Mvb2Mvb2Mvb2Mvb2MvbGliL2RiL2RyaXp6bGUnLCAoKSA9PiAoewogIGRiOiB7CiAgICBzZWxlY3Q6IHZpLmZuKCkubW9ja1JldHVyblRoaXMoKSwKICAgIGZyb206IHZpLmZuKCkubW9ja1JldHVyblRoaXMoKSwKICAgIHdoZXJlOiB2aS5mbihhcyA9PiBQcm9taXNlLnJlc29sdmUoW10pKSwKICAgIGxpbWl0OiB2aS5mbihhcyA9PiBQcm9taXNlLnJlc29sdmUoW10pKSwKICAgIGluc2VydDogdmkuZm4oKS5tb2NrUmV0dXJuVGhpcygpLAogICAgdmFsdWVzOiB2aS5mbihhcyA9PiBQcm9taXNlLnJlc29sdmUoW10pKSwKICAgIGRlbGV0ZTogdmkuZm4oKS5tb2NrUmV0dXJuVGhpcygpLAogICAgdXBkYXRlOiB2aS5mbihhcyA9PiBQcm9taXNlLnJlc29sdmUoW10pKSwKICB9LAp9KSkKCi8vIC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCi8vIE1vY2sgbmV4dC9oZWFkZXJzIChzZXNzaW9uLnRzIHVzYSBjb29raWVzKCkpCi8vIC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCnZpLm1vY2soJ25leHQvaGVhZGVycycsICgpID0+ICh7CiAgY29va2llczogdmkuZm4oKS5tb2NrUmVzb2x2ZWRWYWx1ZSh7CiAgICBnZXQ6IHZpLmZuKCkubW9ja1JldHVyblZhbHVlKHsgdmFsdWU6ICdtb2NrLXNlc3Npb24tdG9rZW4nIH0pLAogICAgc2V0OiB2aS5mbigpLAogICAgZGVsZXRlOiB2aS5mbigpLAogIH0pLAogIGhlYWRlcnM6IHZpLmZuKCkubW9ja1JldHVyblZhbHVlKG5ldyBIZWFkZXJzKCkpLAp9KSkKCi8vIC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCi8vIFNFQ1RJT04gMTogc2Vzc2lvbi50cyAtLSBoYXNoUGFzc3dvcmQsIGNvbXBhcmVQYXNzd29yZHMsIHNpZ25Ub2tlbiwgdmVyaWZ5VG9rZW4KLy8gLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KZGVzY3JpYmUoJ3Nlc3Npb24udHMnLCAoKSA9PiB7CiAgLy8gSW1wb3J0IGR5bmFtaWMgcGVyIGV2aXRhcmUgcHJvYmxlbWkgY29uIG5leHQvaGVhZGVycyBhdCB0b3AtbGV2ZWwKICBsZXQgaGFzaFBhc3N3b3JkOiAocDogc3RyaW5nKSA9PiBQcm9taXNlPHN0cmluZz4KICBsZXQgY29tcGFyZVBhc3N3b3JkczogKHBsYWluOiBzdHJpbmcsIGhhc2hlZDogc3RyaW5nKSA9PiBQcm9taXNlPGJvb2xlYW4+CiAgbGV0IHNpZ25Ub2tlbjogKHBheWxvYWQ6IHsgdXNlcjogeyBpZDogbnVtYmVyOyByb2xlOiBzdHJpbmcgfTsgZXhwaXJlczogc3RyaW5nIH0pID0+IFByb21pc2U8c3RyaW5nPgogIGxldCB2ZXJpZnlUb2tlbjogKHRva2VuOiBzdHJpbmcpID0+IFByb21pc2U8eyB1c2VyOiB7IGlkOiBudW1iZXI7IHJvbGU6IHN0cmluZyB9OyBleHBpcmVzOiBzdHJpbmcgfT4KCiAgYmVmb3JlRWFjaChhc3luYyAoKSA9PiB7CiAgICBwcm9jZXNzLmVudi5BVVRIX1NFQ1JFVCA9ICd0ZXN0LXNlY3JldC1rZXktYXQtbGVhc3QtMzItY2hhcnMtbG9uZy0hJwogICAgY29uc3QgbW9kID0gYXdhaXQgaW1wb3J0KCdAL2xpYi9hdXRoL3Nlc3Npb24nKQogICAgaGFzaFBhc3N3b3JkID0gbW9kLmhhc2hQYXNzd29yZAogICAgY29tcGFyZVBhc3N3b3JkcyA9IG1vZC5jb21wYXJlUGFzc3dvcmRzCiAgICBzaWduVG9rZW4gPSBtb2Quc2lnblRva2VuCiAgICB2ZXJpZnlUb2tlbiA9IG1vZC52ZXJpZnlUb2tlbgogIH0pCgogIGRlc2NyaWJlKCdoYXNoUGFzc3dvcmQgLyBjb21wYXJlUGFzc3dvcmRzJywgKCkgPT4gewogICAgaXQoJ3Byb2R1Y2UgdW4gaGFzaCBkaXZlcnNvIGRhbGxhIHBhc3N3b3JkIG9yaWdpbmFsZScsIGFzeW5jICgpID0+IHsKICAgICAgY29uc3QgaGFzaGVkID0gYXdhaXQgaGFzaFBhc3N3b3JkKCdNeVNlY3VyZVBhc3MxMjMhJykKICAgICAgZXhwZWN0KGhhc2hlZCkubm90LnRvQmUoJ015U2VjdXJlUGFzczEyMyEnKQogICAgICBleHBlY3QoaGFzaGVkLnN0YXJ0c1dpdGgoJyQyYiQnKSkudG9CZSh0cnVlKSAvLyBiY3J5cHQgZm9ybWF0CiAgICB9KQoKICAgIGl0KCdkdWUgaGFzaCBkZWxsYSBzdGVzc2EgcGFzc3dvcmQgc29ubyBkaXZlcnNpIChzYWx0KScsIGFzeW5jICgpID0+IHsKICAgICAgY29uc3QgaGExID0gYXdhaXQgaGFzaFBhc3N3b3JkKCdwYXNzd29yZCcpCiAgICAgIGNvbnN0IGhhMiA9IGF3YWl0IGhhc2hQYXNzd29yZCgncGFzc3dvcmQnKQogICAgICBleHBlY3QoaGExKS5ub3QudG9CZShoYTIpCiAgICB9KQoKICAgIGl0KCdjb21wYXJlUGFzc3dvcmRzIHJpdG9ybmEgdHJ1ZSBwZXIgcGFzc3dvcmQgY29ycmV0dGEnLCBhc3luYyAoKSA9PiB7CiAgICAgIGNvbnN0IGhhc2hlZCA9IGF3YWl0IGhhc2hQYXNzd29yZCgnY29ycmVjdC1ob3JzZS1iYXR0ZXJ5JykKICAgICAgY29uc3QgcmVzdWx0ID0gYXdhaXQgY29tcGFyZVBhc3N3b3JkcygnY29ycmVjdC1ob3JzZS1iYXR0ZXJ5JywgaGFzaGVkKQogICAgICBleHBlY3QocmVzdWx0KS50b0JlKHRydWUpCiAgICB9KQoKICAgIGl0KCdjb21wYXJlUGFzc3dvcmRzIHJpdG9ybmEgZmFsc2UgcGVyIHBhc3N3b3JkIHNiYWdsaWF0YScsIGFzeW5jICgpID0+IHsKICAgICAgY29uc3QgaGFzaGVkID0gYXdhaXQgaGFzaFBhc3N3b3JkKCdjb3JyZWN0LXBhc3N3b3JkJykKICAgICAgY29uc3QgcmVzdWx0ID0gYXdhaXQgY29tcGFyZVBhc3N3b3Jkcygnd3JvbmctcGFzc3dvcmQnLCBoYXNoZWQpCiAgICAgIGV4cGVjdChyZXN1bHQpLnRvQmUoZmFsc2UpCiAgICB9KQogIH0pCgogIGRlc2NyaWJlKCdzaWduVG9rZW4gLyB2ZXJpZnlUb2tlbicsICgpID0+IHsKICAgIGl0KCdzaWduYSBlIHZlcmlmaWNhIHVuIHRva2VuIHZhbGlkbycsIGFzeW5jICgpID0+IHsKICAgICAgY29uc3QgcGF5bG9hZCA9IHsKICAgICAgICB1c2VyOiB7IGlkOiA0Miwgcm9sZTogJ21lbWJlcicgfSwKICAgICAgICBleHBpcmVzOiBuZXcgRGF0ZShEYXRlLm5vdygpICsgODY0MDAgKiAxMDAwKS50b0lTT1N0cmluZygpLAogICAgICB9CiAgICAgIGNvbnN0IHRva2VuID0gYXdhaXQgc2lnblRva2VuKHBheWxvYWQpCiAgICAgIGV4cGVjdCh0eXBlb2YgdG9rZW4pLnRvQmUoJ3N0cmluZycpCiAgICAgIGV4cGVjdCh0b2tlbi5zcGxpdCgnLicpLmxlbmd0aCkudG9CZSgzKSAvLyBKV1QgZm9ybWF0CgogICAgICBjb25zdCBkZWNvZGVkID0gYXdhaXQgdmVyaWZ5VG9rZW4odG9rZW4pCiAgICAgIGV4cGVjdChkZWNvZGVkLnVzZXIuaWQpLnRvQmUoNDIpCiAgICAgIGV4cGVjdChkZWNvZGVkLnVzZXIucm9sZSkudG9CZSgnbWVtYmVyJykKICAgIH0pCgogICAgaXQoJ3ZlcmlmeVRva2VuIGZhbGxpc2NlIHN1IHRva2VuIG1hbGZvcm1hdG8nLCBhc3luYyAoKSA9PiB7CiAgICAgIGF3YWl0IGV4cGVjdCh2ZXJpZnlUb2tlbigndG9rZW4ubm90LnZhbGlkJykpLnJlamVjdHMudG9UaHJvdygpCiAgICB9KQoKICAgIGl0KCd2ZXJpZnlUb2tlbiBmYWxsaXNjZSBzdSBzdHJpbmcgdnVvdGEnLCBhc3luYyAoKSA9PiB7CiAgICAgIGF3YWl0IGV4cGVjdCh2ZXJpZnlUb2tlbignJykpLnJlamVjdHMudG9UaHJvdygpCiAgICB9KQogIH0pCn0pCgovLyAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQovLyBTRUNUSU9OIDI6IG90cC50cyAtLSBnZW5lcmF0ZU90cENvZGUsIHZlcmlmeU90cENvZGUKLy8gLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KZGVzY3JpYmUoJ290cC50cycsICgpID0+IHsKICBsZXQgZ2VuZXJhdGVPdHBDb2RlOiAoKSA9PiBzdHJpbmcKCiAgYmVmb3JlRWFjaChhc3luYyAoKSA9PiB7CiAgICBjb25zdCBtb2QgPSBhd2FpdCBpbXBvcnQoJ0AvbGliL2F1dGgvb3RwJykKICAgIGdlbmVyYXRlT3RwQ29kZSA9IG1vZC5nZW5lcmF0ZU90cENvZGUKICB9KQoKICBkZXNjcmliZSgnZ2VuZXJhdGVPdHBDb2RlJywgKCkgPT4gewogICAgaXQoJ2dlbmVyYSB1biBjb2RpY2UgZGkgZXNhdHRhbWVudGUgNiBjaWZyZScsICgpID0+IHsKICAgICAgY29uc3QgY29kZSA9IGdlbmVyYXRlT3RwQ29kZSgpCiAgICAgIGV4cGVjdChjb2RlKS50b01hdGNoKC9eXGR7Nn0kLykKICAgIH0pCgogICAgaXQoJ2dlbmVyYSBjb2RpY2kgZGl2ZXJzaSBhZCBvZ25pIGNoaWFtYXRhJywgKCkgPT4gewogICAgICBjb25zdCBjb2RlcyA9IG5ldyBTZXQoQXJyYXkuZnJvbSh7IGxlbmd0aDogMTAgfSwgKCkgPT4gZ2VuZXJhdGVPdHBDb2RlKCkpKQogICAgICBleHBlY3QoY29kZXMuc2l6ZSkudG9CZUdyZWF0ZXJUaGFuKDEpCiAgICB9KQoKICAgIGl0KCdpbCBjb2RpY2Ugw6ggc2VtcHJlIGNvbXByZXNvIHRyYSAxMDAwMDAgZSA5OTk5OTknLCAoKSA9PiB7CiAgICAgIGZvciAobGV0IGkgPSAwOyBpIDwgMjA7IGkrKykgewogICAgICAgIGNvbnN0IG51bSA9IEludGVnZXIucGFyc2VJbnQoZ2VuZXJhdGVPdHBDb2RlKCksIDEwKQogICAgICAgIGV4cGVjdChudW0pLnRvQmVHcmVhdGVyVGhhbk9yRXF1YWwoMTAwMDAwKQogICAgICAgIGV4cGVjdChudW0pLnRvQmVMZXNzVGhhbk9yRXF1YWwoOTk5OTk5KQogICAgICB9CiAgICB9KQogIH0pCgogIGRlc2NyaWJlKCd2ZXJpZnlPdHBDb2RlIC0tIGxvZ2ljYSBkb21pbmlvIChtb2NrIERCKScsICgpID0+IHsKICAgIGl0KCdyaWZpdXRhIHNlIG5lc3N1biByZWNvcmQgdHJvdmF0byAoY29kaWNlIG5vbiBlc2lzdGUpJywgYXN5bmMgKCkgPT4gewogICAgICAvLyBEQiBtb2NrYXRvIHJpdG9ybmEgW10gcGVyIGRlZmF1bHQKICAgICAgY29uc3QgeyB2ZXJpZnlPdHBDb2RlIH0gPSBhd2FpdCBpbXBvcnQoJ0AvbGliL2F1dGgvb3RwJykKICAgICAgY29uc3QgcmVzdWx0ID0gYXdhaXQgdmVyaWZ5T3RwQ29kZSgxLCAnMTIzNDU2JykKICAgICAgZXhwZWN0KHJlc3VsdC5zdWNjZXNzKS50b0JlKGZhbHNlKQogICAgICBleHBlY3QocmVzdWx0LmVycm9yKS50b0JlKCdDb2RpY2Ugbm9uIHRyb3ZhdG8uJykKICAgIH0pCiAgfSkKfSkKCi8vIC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCi8vIFNFQ1RJT04gMzogcGFzc3dvcmQtcmVzZXQudHMgLS0gdmVyaWZ5UGFzc3dvcmRSZXNldFRva2VuCi8vIC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCmRlc2NyaWJlKCdwYXNzd29yZC1yZXNldC50cycsICgpID0+IHsKICBpdCgncmlmaXV0YSB0b2tlbiBpbmVzaXN0ZW50ZSAoREIgcml0b3JuYSBbXSknLCBhc3luYyAoKSA9PiB7CiAgICBjb25zdCB7IHZlcmlmeVBhc3N3b3JkUmVzZXRUb2tlbiB9ID0gYXdhaXQgaW1wb3J0KCdAL2xpYi9hdXRoL3Bhc3N3b3JkLXJlc2V0JykKICAgIGNvbnN0IHJlc3VsdCA9IGF3YWl0IHZlcmlmeVBhc3N3b3JkUmVzZXRUb2tlbignbm9uZXhpc3RlbnQtdG9rZW4nKQogICAgZXhwZWN0KHJlc3VsdC52YWxpZCkudG9CZShmYWxzZSkKICAgIGlmICghcmVzdWx0LnZhbGlkKSBleHBlY3QocmVzdWx0LmVycm9yKS50b0JlKCdMaW5rIG5vbiB2YWxpZG8uJykKICB9KQoKICBpdCgncmlmaXV0YSB0b2tlbiBzY2FkdXRvJywgYXN5bmMgKCkgPT4gewogICAgLy8gUmUtbW9jayBEQiBwZXIgcml0b3JuYXJlIHVuIHRva2VuIHNjYWR1dG8KICAgIGNvbnN0IHsgZGIgfSA9IGF3YWl0IGltcG9ydCgnQC9saWIvZGIvZHJpenpsZScpCiAgICBjb25zdCBleHBpcmVkUmVjb3JkID0gewogICAgICBpZDogMSwKICAgICAgdXNlcklkOiAxMCwKICAgICAgdG9rZW46ICdleHBpcmVkLXRva2VuJywKICAgICAgZXhwaXJlc0F0OiBuZXcgRGF0ZShEYXRlLm5vdygpIC0gMTAwMCksIC8vIGdpw6Agc2NhZHV0bwogICAgfQogICAgLy8gU2ltdWxhIHJlY29yZCBmb3VuZCBuZWxsYSBjaGFpbiBzZWxlY3QuZnJvbS53aGVyZS5saW1pdAogICAgY29uc3QgbW9ja0NoYWluID0geyBsaW1pdDogdmkuZm4oKS5tb2NrUmVzb2x2ZWRWYWx1ZShbZXhwaXJlZFJlY29yZF0pIH0KICAgIHZpLm1vY2tPYmplY3QoZGIgYXMgYW55LCAnc2VsZWN0JywgdmkuZm4oKS5tb2NrUmV0dXJuVmFsdWUoewogICAgICBmcm9tOiB2aS5mbigoKSA9PiAoeyB3aGVyZTogdmkuZm4oKSA9PiBtb2NrQ2hhaW4gfSkpLAogICAgfSkpCgogICAgY29uc3QgeyB2ZXJpZnlQYXNzd29yZFJlc2V0VG9rZW4gfSA9IGF3YWl0IGltcG9ydCgnQC9saWIvYXV0aC9wYXNzd29yZC1yZXNldCcpCiAgICBjb25zdCByZXN1bHQgPSBhd2FpdCB2ZXJpZnlQYXNzd29yZFJlc2V0VG9rZW4oJ2V4cGlyZWQtdG9rZW4nKQogICAgZXhwZWN0KHJlc3VsdC52YWxpZCkudG9CZShmYWxzZSkKICAgIGlmICghcmVzdWx0LnZhbGlkKSBleHBlY3QocmVzdWx0LmVycm9yKS50b0JlKCdMaW5rIHNjYWR1dG8uIFJpY2hpZWRpbmUgdW5vIG51b3ZvLicpCiAgfSkKfSkKCi8vIC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCi8vIFNFQ1RJT04gNDogcmF0ZS1saW1pdC50cyAtLSBjaGVja0dlbmVyYWxSYXRlTGltaXQgKGluLW1lbW9yeSwgbm8gREIpCi8vIC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCmRlc2NyaWJlKCdyYXRlLWxpbWl0LnRzIC0tIGNoZWNrR2VuZXJhbFJhdGVMaW1pdCcsICgpID0+IHsKICBsZXQgY2hlY2tHZW5lcmFsUmF0ZUxpbWl0OiAoa2V5OiBzdHJpbmcsIG1heDogbnVtYmVyLCB3aW5kb3dTZWM6IG51bWJlcikgPT4geyBibG9ja2VkOiBib29sZWFuOyByZW1haW5pbmc6IG51bWJlciB9CgogIGJlZm9yZUVhY2goYXN5bmMgKCkgPT4gewogICAgLy8gUmktaW1wb3J0YSBwZXIgcmVzZXR0YXJlIGxvIHN0YXRvIGluLW1lbW9yeSBkZWxsYSBNYXAgaW50ZXJuYQogICAgdmkucmVzZXRNb2R1bGVzKCkKICAgIGNvbnN0IG1vZCA9IGF3YWl0IGltcG9ydCgnQC9saWIvYXV0aC9yYXRlLWxpbWl0JykKICAgIGNoZWNrR2VuZXJhbFJhdGVMaW1pdCA9IG1vZC5jaGVja0dlbmVyYWxSYXRlTGltaXQKICB9KQoKICBpdCgncHJpbWEgcmljaGllc3RhIG5vbiBibG9jY2F0YScsICgpID0+IHsKICAgIGNvbnN0IHJlc3VsdCA9IGNoZWNrR2VuZXJhbFJhdGVMaW1pdCgndGVzdC1pcC0xJywgMywgNjApCiAgICBleHBlY3QocmVzdWx0LmJsb2NrZWQpLnRvQmUoZmFsc2UpCiAgICBleHBlY3QocmVzdWx0LnJlbWFpbmluZykudG9CZSgyKQogIH0pCgogIGl0KCdibG9jY2EgZG9wbyBhdmVyIHN1cGVyYXRvIGlsIG1hc3NpbW8nLCAoKSA9PiB7CiAgICBjb25zdCBrZXkgPSAndGVzdC1pcC1ibG9jaycKICAgIGNoZWNrR2VuZXJhbFJhdGVMaW1pdChrZXksIDIsIDYwKSAvLyAxCiAgICBjaGVja0dlbmVyYWxSYXRlTGltaXQoa2V5LCAyLCA2MCkgLy8gMgogICAgY29uc3QgcmVzdWx0ID0gY2hlY2tHZW5lcmFsUmF0ZUxpbWl0KGtleSwgMiwgNjApIC8vIDMgLT4gYmxvY2NhdG8KICAgIGV4cGVjdChyZXN1bHQuYmxvY2tlZCkudG9CZSh0cnVlKQogICAgZXhwZWN0KHJlc3VsdC5yZW1haW5pbmcpLnRvQmUoMCkKICB9KQoKICBpdCgncmVtYWluaW5nIG5vbiBzY2VuZGUgbWFpIHNvdHRvIHplcm8nLCAoKSA9PiB7CiAgICBjb25zdCBrZXkgPSAndGVzdC1pcC1mbG9vcicKICAgIGZvciAobGV0IGkgPSAwOyBpIDwgMTA7IGkrKykgY2hlY2tHZW5lcmFsUmF0ZUxpbWl0KGtleSwgMiwgNjApCiAgICBjb25zdCByZXN1bHQgPSBjaGVja0dlbmVyYWxSYXRlTGltaXQoa2V5LCAyLCA2MCkKICAgIGV4cGVjdChyZXN1bHQucmVtYWluaW5nKS50b0JlR3JlYXRlclRoYW5PckVxdWFsKDApCiAgfSkKCiAgaXQoJ2NoaWF2aSBkaXZlcnNlIHNvbm8gaW5kaXBlbmRlbnRpJywgKCkgPT4gewogICAgY2hlY2tHZW5lcmFsUmF0ZUxpbWl0KCdrZXktYScsIDIsIDYwKQogICAgY2hlY2tHZW5lcmFsUmF0ZUxpbWl0KCdrZXktYScsIDIsIDYwKQogICAgY29uc3QgcmVzdWx0QSA9IGNoZWNrR2VuZXJhbFJhdGVMaW1pdCgna2V5LWEnLCAyLCA2MCkgLy8gYmxvY2NhdG8KICAgIGNvbnN0IHJlc3VsdEIgPSBjaGVja0dlbmVyYWxSYXRlTGltaXQoJ2tleS1iJywgMiwgNjApIC8vIG51b3ZhIGNoaWF2ZQogICAgZXhwZWN0KHJlc3VsdEEuYmxvY2tlZCkudG9CZSh0cnVlKQogICAgZXhwZWN0KHJlc3VsdEIuYmxvY2tlZCkudG9CZShmYWxzZSkKICB9KQp9KQoKLy8gLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KLy8gU0VDVElPTiA1OiBWYWxpZGF6aW9uZSBpbnB1dCAtLSBsb2dpY2EgcHVyYSAobmVzc3VuYSBkaXBlbmRlbnphKQovLyAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQpkZXNjcmliZSgnQXV0aCBpbnB1dCB2YWxpZGF0aW9uICh1bml0KScsICgpID0+IHsKICBiZWZvcmVFYWNoKCgpID0+IHZpLmNsZWFyQWxsTW9ja3MoKSkKCiAgY29uc3QgdmFsaWRhdGVMb2dpbklucHV0ID0gKGVtYWlsOiBzdHJpbmcsIHBhc3N3b3JkOiBzdHJpbmcpID0+IHsKICAgIGlmICghZW1haWwgfHwgIXBhc3N3b3JkKSByZXR1cm4geyBvazogZmFsc2UsIGVycm9yOiAnQ2FtcGkgb2JibGlnYXRvcmknIH0KICAgIGlmICghL14uK0AuK1wuLiskLy50ZXN0KGVtYWlsKSkgcmV0dXJuIHsgb2s6IGZhbHNlLCBlcnJvcjogJ0VtYWlsIG5vbiB2YWxpZGEnIH0KICAgIGlmIChwYXNzd29yZC5sZW5ndGggPCA4KSByZXR1cm4geyBvazogZmFsc2UsIGVycm9yOiAnUGFzc3dvcmQgdHJvcHBvIGNvcnRhJyB9CiAgICByZXR1cm4geyBvazogdHJ1ZSB9CiAgfQoKICBjb25zdCBub3JtYWxpemVFbWFpbCA9IChlbWFpbDogc3RyaW5nKSA9PiBlbWFpbC50cmltKCkudG9Mb3dlckNhc2UoKQoKICBpdCgncmlmaXV0YSBwYXNzd29yZCB2dW90YScsICgpID0+IHsKICAgIGV4cGVjdCh2YWxpZGF0ZUxvZ2luSW5wdXQoJ3VzZXJAdGVzdC5jb20nLCAnJykub2spLnRvQmUoZmFsc2UpCiAgfSkKCiAgaXQoJ3JpZml1dGEgZW1haWwgdnVvdGEnLCAoKSA9PiB7CiAgICBleHBlY3QodmFsaWRhdGVMb2dpbklucHV0KCcnLCAncGFzc3dvcmQxMjMnKS5vaykudG9CZShmYWxzZSkKICB9KQoKICBpdCgncmlmaXV0YSBlbWFpbCBub24gdmFsaWRhJywgKCkgPT4gewogICAgY29uc3QgciA9IHZhbGlkYXRlTG9naW5JbnB1dCgnbm90LWFuLWVtYWlsJywgJ3Bhc3N3b3JkMTIzJykKICAgIGV4cGVjdChyLm9rKS50b0JlKGZhbHNlKQogICAgZXhwZWN0KHIuZXJyb3IpLnRvQmUoJ0VtYWlsIG5vbiB2YWxpZGEnKQogIH0pCgogIGl0KCdyaWZpdXRhIHBhc3N3b3JkIHRyb3BwbyBjb3J0YSAoPDggY2FyYXR0ZXJpKScsICgpID0+IHsKICAgIGNvbnN0IHIgPSB2YWxpZGF0ZUxvZ2luSW5wdXQoJ3VzZXJAdGVzdC5jb20nLCAnYWJjJykKICAgIGV4cGVjdChyLm9rKS50b0JlKGZhbHNlKQogICAgZXhwZWN0KHIuZXJyb3IpLnRvQmUoJ1Bhc3N3b3JkIHRyb3BwbyBjb3J0YScpCiAgfSkKCiAgaXQoJ2FjY2V0dGEgY3JlZGVuemphbGkgdmFsaWRlJywgKCkgPT4gewogICAgZXhwZWN0KHZhbGlkYXRlTG9naW5JbnB1dCgndXNlckB0ZXN0LmNvbScsICdwYXNzd29yZDEyMycpLm9rKS50b0JlKHRydWUpCiAgfSkKCiAgaXQoJ25vcm1hbGl6emEgZW1haWwgKGxvd2VyY2FzZSArIHRyaW0pJywgKCkgPT4gewogICAgZXhwZWN0KG5vcm1hbGl6ZUVtYWlsKCcgIFVzZXJARXhhbXBsZS5DT00gICcpKS50b0JlKCd1c2VyQGV4YW1wbGUuY29tJykKICB9KQp9KQo=
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+
+// ---------------------------------------------------------------------------
+// Mock DB -- evita connessioni reali in test
+// La chain drizzle deve supportare sia .where() terminale (senza .limit)
+// sia .where().limit() terminale
+// ---------------------------------------------------------------------------
+const mockDbFactory = () => {
+  const terminal = vi.fn().mockResolvedValue([])
+  const chain: Record<string, unknown> = {}
+  chain.limit     = terminal
+  chain.orderBy   = vi.fn(() => ({ limit: terminal }))
+  chain.where     = Object.assign(vi.fn().mockResolvedValue([]), { limit: terminal })
+  chain.innerJoin = vi.fn(() => chain)
+  chain.from      = vi.fn(() => chain)
+  return chain
+}
+
+vi.mock('@/lib/db/drizzle', () => ({
+  db: {
+    select: vi.fn(() => mockDbFactory()),
+    insert: vi.fn().mockReturnThis(),
+    values:  vi.fn().mockResolvedValue([]),
+    delete:  vi.fn().mockReturnThis(),
+    update:  vi.fn().mockResolvedValue([]),
+  },
+}))
+
+// ---------------------------------------------------------------------------
+// Mock next/headers (session.ts usa cookies())
+// ---------------------------------------------------------------------------
+vi.mock('next/headers', () => ({
+  cookies: vi.fn().mockResolvedValue({
+    get:    vi.fn().mockReturnValue({ value: 'mock-session-token' }),
+    set:    vi.fn(),
+    delete: vi.fn(),
+  }),
+  headers: vi.fn().mockReturnValue(new Headers()),
+}))
+
+// ---------------------------------------------------------------------------
+// SECTION 1: session.ts -- hashPassword, comparePasswords, signToken, verifyToken
+// ---------------------------------------------------------------------------
+describe('session.ts', () => {
+  let hashPassword:    (p: string) => Promise<string>
+  let comparePasswords:(plain: string, hashed: string) => Promise<boolean>
+  let signToken:       (payload: { user: { id: number; role: string }; expires: string }) => Promise<string>
+  let verifyToken:     (token: string) => Promise<{ user: { id: number; role: string }; expires: string }>
+
+  beforeEach(async () => {
+    process.env.AUTH_SECRET = 'test-secret-key-at-least-32-chars-long-!'
+    const mod       = await import('@/lib/auth/session')
+    hashPassword    = mod.hashPassword
+    comparePasswords = mod.comparePasswords
+    signToken       = mod.signToken
+    verifyToken     = mod.verifyToken
+  })
+
+  describe('hashPassword / comparePasswords', () => {
+    it('produce un hash diverso dalla password originale', async () => {
+      const hashed = await hashPassword('MySecurePass123!')
+      expect(hashed).not.toBe('MySecurePass123!')
+      expect(hashed.startsWith('$2b$')).toBe(true)
+    })
+
+    it('due hash della stessa password sono diversi (salt)', async () => {
+      const ha1 = await hashPassword('password')
+      const ha2 = await hashPassword('password')
+      expect(ha1).not.toBe(ha2)
+    })
+
+    it('comparePasswords ritorna true per password corretta', async () => {
+      const hashed = await hashPassword('correct-horse-battery')
+      const result = await comparePasswords('correct-horse-battery', hashed)
+      expect(result).toBe(true)
+    })
+
+    it('comparePasswords ritorna false per password sbagliata', async () => {
+      const hashed = await hashPassword('correct-password')
+      const result = await comparePasswords('wrong-password', hashed)
+      expect(result).toBe(false)
+    })
+  })
+
+  describe('signToken / verifyToken', () => {
+    it('signa e verifica un token valido', async () => {
+      const payload = {
+        user:    { id: 42, role: 'member' },
+        expires: new Date(Date.now() + 86400 * 1000).toISOString(),
+      }
+      const token = await signToken(payload)
+      expect(typeof token).toBe('string')
+      expect(token.split('.').length).toBe(3)
+
+      const decoded = await verifyToken(token)
+      expect(decoded.user.id).toBe(42)
+      expect(decoded.user.role).toBe('member')
+    })
+
+    it('verifyToken fallisce su token malformato', async () => {
+      await expect(verifyToken('token.not.valid')).rejects.toThrow()
+    })
+
+    it('verifyToken fallisce su stringa vuota', async () => {
+      await expect(verifyToken('')).rejects.toThrow()
+    })
+  })
+})
+
+// ---------------------------------------------------------------------------
+// SECTION 2: otp.ts -- generateOtpCode, verifyOtpCode
+// ---------------------------------------------------------------------------
+describe('otp.ts', () => {
+  let generateOtpCode: () => string
+
+  beforeEach(async () => {
+    const mod      = await import('@/lib/auth/otp')
+    generateOtpCode = mod.generateOtpCode
+  })
+
+  describe('generateOtpCode', () => {
+    it('genera un codice di esattamente 6 cifre', () => {
+      const code = generateOtpCode()
+      expect(code).toMatch(/^\d{6}$/)
+    })
+
+    it('genera codici diversi ad ogni chiamata', () => {
+      const codes = new Set(Array.from({ length: 10 }, () => generateOtpCode()))
+      expect(codes.size).toBeGreaterThan(1)
+    })
+
+    it('il codice e sempre compreso tra 100000 e 999999', () => {
+      for (let i = 0; i < 20; i++) {
+        const num = parseInt(generateOtpCode(), 10)
+        expect(num).toBeGreaterThanOrEqual(100000)
+        expect(num).toBeLessThanOrEqual(999999)
+      }
+    })
+  })
+
+  describe('verifyOtpCode -- logica dominio (mock DB)', () => {
+    it('rifiuta se nessun record trovato (codice non esiste)', async () => {
+      const { verifyOtpCode } = await import('@/lib/auth/otp')
+      const result = await verifyOtpCode(1, '123456')
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('Codice non trovato.')
+    })
+  })
+})
+
+// ---------------------------------------------------------------------------
+// SECTION 3: password-reset.ts -- verifyPasswordResetToken
+// ---------------------------------------------------------------------------
+describe('password-reset.ts', () => {
+  it('rifiuta token inesistente (DB ritorna [])', async () => {
+    const { verifyPasswordResetToken } = await import('@/lib/auth/password-reset')
+    const result = await verifyPasswordResetToken('nonexistent-token')
+    expect(result.valid).toBe(false)
+    if (!result.valid) expect(result.error).toBe('Link non valido.')
+  })
+
+  it('rifiuta token scaduto', async () => {
+    const { db } = await import('@/lib/db/drizzle')
+    const expiredRecord = {
+      id: 1, userId: 10, token: 'expired-token',
+      expiresAt: new Date(Date.now() - 1000),
+    }
+    const mockChain = { limit: vi.fn().mockResolvedValue([expiredRecord]) }
+    vi.mocked(db.select).mockReturnValueOnce({
+      from: vi.fn(() => ({ where: vi.fn(() => mockChain) })),
+    } as never)
+
+    const { verifyPasswordResetToken } = await import('@/lib/auth/password-reset')
+    const result = await verifyPasswordResetToken('expired-token')
+    expect(result.valid).toBe(false)
+    if (!result.valid) expect(result.error).toBe('Link scaduto. Richiedine uno nuovo.')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// SECTION 4: rate-limit.ts -- checkGeneralRateLimit (in-memory, no DB)
+// ---------------------------------------------------------------------------
+describe('rate-limit.ts -- checkGeneralRateLimit', () => {
+  let checkGeneralRateLimit: (key: string, max: number, windowSec: number) => { blocked: boolean; remaining: number }
+
+  beforeEach(async () => {
+    vi.resetModules()
+    const mod          = await import('@/lib/auth/rate-limit')
+    checkGeneralRateLimit = mod.checkGeneralRateLimit
+  })
+
+  it('prima richiesta non bloccata', () => {
+    const result = checkGeneralRateLimit('test-ip-1', 3, 60)
+    expect(result.blocked).toBe(false)
+    expect(result.remaining).toBe(2)
+  })
+
+  it('blocca dopo aver superato il massimo', () => {
+    const key = 'test-ip-block'
+    checkGeneralRateLimit(key, 2, 60)
+    checkGeneralRateLimit(key, 2, 60)
+    const result = checkGeneralRateLimit(key, 2, 60)
+    expect(result.blocked).toBe(true)
+    expect(result.remaining).toBe(0)
+  })
+
+  it('remaining non scende mai sotto zero', () => {
+    const key = 'test-ip-floor'
+    for (let i = 0; i < 10; i++) checkGeneralRateLimit(key, 2, 60)
+    const result = checkGeneralRateLimit(key, 2, 60)
+    expect(result.remaining).toBeGreaterThanOrEqual(0)
+  })
+
+  it('chiavi diverse sono indipendenti', () => {
+    checkGeneralRateLimit('key-a', 2, 60)
+    checkGeneralRateLimit('key-a', 2, 60)
+    const resultA = checkGeneralRateLimit('key-a', 2, 60)
+    const resultB = checkGeneralRateLimit('key-b', 2, 60)
+    expect(resultA.blocked).toBe(true)
+    expect(resultB.blocked).toBe(false)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// SECTION 5: Validazione input -- logica pura (nessuna dipendenza)
+// ---------------------------------------------------------------------------
+describe('Auth input validation (unit)', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  const validateLoginInput = (email: string, password: string) => {
+    if (!email || !password) return { ok: false, error: 'Campi obbligatori' }
+    if (!/^.+@.+\..+$/.test(email)) return { ok: false, error: 'Email non valida' }
+    if (password.length < 8) return { ok: false, error: 'Password troppo corta' }
+    return { ok: true }
+  }
+
+  const normalizeEmail = (email: string) => email.trim().toLowerCase()
+
+  it('rifiuta password vuota', () => {
+    expect(validateLoginInput('user@test.com', '').ok).toBe(false)
+  })
+
+  it('rifiuta email vuota', () => {
+    expect(validateLoginInput('', 'password123').ok).toBe(false)
+  })
+
+  it('rifiuta email non valida', () => {
+    const r = validateLoginInput('not-an-email', 'password123')
+    expect(r.ok).toBe(false)
+    expect(r.error).toBe('Email non valida')
+  })
+
+  it('rifiuta password troppo corta (meno di 8 caratteri)', () => {
+    const r = validateLoginInput('user@test.com', 'abc')
+    expect(r.ok).toBe(false)
+    expect(r.error).toBe('Password troppo corta')
+  })
+
+  it('accetta credenziali valide', () => {
+    expect(validateLoginInput('user@test.com', 'password123').ok).toBe(true)
+  })
+
+  it('normalizza email (lowercase + trim)', () => {
+    expect(normalizeEmail('  User@Example.COM  ')).toBe('user@example.com')
+  })
+})
