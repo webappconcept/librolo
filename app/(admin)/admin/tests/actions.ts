@@ -87,8 +87,9 @@ export async function testComparePasswords(): Promise<IntegrationResult> {
 export async function testSignAndVerifyToken(): Promise<IntegrationResult> {
   await requireAdminPage();
   try {
+    // UUID fittizio — solo per testare la firma/verifica JWT, non corrisponde a un utente reale
     const payload = {
-      user: { id: 9999, role: "member" },
+      user: { id: "00000000-0000-0000-0000-000000009999", role: "member" },
       expires: new Date(Date.now() + 60_000).toISOString(),
     };
     const { result: token, durationMs: signMs } = await timed(() => signToken(payload));

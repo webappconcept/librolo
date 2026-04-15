@@ -16,11 +16,11 @@ type Override = {
   reason: string | null;
   expiresAt: Date | null;
   createdAt: Date;
-  grantedById: number | null;
+  grantedById: string | null;
 };
 
 type Props = {
-  userId: number;
+  userId: string;
   rolePerms: { key: string; label: string; group: string }[];
   overrides: Override[];
   allPermissions: Permission[];
@@ -48,7 +48,7 @@ function AddOverrideForm({
   allPermissions,
   onClose,
 }: {
-  userId: number;
+  userId: string;
   allPermissions: Permission[];
   onClose: () => void;
 }) {
@@ -68,7 +68,7 @@ function AddOverrideForm({
     e.preventDefault();
     setError(null);
     const fd = new FormData(e.currentTarget);
-    fd.set("userId", String(userId));
+    fd.set("userId", userId);
     // Allega l'offset timezone del browser (in minuti, convenzione JS: negativo per UTC+)
     fd.set("tzOffset", String(new Date().getTimezoneOffset()));
     startTransition(async () => {
