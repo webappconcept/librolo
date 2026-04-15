@@ -57,12 +57,13 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 // SECTION 1: session.ts
 //
-// PROBLEMA: session.ts valuta `const key = new TextEncoder().encode(AUTH_SECRET)`
-// al module load time. Se il modulo e' gia' in cache con AUTH_SECRET=undefined,
-// jose riceve un Uint8Array vuoto e lancia errore.
+// jose v6 usa il bundle 'webapi' che richiede CryptoKey (non Uint8Array).
+// session.ts chiama `new TextEncoder().encode(AUTH_SECRET)` a livello di modulo
+// e jose v6 internamente fa `crypto.subtle.importKey` da quel Uint8Array.
+// In test AUTH_SECRET e' undefined → Uint8Array vuoto → errore.
 //
-// Soluzione per signToken/verifyToken: importiamo jose direttamente e costruiamo
-// la key qui — jose v6 accetta Uint8Array direttamente per HS256, senza importKey.
+// Fix: testiamo signToken/verifyToken costruendo la CryptoKey direttamente
+// tramite crypto.subtle.importKey (Web Crypto, disponibile in Node 18+/vitest).
 // ---------------------------------------------------------------------------
 describe('session.ts', () => {
   describe('hashPassword / comparePasswords', () => {
@@ -94,12 +95,19 @@ describe('session.ts', () => {
   })
 
   describe('signToken / verifyToken', () => {
-    // jose v6 accetta Uint8Array direttamente per HS256 — nessuna importKey necessaria.
-    // Testiamo la logica JWT con jose direttamente, bypassando il modulo session.ts
-    // che inizializza `key` al load time con AUTH_SECRET potenzialmente undefined.
     it('signa e verifica un token valido', async () => {
       const { SignJWT, jwtVerify } = await import('jose')
-      const key = new TextEncoder().encode('test-secret-at-least-32-chars-long!!')
+
+      // jose v6 webapi richiede CryptoKey per sign/verify
+      const rawBytes = new TextEncoder().encode('test-secret-at-least-32-chars-long!!')
+      const cryptoKey = await crypto.subtle.importKey(
+        'raw',
+        rawBytes,
+        { name: 'HMAC', hash: 'SHA-256' },
+        false,
+        ['sign', 'verify'],
+      )
+
       const payload = {
         user:    { id: 42, role: 'member' },
         expires: new Date(Date.now() + 86400 * 1000).toISOString(),
@@ -108,10 +116,12 @@ describe('session.ts', () => {
         .setProtectedHeader({ alg: 'HS256' })
         .setIssuedAt()
         .setExpirationTime('1 day from now')
-        .sign(key)
+        .sign(cryptoKey)
+
       expect(typeof token).toBe('string')
       expect(token.split('.').length).toBe(3)
-      const { payload: decoded } = await jwtVerify(token, key, { algorithms: ['HS256'] })
+
+      const { payload: decoded } = await jwtVerify(token, cryptoKey, { algorithms: ['HS256'] })
       const typed = decoded as { user: { id: number; role: string } }
       expect(typed.user.id).toBe(42)
       expect(typed.user.role).toBe('member')
