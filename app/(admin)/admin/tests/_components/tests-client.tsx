@@ -2,7 +2,7 @@
 // app/(admin)/admin/tests/_components/tests-client.tsx
 //
 // Struttura UI:
-//  - Tab orizzontali di sezione: Auth | RBAC  (una per ogni dominio)
+//  - Tab orizzontali di sezione: Auth | RBAC | SEO | Contenuti
 //  - Dentro ogni sezione: pill  Unit | Live   (modalità di esecuzione)
 //  - Unit  → test in-memory, istantanei, nessuna dipendenza esterna
 //  - Live  → chiama Server Actions reali (bcrypt, JWT, DB, RBAC)
@@ -11,7 +11,7 @@ import { useState, useCallback } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import {
   FlaskConical, CheckCircle2, XCircle, ChevronDown, ChevronUp,
-  Loader2, RotateCcw, LogIn, ShieldCheck, Plug, Zap,
+  Loader2, RotateCcw, LogIn, ShieldCheck, Plug, Zap, Search, FileText,
 } from "lucide-react";
 import {
   testDbPing, testHashPassword, testComparePasswords,
@@ -20,6 +20,7 @@ import {
   testCanCurrentUser, testGetUserPermissions, testCanNegative,
   testReadSettings,
 } from "../actions";
+import { z } from "zod";
 
 // ---------------------------------------------------------------------------
 // Tipi
@@ -137,6 +138,136 @@ function buildRbacUnitGroups(): TestGroup[] {
 }
 
 // ---------------------------------------------------------------------------
+// SEO — Unit groups
+// ---------------------------------------------------------------------------
+function buildSeoUnitGroups(): TestGroup[] {
+  const ROBOTS_VALUES = ["", "noindex,nofollow", "noindex,follow"] as const;
+  const schema = z.object({
+    pathname: z.string().min(1).regex(/^\//, { message: "Il pathname deve iniziare con /" }),
+    label: z.string().min(1, "Il nome è obbligatorio").max(100),
+    title: z.string().max(70).optional(),
+    description: z.string().max(160).optional(),
+    ogTitle: z.string().max(70).optional(),
+    ogDescription: z.string().max(200).optional(),
+    ogImage: z.string().url().optional().or(z.literal("")),
+    robots: z.enum(ROBOTS_VALUES).optional().transform((v) => v || null),
+    jsonLdEnabled: z.boolean().default(false),
+    jsonLdType: z.string().optional().nullable(),
+  });
+  const ok = { pathname: "/test", label: "Test" };
+  const p = (data: object) => schema.safeParse(data);
+  return [
+    { key: "seo-pathname", label: "Pathname validation", emoji: "🔗", open: true, tests: [
+      run("accetta pathname con /",                    () => assert(p({ ...ok }).success, "fail")),
+      run("rifiuta pathname senza /",                  () => { const r = p({ ...ok, pathname: "noslash" }); assert(!r.success, "doveva fallire"); }),
+      run("rifiuta pathname vuoto",                    () => assert(!p({ ...ok, pathname: "" }).success, "doveva fallire")),
+      run("accetta /blog/sub-path",                    () => assert(p({ ...ok, pathname: "/blog/sub-path" }).success, "fail")),
+    ]},
+    { key: "seo-label", label: "Label validation", emoji: "🏷️", open: true, tests: [
+      run("rifiuta label vuota",                       () => assert(!p({ ...ok, label: "" }).success, "doveva fallire")),
+      run("rifiuta label > 100 char",                  () => assert(!p({ ...ok, label: "a".repeat(101) }).success, "doveva fallire")),
+      run("accetta label di 100 char esatti",          () => assert(p({ ...ok, label: "a".repeat(100) }).success, "fail")),
+    ]},
+    { key: "seo-limits", label: "Limiti campi SEO", emoji: "📏", open: true, tests: [
+      run("rifiuta title > 70 char",                   () => assert(!p({ ...ok, title: "a".repeat(71) }).success, "doveva fallire")),
+      run("accetta title di 70 char",                  () => assert(p({ ...ok, title: "a".repeat(70) }).success, "fail")),
+      run("rifiuta description > 160 char",            () => assert(!p({ ...ok, description: "a".repeat(161) }).success, "doveva fallire")),
+      run("accetta description di 160 char",           () => assert(p({ ...ok, description: "a".repeat(160) }).success, "fail")),
+      run("rifiuta ogTitle > 70 char",                 () => assert(!p({ ...ok, ogTitle: "a".repeat(71) }).success, "doveva fallire")),
+      run("rifiuta ogDescription > 200 char",          () => assert(!p({ ...ok, ogDescription: "a".repeat(201) }).success, "doveva fallire")),
+    ]},
+    { key: "seo-image", label: "ogImage URL", emoji: "🖼️", open: true, tests: [
+      run("accetta stringa vuota",                     () => assert(p({ ...ok, ogImage: "" }).success, "fail")),
+      run("accetta URL https valido",                  () => assert(p({ ...ok, ogImage: "https://cdn.example.com/img.jpg" }).success, "fail")),
+      run("rifiuta stringa non-URL",                   () => assert(!p({ ...ok, ogImage: "non-un-url" }).success, "doveva fallire")),
+    ]},
+    { key: "seo-robots", label: "Robots directive", emoji: "🤖", open: true, tests: [
+      run("'' trasformato in null",                    () => { const r = p({ ...ok, robots: "" }); assert(r.success && (r.data as { robots: null }).robots === null, "non null"); }),
+      run("accetta noindex,nofollow",                  () => assert(p({ ...ok, robots: "noindex,nofollow" }).success, "fail")),
+      run("accetta noindex,follow",                    () => assert(p({ ...ok, robots: "noindex,follow" }).success, "fail")),
+      run("rifiuta valore non previsto",               () => assert(!p({ ...ok, robots: "all" }).success, "doveva fallire")),
+    ]},
+  ];
+}
+
+// ---------------------------------------------------------------------------
+// Contenuti — Unit groups
+// ---------------------------------------------------------------------------
+function buildContenutiUnitGroups(): TestGroup[] {
+  const schema = z.object({
+    id: z.string().optional(),
+    originalSlug: z.string().optional(),
+    slug: z
+      .string()
+      .min(1, "Lo slug è obbligatorio")
+      .max(255)
+      .regex(/^[a-z0-9]+(?:[/-][a-z0-9]+)*$/, {
+        message: "Slug non valido: usa solo lettere minuscole, numeri, trattini e slash",
+      }),
+    title: z.string().min(1, "Il titolo è obbligatorio").max(255),
+    content: z.string().default(""),
+    status: z.enum(["draft", "published"]).default("draft"),
+    publishedAt: z.string().optional(),
+    expiresAt: z.string().optional(),
+    parentId: z.string().optional(),
+    templateId: z.string().optional(),
+    customFields: z.string().optional(),
+    pageType: z.string().optional(),
+    sortOrder: z.string().optional(),
+  });
+  const ok = { slug: "chi-siamo", title: "Chi siamo", status: "draft" as const };
+  const p = (data: object) => schema.safeParse(data);
+  const toggle = (s: string) => s === "published" ? "draft" : "published";
+  const parseJson = (raw?: string): Record<string, unknown> => {
+    if (!raw) return {};
+    try { return JSON.parse(raw); } catch { return {}; }
+  };
+  const resolveDate = (status: string, at?: string): Date | null => {
+    if (status === "published") return at ? new Date(at) : new Date();
+    if (at) return new Date(at);
+    return null;
+  };
+
+  return [
+    { key: "cont-slug", label: "Slug validation", emoji: "🔤", open: true, tests: [
+      run("accetta slug lowercase semplice",            () => assert(p(ok).success, "fail")),
+      run("accetta slug con trattini",                  () => assert(p({ ...ok, slug: "blog-post-1" }).success, "fail")),
+      run("accetta slug con slash",                     () => assert(p({ ...ok, slug: "blog/post-1" }).success, "fail")),
+      run("rifiuta slug vuoto",                         () => assert(!p({ ...ok, slug: "" }).success, "doveva fallire")),
+      run("rifiuta slug con maiuscole",                 () => assert(!p({ ...ok, slug: "ChiSiamo" }).success, "doveva fallire")),
+      run("rifiuta slug con spazi",                     () => assert(!p({ ...ok, slug: "chi siamo" }).success, "doveva fallire")),
+      run("rifiuta slug che inizia con -",              () => assert(!p({ ...ok, slug: "-chi" }).success, "doveva fallire")),
+      run("rifiuta slug con // doppio",                 () => assert(!p({ ...ok, slug: "blog//post" }).success, "doveva fallire")),
+      run("rifiuta slug > 255 char",                    () => assert(!p({ ...ok, slug: "a".repeat(256) }).success, "doveva fallire")),
+    ]},
+    { key: "cont-title", label: "Title validation", emoji: "📝", open: true, tests: [
+      run("rifiuta titolo vuoto",                       () => assert(!p({ ...ok, title: "" }).success, "doveva fallire")),
+      run("rifiuta titolo > 255 char",                  () => assert(!p({ ...ok, title: "a".repeat(256) }).success, "doveva fallire")),
+      run("accetta titolo di 255 char esatti",          () => assert(p({ ...ok, title: "a".repeat(255) }).success, "fail")),
+    ]},
+    { key: "cont-status", label: "Status & toggle", emoji: "🔀", open: true, tests: [
+      run("default status è draft",                    () => { const r = p({ slug: "t", title: "T" }); assert(r.success && r.data.status === "draft", "non draft"); }),
+      run("accetta published",                          () => assert(p({ ...ok, status: "published" }).success, "fail")),
+      run("rifiuta status non previsto",                () => assert(!p({ ...ok, status: "archived" }).success, "doveva fallire")),
+      run("toggle published → draft",                   () => assert(toggle("published") === "draft", "fail")),
+      run("toggle draft → published",                   () => assert(toggle("draft") === "published", "fail")),
+    ]},
+    { key: "cont-json", label: "customFields JSON", emoji: "🗂️", open: true, tests: [
+      run("stringa vuota → {}",                        () => assert(JSON.stringify(parseJson("")) === "{}", "fail")),
+      run("undefined → {}",                            () => assert(JSON.stringify(parseJson(undefined)) === "{}", "fail")),
+      run("JSON valido parsato",                       () => assert(parseJson('{"k":1}').k === 1, "fail")),
+      run("JSON non valido → {} (no throw)",           () => assert(JSON.stringify(parseJson("{ bad }")) === "{}", "fail")),
+    ]},
+    { key: "cont-dates", label: "publishedAt risoluzione", emoji: "📅", open: true, tests: [
+      run("published senza data → now",                () => { const before = Date.now(); const r = resolveDate("published"); assert(r !== null && r.getTime() >= before, "fail"); }),
+      run("published con data specifica",              () => assert(resolveDate("published", "2025-01-15T10:00:00.000Z")?.toISOString() === "2025-01-15T10:00:00.000Z", "fail")),
+      run("draft senza data → null",                   () => assert(resolveDate("draft") === null, "fail")),
+      run("draft con data → conserva data",            () => assert(resolveDate("draft", "2025-06-01T00:00:00.000Z") !== null, "fail")),
+    ]},
+  ];
+}
+
+// ---------------------------------------------------------------------------
 // Live runners
 // ---------------------------------------------------------------------------
 type LiveRunner = {
@@ -185,8 +316,10 @@ async function runLiveGroups(
 // Sezioni (tab orizzontali)
 // ---------------------------------------------------------------------------
 const SECTIONS = [
-  { id: "auth",  label: "Auth",  Icon: LogIn,       buildUnit: buildAuthUnitGroups, liveRunners: AUTH_LIVE },
-  { id: "rbac",  label: "RBAC",  Icon: ShieldCheck,  buildUnit: buildRbacUnitGroups, liveRunners: RBAC_LIVE },
+  { id: "auth",      label: "Auth",      Icon: LogIn,      buildUnit: buildAuthUnitGroups,      liveRunners: AUTH_LIVE,  hasLive: true  },
+  { id: "rbac",      label: "RBAC",      Icon: ShieldCheck, buildUnit: buildRbacUnitGroups,      liveRunners: RBAC_LIVE,  hasLive: true  },
+  { id: "seo",       label: "SEO",       Icon: Search,      buildUnit: buildSeoUnitGroups,       liveRunners: [],         hasLive: false },
+  { id: "contenuti", label: "Contenuti", Icon: FileText,    buildUnit: buildContenutiUnitGroups, liveRunners: [],         hasLive: false },
 ] as const;
 
 type SectionId = (typeof SECTIONS)[number]["id"];
@@ -222,7 +355,10 @@ export function TestsClient({ initialTab }: { initialTab: string }) {
     setSectionId(id);
     setRunning(false);
     const sec = SECTIONS.find((s) => s.id === id)!;
-    setGroups(mode === "unit" ? sec.buildUnit() : buildLiveGroups(sec.liveRunners));
+    // Se la sezione non ha live, forza unit
+    const nextMode: Mode = (!sec.hasLive && mode === "live") ? "unit" : mode;
+    setMode(nextMode);
+    setGroups(nextMode === "unit" ? sec.buildUnit() : buildLiveGroups(sec.liveRunners));
   }, [router, pathname, searchParams, mode]);
 
   // Cambio modalità
@@ -286,18 +422,21 @@ export function TestsClient({ initialTab }: { initialTab: string }) {
         {/* Separatore visivo */}
         <div className="w-px h-6" style={{ background: "var(--admin-card-border)" }} />
 
-        {/* Pill modalità Unit / Live */}
+        {/* Pill modalità Unit / Live — Live disabilitato per SEO e Contenuti */}
         <div className="flex items-center gap-1 p-1 rounded-xl" style={{ background: "var(--admin-hover-bg)" }}>
           {(["unit", "live"] as Mode[]).map((m) => {
             const active = mode === m;
             const isLive = m === "live";
+            const disabled = isLive && !section.hasLive;
             return (
-              <button key={m} onClick={() => switchMode(m)}
+              <button key={m} onClick={() => !disabled && switchMode(m)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all"
                 style={{
                   background: active ? (isLive ? "#854d0e" : "#1d4ed8") : "transparent",
-                  color: active ? "#fff" : "var(--admin-text-muted)",
+                  color: disabled ? "var(--admin-text-faint)" : active ? "#fff" : "var(--admin-text-muted)",
                   boxShadow: active ? "0 1px 3px oklch(0 0 0/0.15)" : "none",
+                  cursor: disabled ? "not-allowed" : "pointer",
+                  opacity: disabled ? 0.4 : 1,
                 }}>
                 {isLive ? <Plug size={12} /> : <Zap size={12} />}
                 {m === "unit" ? "Unit" : "Live"}
@@ -356,6 +495,18 @@ export function TestsClient({ initialTab }: { initialTab: string }) {
           <span style={{ color: "var(--admin-text-muted)" }}>
             I test <strong style={{ color: "var(--admin-text)" }}>live</strong> chiamano le funzioni reali dell&apos;applicazione (bcrypt, JWT, DB, RBAC).
             Nessuna scrittura permanente viene eseguita.
+          </span>
+        </div>
+      )}
+
+      {/* ── Banner solo-unit per SEO / Contenuti ── */}
+      {!section.hasLive && (
+        <div className="flex items-start gap-2 px-4 py-3 rounded-xl text-sm"
+          style={{ background: "color-mix(in srgb, var(--admin-accent) 5%, var(--admin-card-bg))", border: "1px solid color-mix(in srgb, var(--admin-accent) 15%, transparent)" }}>
+          <Zap size={15} style={{ color: "var(--admin-accent)", marginTop: 2, flexShrink: 0 }} />
+          <span style={{ color: "var(--admin-text-muted)" }}>
+            I test <strong style={{ color: "var(--admin-text)" }}>Unit</strong> per questa sezione validano la logica di business e i vincoli degli schema
+            direttamente in-memory — nessuna chiamata al DB.
           </span>
         </div>
       )}
