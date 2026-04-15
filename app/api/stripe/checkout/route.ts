@@ -6,6 +6,10 @@ import { eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 
+// UUID v4 regex
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function GET(request: NextRequest) {
   const stripe = getStripe();
   const searchParams = request.nextUrl.searchParams;
@@ -51,14 +55,14 @@ export async function GET(request: NextRequest) {
     }
 
     const userId = session.client_reference_id;
-    if (!userId) {
-      throw new Error("No user ID found in session's client_reference_id.");
+    if (!userId || !UUID_REGEX.test(userId)) {
+      throw new Error("No valid user UUID found in session's client_reference_id.");
     }
 
     const [foundUser] = await db
       .select()
       .from(users)
-      .where(eq(users.id, Number(userId)))
+      .where(eq(users.id, userId))
       .limit(1);
 
     if (!foundUser) {
