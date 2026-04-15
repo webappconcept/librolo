@@ -28,7 +28,7 @@ import {
 
 type LogEntry = {
   id: number;
-  userId: number | null;
+  userId: string | null;
   userEmail: string | null;
   action: string;
   ipAddress: string | null;
@@ -348,6 +348,7 @@ export function LogsClient({ data }: Props) {
                 p === "..." ? (
                   <span key={`dots-${idx}`} className="w-8 text-center text-xs" style={{ color: "var(--admin-text-faint)" }}>
                     &hellip;
+
                   </span>
                 ) : (
                   <button
