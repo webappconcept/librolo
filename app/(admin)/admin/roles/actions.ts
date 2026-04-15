@@ -12,7 +12,7 @@ import { z } from "zod";
 
 /** Scrive un record su activity_logs con IP del richiedente. */
 async function logRbacAction(
-  adminId: number,
+  adminId: string,
   action: ActivityType,
   detail: string,
 ) {
@@ -156,7 +156,7 @@ export async function deleteRole(id: number) {
   return { success: "Ruolo eliminato" };
 }
 
-export async function setUserRole(userId: number, roleName: string) {
+export async function setUserRole(userId: string, roleName: string) {
   const admin = await requireAdmin();
 
   const [role] = await db
