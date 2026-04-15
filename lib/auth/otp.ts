@@ -8,7 +8,7 @@ export function generateOtpCode(): string {
   return String(randomInt(100000, 999999)); // 6 cifre sicure
 }
 
-export async function createVerificationCode(userId: number): Promise<string> {
+export async function createVerificationCode(userId: string): Promise<string> {
   const code = generateOtpCode();
   const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minuti
 
@@ -22,7 +22,7 @@ export async function createVerificationCode(userId: number): Promise<string> {
 }
 
 export async function verifyOtpCode(
-  userId: number,
+  userId: string,
   inputCode: string,
 ): Promise<{ success: boolean; error?: string }> {
   const [record] = await db
