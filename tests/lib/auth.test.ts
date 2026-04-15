@@ -93,8 +93,6 @@ describe('session.ts', () => {
   })
 
   describe('signToken / verifyToken', () => {
-    // Con @vitest-environment node, crypto.subtle e' disponibile (Node 18+ Web Crypto).
-    // Usiamo jose direttamente con CryptoKey costruita via crypto.subtle.importKey.
     it('signa e verifica un token valido', async () => {
       const { SignJWT, jwtVerify } = await import('jose')
 
@@ -106,7 +104,8 @@ describe('session.ts', () => {
         ['sign', 'verify'],
       )
 
-      const token = await new SignJWT({ sub: '42', role: 'member' })
+      // sub ora è una stringa UUID-like
+      const token = await new SignJWT({ sub: 'a1b2c3d4-0000-0000-0000-000000000001', role: 'member' })
         .setProtectedHeader({ alg: 'HS256' })
         .setIssuedAt()
         .setExpirationTime('1d')
@@ -116,7 +115,7 @@ describe('session.ts', () => {
       expect(token.split('.').length).toBe(3)
 
       const { payload } = await jwtVerify(token, cryptoKey, { algorithms: ['HS256'] })
-      expect(payload.sub).toBe('42')
+      expect(payload.sub).toBe('a1b2c3d4-0000-0000-0000-000000000001')
       expect((payload as Record<string, unknown>).role).toBe('member')
     })
 
@@ -162,7 +161,7 @@ describe('otp.ts', () => {
     it('rifiuta se nessun record trovato (codice non esiste)', async () => {
       buildAuthChain([])
       const { verifyOtpCode } = await import('@/lib/auth/otp')
-      const result = await verifyOtpCode(1, '123456')
+      const result = await verifyOtpCode('a1b2c3d4-0000-0000-0000-000000000001', '123456')
       expect(result.success).toBe(false)
       expect(result.error).toBe('Codice non trovato.')
     })
@@ -183,7 +182,9 @@ describe('password-reset.ts', () => {
 
   it('rifiuta token scaduto', async () => {
     const expiredRecord = {
-      id: 1, userId: 10, token: 'expired-token',
+      id: 1,
+      userId: 'a1b2c3d4-0000-0000-0000-000000000010',
+      token: 'expired-token',
       expiresAt: new Date(Date.now() - 1000),
     }
     buildAuthChain([expiredRecord])
