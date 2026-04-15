@@ -4,6 +4,7 @@
 import { useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { ActivityType } from "@/lib/db/schema";
+import type { PaginatedLogs } from "@/lib/db/types";
 import {
   Activity,
   ChevronLeft,
@@ -26,24 +27,9 @@ import {
   UserCog,
 } from "lucide-react";
 
-type LogEntry = {
-  id: number;
-  userId: string | null;
-  userEmail: string | null;
-  action: string;
-  ipAddress: string | null;
-  timestamp: Date;
-};
+// LogEntry e PaginatedLogs sono ora in @/lib/db/types — non ridefinire qui.
 
-type PaginatedData = {
-  logs: LogEntry[];
-  total: number;
-  page: number;
-  perPage: number;
-  totalPages: number;
-};
-
-type Props = { data: PaginatedData };
+type Props = { data: PaginatedLogs };
 
 const TABS = [
   { id: "rbac", label: "RBAC", icon: KeyRound },
@@ -348,7 +334,6 @@ export function LogsClient({ data }: Props) {
                 p === "..." ? (
                   <span key={`dots-${idx}`} className="w-8 text-center text-xs" style={{ color: "var(--admin-text-faint)" }}>
                     &hellip;
-
                   </span>
                 ) : (
                   <button
