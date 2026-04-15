@@ -5,7 +5,7 @@ import { useState, useTransition } from "react";
 import { banUser } from "../actions";
 
 interface BanModalProps {
-  userId: number;
+  userId: string;
   userName: string;
   onClose: () => void;
 }
