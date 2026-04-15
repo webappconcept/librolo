@@ -5,7 +5,7 @@ import { randomBytes } from "crypto";
 import { eq } from "drizzle-orm";
 
 export async function createPasswordResetToken(
-  userId: number,
+  userId: string,
 ): Promise<string> {
   const token = randomBytes(32).toString("hex"); // 64 char hex
   const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minuti
@@ -21,7 +21,7 @@ export async function createPasswordResetToken(
 
 export async function verifyPasswordResetToken(
   token: string,
-): Promise<{ valid: false; error: string } | { valid: true; userId: number }> {
+): Promise<{ valid: false; error: string } | { valid: true; userId: string }> {
   const [record] = await db
     .select()
     .from(passwordResetTokens)
