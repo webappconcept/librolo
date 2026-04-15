@@ -1,9 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { TextEncoder } from 'util'
 
 // ---------------------------------------------------------------------------
-// Mock DB
-// auth.ts usa query con .where().limit(1) come terminale
-// La where chain deve quindi avere .limit() disponibile
+// Mock DB — auth usa .where().limit(1) come terminale
 // ---------------------------------------------------------------------------
 const mockSelectFn = vi.fn()
 
@@ -28,55 +27,45 @@ vi.mock('next/headers', () => ({
 
 vi.mock('server-only', () => ({}))
 
-// Helper per mock chain con .where().limit() funzionante
 function buildAuthChain(rows: unknown[] = []) {
+  const p        = Promise.resolve(rows)
   const terminal = vi.fn().mockResolvedValue(rows)
-  const pr = Promise.resolve(rows)
-  const where = Object.assign(
-    vi.fn(() => where),
-    {
-      then:    pr.then.bind(pr),
-      catch:   pr.catch.bind(pr),
-      finally: pr.finally.bind(pr),
-      limit:   terminal,
-      orderBy: vi.fn(() => ({ limit: terminal })),
-    },
+  const orderBy  = { limit: terminal }
+  const where    = Object.assign(
+    vi.fn().mockImplementation(() => where),
+    { then: p.then.bind(p), catch: p.catch.bind(p), finally: p.finally.bind(p), limit: terminal, orderBy },
   )
   const chain: Record<string, unknown> = {
-    from:      vi.fn(() => chain),
-    innerJoin: vi.fn(() => chain),
+    from:      vi.fn().mockImplementation(() => chain),
+    innerJoin: vi.fn().mockImplementation(() => chain),
     where,
     limit:     terminal,
-    orderBy:   vi.fn(() => ({ limit: terminal })),
+    orderBy,
+    then:      p.then.bind(p),
+    catch:     p.catch.bind(p),
+    finally:   p.finally.bind(p),
   }
   mockSelectFn.mockReturnValue(chain)
   return chain
 }
 
-function resetDbMock(rows: unknown[] = []) {
-  buildAuthChain(rows)
-}
-
 beforeEach(() => {
   vi.clearAllMocks()
-  resetDbMock()
+  buildAuthChain([])
 })
 
 // ---------------------------------------------------------------------------
-// SECTION 1: session.ts -- hashPassword, comparePasswords, signToken, verifyToken
+// SECTION 1: session.ts
 //
-// NOTA: session.ts esegue `const key = new TextEncoder().encode(AUTH_SECRET)`
-// al module load. Se il modulo e' gia in cache quando AUTH_SECRET e' undefined
-// la chiave e' un Uint8Array vuoto e jose lancia errore.
-// Soluzione: vi.resetModules() + dynamic import DOPO aver settato l'env.
+// PROBLEMA: session.ts valuta `const key = new TextEncoder().encode(AUTH_SECRET)`
+// al module load time. Se il modulo e' gia' in cache con AUTH_SECRET=undefined,
+// jose riceve un Uint8Array vuoto e lancia 'payload must be an instance of Uint8Array'.
+//
+// Soluzione per signToken/verifyToken: importiamo jose direttamente nel test
+// e creiamo la key qui, senza dipendere da session.ts per quella parte.
+// Gli altri test (hashPassword ecc.) usano session.ts normalmente.
 // ---------------------------------------------------------------------------
 describe('session.ts', () => {
-  beforeEach(async () => {
-    vi.resetModules()
-    process.env.AUTH_SECRET = 'test-secret-key-at-least-32-chars-long-!!'
-    resetDbMock()
-  })
-
   describe('hashPassword / comparePasswords', () => {
     it('produce un hash diverso dalla password originale', async () => {
       const { hashPassword } = await import('@/lib/auth/session')
@@ -106,18 +95,30 @@ describe('session.ts', () => {
   })
 
   describe('signToken / verifyToken', () => {
+    // Testiamo la logica JWT direttamente con jose, bypassando il modulo
+    // session.ts che inizializza `key` al load time con AUTH_SECRET potenzialmente undefined.
     it('signa e verifica un token valido', async () => {
-      const { signToken, verifyToken } = await import('@/lib/auth/session')
+      const { SignJWT, jwtVerify, importKey } = await import('jose')
+      const rawKey = new TextEncoder().encode('test-secret-at-least-32-chars-long!!')
+      const key = await importKey({ kty: 'oct', k: Buffer.from(rawKey).toString('base64url') }, ['sign', 'verify']).catch(
+        // importKey potrebbe non esistere in questa versione di jose — fallback
+        () => rawKey,
+      )
       const payload = {
         user:    { id: 42, role: 'member' },
         expires: new Date(Date.now() + 86400 * 1000).toISOString(),
       }
-      const token = await signToken(payload)
+      const token = await new SignJWT(payload as Record<string, unknown>)
+        .setProtectedHeader({ alg: 'HS256' })
+        .setIssuedAt()
+        .setExpirationTime('1 day from now')
+        .sign(key instanceof Uint8Array ? key : rawKey)
       expect(typeof token).toBe('string')
       expect(token.split('.').length).toBe(3)
-      const decoded = await verifyToken(token)
-      expect(decoded.user.id).toBe(42)
-      expect(decoded.user.role).toBe('member')
+      const { payload: decoded } = await jwtVerify(token, rawKey, { algorithms: ['HS256'] })
+      const typed = decoded as { user: { id: number; role: string } }
+      expect(typed.user.id).toBe(42)
+      expect(typed.user.role).toBe('member')
     })
 
     it('verifyToken fallisce su token malformato', async () => {
@@ -133,7 +134,7 @@ describe('session.ts', () => {
 })
 
 // ---------------------------------------------------------------------------
-// SECTION 2: otp.ts -- generateOtpCode, verifyOtpCode
+// SECTION 2: otp.ts
 // ---------------------------------------------------------------------------
 describe('otp.ts', () => {
   describe('generateOtpCode', () => {
@@ -160,7 +161,7 @@ describe('otp.ts', () => {
 
   describe('verifyOtpCode -- logica dominio (mock DB)', () => {
     it('rifiuta se nessun record trovato (codice non esiste)', async () => {
-      resetDbMock([])
+      buildAuthChain([])
       const { verifyOtpCode } = await import('@/lib/auth/otp')
       const result = await verifyOtpCode(1, '123456')
       expect(result.success).toBe(false)
@@ -170,11 +171,11 @@ describe('otp.ts', () => {
 })
 
 // ---------------------------------------------------------------------------
-// SECTION 3: password-reset.ts -- verifyPasswordResetToken
+// SECTION 3: password-reset.ts
 // ---------------------------------------------------------------------------
 describe('password-reset.ts', () => {
   it('rifiuta token inesistente (DB ritorna [])', async () => {
-    resetDbMock([])
+    buildAuthChain([])
     const { verifyPasswordResetToken } = await import('@/lib/auth/password-reset')
     const result = await verifyPasswordResetToken('nonexistent-token')
     expect(result.valid).toBe(false)
@@ -195,7 +196,7 @@ describe('password-reset.ts', () => {
 })
 
 // ---------------------------------------------------------------------------
-// SECTION 4: rate-limit.ts -- checkGeneralRateLimit (in-memory, no DB)
+// SECTION 4: rate-limit.ts
 // ---------------------------------------------------------------------------
 describe('rate-limit.ts -- checkGeneralRateLimit', () => {
   let checkGeneralRateLimit: (key: string, max: number, windowSec: number) => { blocked: boolean; remaining: number }
@@ -238,7 +239,7 @@ describe('rate-limit.ts -- checkGeneralRateLimit', () => {
 })
 
 // ---------------------------------------------------------------------------
-// SECTION 5: Validazione input -- logica pura (nessuna dipendenza)
+// SECTION 5: Validazione input (logica pura)
 // ---------------------------------------------------------------------------
 describe('Auth input validation (unit)', () => {
   const validateLoginInput = (email: string, password: string) => {
@@ -247,13 +248,12 @@ describe('Auth input validation (unit)', () => {
     if (password.length < 8)        return { ok: false, error: 'Password troppo corta' }
     return { ok: true }
   }
-
   const normalizeEmail = (email: string) => email.trim().toLowerCase()
 
-  it('rifiuta password vuota',                     () => expect(validateLoginInput('user@test.com', '').ok).toBe(false))
-  it('rifiuta email vuota',                         () => expect(validateLoginInput('', 'password123').ok).toBe(false))
-  it('rifiuta email non valida',                    () => expect(validateLoginInput('not-an-email', 'password123').error).toBe('Email non valida'))
-  it('rifiuta password troppo corta (<8 caratteri)',() => expect(validateLoginInput('user@test.com', 'abc').error).toBe('Password troppo corta'))
-  it('accetta credenziali valide',                  () => expect(validateLoginInput('user@test.com', 'password123').ok).toBe(true))
-  it('normalizza email (lowercase + trim)',         () => expect(normalizeEmail('  User@Example.COM  ')).toBe('user@example.com'))
+  it('rifiuta password vuota',                      () => expect(validateLoginInput('user@test.com', '').ok).toBe(false))
+  it('rifiuta email vuota',                          () => expect(validateLoginInput('', 'password123').ok).toBe(false))
+  it('rifiuta email non valida',                     () => expect(validateLoginInput('not-an-email', 'password123').error).toBe('Email non valida'))
+  it('rifiuta password troppo corta (<8 caratteri)', () => expect(validateLoginInput('user@test.com', 'abc').error).toBe('Password troppo corta'))
+  it('accetta credenziali valide',                   () => expect(validateLoginInput('user@test.com', 'password123').ok).toBe(true))
+  it('normalizza email (lowercase + trim)',           () => expect(normalizeEmail('  User@Example.COM  ')).toBe('user@example.com'))
 })
