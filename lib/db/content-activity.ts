@@ -12,12 +12,12 @@ import { headers } from "next/headers";
  *
  * @param action  - uno dei valori ActivityType (es. ActivityType.PAGE_CREATED)
  * @param detail  - stringa libera separata con " | " (es. "slug: /about | titolo: About")
- * @param userId  - id utente admin che ha eseguito l'azione (opzionale)
+ * @param userId  - UUID utente admin che ha eseguito l'azione (opzionale)
  */
 export async function logContentActivity(
   action: ActivityType,
   detail: string,
-  userId?: number | null,
+  userId?: string | null,
 ): Promise<void> {
   try {
     const hdrs = await headers();
