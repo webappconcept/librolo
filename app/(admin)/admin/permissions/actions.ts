@@ -15,7 +15,7 @@ import { headers } from "next/headers";
 
 /** Scrive un record su activity_logs con IP del richiedente. */
 async function logRbacAction(
-  adminId: number,
+  adminId: string,
   action: ActivityType,
   detail: string,
 ) {

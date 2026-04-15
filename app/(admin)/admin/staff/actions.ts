@@ -7,7 +7,7 @@ import { requireAdmin } from "@/lib/rbac/guards";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
-export async function changeStaffRole(userId: number, roleName: string) {
+export async function changeStaffRole(userId: string, roleName: string) {
   await requireAdmin();
 
   const [role] = await db

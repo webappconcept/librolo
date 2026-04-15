@@ -16,7 +16,7 @@ import { z } from "zod";
 
 /** Scrive un record su activity_logs con IP del richiedente. */
 async function logRbacAction(
-  adminId: number,
+  adminId: string,
   action: ActivityType,
   detail: string,
 ) {
@@ -33,7 +33,7 @@ async function logRbacAction(
 }
 
 const OverrideSchema = z.object({
-  userId: z.coerce.number().int().positive(),
+  userId: z.string().uuid(),
   permissionId: z.coerce.number().int().positive(),
   granted: z.string().transform((v) => v === "true"),
   reason: z.string().max(500).optional(),
@@ -95,7 +95,7 @@ export async function addOverride(formData: FormData) {
   return { success: true };
 }
 
-export async function removeOverride(overrideId: number, userId: number) {
+export async function removeOverride(overrideId: number, userId: string) {
   const admin = await getUser();
   if (!admin || !admin.isAdmin) return { error: "Non autorizzato" };
 
@@ -115,7 +115,7 @@ export async function removeOverride(overrideId: number, userId: number) {
  * Elimina tutti gli override scaduti dell'utente.
  * Chiamata sia manualmente dal pulsante UI sia automaticamente al caricamento della pagina.
  */
-export async function purgeExpired(userId: number) {
+export async function purgeExpired(userId: string) {
   const admin = await getUser();
   if (!admin || !admin.isAdmin) return { error: "Non autorizzato" };
 

@@ -6,7 +6,7 @@ import { TriangleAlert, X, Trash2 } from "lucide-react";
 import { deleteUser } from "../actions";
 
 interface DeleteModalProps {
-  userId: number;
+  userId: string;
   userName: string;
   userEmail: string;
   onClose: () => void;

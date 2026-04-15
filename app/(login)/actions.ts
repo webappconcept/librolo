@@ -26,7 +26,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 async function logActivity(
-  userId: number,
+  userId: string,
   type: ActivityType,
   ipAddress?: string,
 ) {
@@ -218,7 +218,7 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
   // Cookie temporaneo per identificare l'utente in attesa di verifica
   (await cookies()).set(
     "pending_verification_user_id",
-    String(createdUser.id),
+    createdUser.id,
     {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",

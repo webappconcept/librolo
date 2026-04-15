@@ -12,12 +12,16 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+// UUID v4 regex
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 // ─── Helper ────────────────────────────────────────────────────
-async function getPendingUserId(): Promise<number | null> {
+async function getPendingUserId(): Promise<string | null> {
   const cookieStore = await cookies();
   const raw = cookieStore.get("pending_verification_user_id")?.value;
-  const id = Number(raw);
-  return isNaN(id) || id === 0 ? null : id;
+  if (!raw || !UUID_REGEX.test(raw)) return null;
+  return raw;
 }
 
 // ─── Verifica codice OTP ────────────────────────────────────────

@@ -103,22 +103,27 @@ export async function getTemplateBySlug(slug: string): Promise<TemplateWithField
 /**
  * Crea o aggiorna un template con i suoi campi.
  * Strategia: upsert template, poi elimina tutti i campi esistenti e li ricrea.
+ *
+ * @param id  - ID esistente per update, undefined per insert
+ * @param data - dati del template (NewPageTemplate non include id)
+ * @param fields - campi del template senza templateId
  */
 export async function upsertTemplate(
+  id: number | undefined,
   data: NewPageTemplate,
   fields: Omit<NewTemplateField, "templateId">[],
 ): Promise<PageTemplate> {
   let template: PageTemplate;
 
-  if (data.id) {
+  if (id !== undefined) {
     await db
       .update(pageTemplates)
       .set({ ...data, updatedAt: new Date() })
-      .where(eq(pageTemplates.id, data.id));
+      .where(eq(pageTemplates.id, id));
     const [updated] = await db
       .select()
       .from(pageTemplates)
-      .where(eq(pageTemplates.id, data.id))
+      .where(eq(pageTemplates.id, id))
       .limit(1);
     template = updated;
   } else {
