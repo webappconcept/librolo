@@ -12,6 +12,7 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import {
   FlaskConical, CheckCircle2, XCircle, ChevronDown, ChevronUp,
   Loader2, RotateCcw, LogIn, ShieldCheck, Plug, Zap, Search, FileText,
+  type LucideIcon,
 } from "lucide-react";
 import {
   testDbPing, testHashPassword, testComparePasswords,
@@ -42,6 +43,20 @@ interface TestGroup {
   emoji: string;
   tests: TestResult[];
   open: boolean;
+}
+
+type LiveRunner = {
+  name: string;
+  fn: () => Promise<{ ok: boolean; detail?: string; durationMs: number; data?: Record<string, unknown> }>;
+};
+
+interface SectionDef {
+  id: string;
+  label: string;
+  Icon: LucideIcon;
+  buildUnit: () => TestGroup[];
+  liveRunners: LiveRunner[];
+  hasLive: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -270,28 +285,23 @@ function buildContenutiUnitGroups(): TestGroup[] {
 // ---------------------------------------------------------------------------
 // Live runners
 // ---------------------------------------------------------------------------
-type LiveRunner = {
-  name: string;
-  fn: () => Promise<{ ok: boolean; detail?: string; durationMs: number; data?: Record<string, unknown> }>;
-};
-
 const AUTH_LIVE: LiveRunner[] = [
-  { name: "DB ping (SELECT 1)",                   fn: testDbPing },
-  { name: "hashPassword (bcrypt)",                 fn: testHashPassword },
-  { name: "comparePasswords — match + no-match",   fn: testComparePasswords },
-  { name: "signToken + verifyToken (JWT HS256)",   fn: testSignAndVerifyToken },
-  { name: "verifyToken rifiuta JWT malformato",    fn: testTokenExpiry },
-  { name: "generateOtpCode — 5 campioni reali",    fn: testGenerateOtp },
+  { name: "DB ping (SELECT 1)",                    fn: testDbPing },
+  { name: "hashPassword (bcrypt)",                  fn: testHashPassword },
+  { name: "comparePasswords — match + no-match",    fn: testComparePasswords },
+  { name: "signToken + verifyToken (JWT HS256)",    fn: testSignAndVerifyToken },
+  { name: "verifyToken rifiuta JWT malformato",     fn: testTokenExpiry },
+  { name: "generateOtpCode — 5 campioni reali",     fn: testGenerateOtp },
   { name: "isDomainBlacklisted (mailinator/gmail)", fn: testDisposableBlacklist },
-  { name: "checkGeneralRateLimit — blocco reale",  fn: testRateLimitReal },
-  { name: "getAppSettings — lettura DB",           fn: testReadSettings },
+  { name: "checkGeneralRateLimit — blocco reale",   fn: testRateLimitReal },
+  { name: "getAppSettings — lettura DB",            fn: testReadSettings },
 ];
 
 const RBAC_LIVE: LiveRunner[] = [
-  { name: "DB ping (SELECT 1)",                                fn: testDbPing },
-  { name: "can(currentUser, 'admin:access') → true",           fn: testCanCurrentUser },
-  { name: "can(currentUser, '__ghost__') → false",             fn: testCanNegative },
-  { name: "getUserPermissions — set completo dal DB",          fn: testGetUserPermissions },
+  { name: "DB ping (SELECT 1)",                               fn: testDbPing },
+  { name: "can(currentUser, 'admin:access') → true",          fn: testCanCurrentUser },
+  { name: "can(currentUser, '__ghost__') → false",            fn: testCanNegative },
+  { name: "getUserPermissions — set completo dal DB",         fn: testGetUserPermissions },
 ];
 
 async function runLiveGroups(
@@ -314,15 +324,17 @@ async function runLiveGroups(
 
 // ---------------------------------------------------------------------------
 // Sezioni (tab orizzontali)
+// Tipizzato esplicitamente come SectionDef[] per evitare che TypeScript
+// inferisca `liveRunners: []` come `readonly []` (non assegnabile a LiveRunner[]).
 // ---------------------------------------------------------------------------
-const SECTIONS = [
-  { id: "auth",      label: "Auth",      Icon: LogIn,      buildUnit: buildAuthUnitGroups,      liveRunners: AUTH_LIVE,  hasLive: true  },
-  { id: "rbac",      label: "RBAC",      Icon: ShieldCheck, buildUnit: buildRbacUnitGroups,      liveRunners: RBAC_LIVE,  hasLive: true  },
-  { id: "seo",       label: "SEO",       Icon: Search,      buildUnit: buildSeoUnitGroups,       liveRunners: [],         hasLive: false },
-  { id: "contenuti", label: "Contenuti", Icon: FileText,    buildUnit: buildContenutiUnitGroups, liveRunners: [],         hasLive: false },
-] as const;
+const SECTIONS: SectionDef[] = [
+  { id: "auth",      label: "Auth",      Icon: LogIn,       buildUnit: buildAuthUnitGroups,      liveRunners: AUTH_LIVE,  hasLive: true  },
+  { id: "rbac",      label: "RBAC",      Icon: ShieldCheck,  buildUnit: buildRbacUnitGroups,      liveRunners: RBAC_LIVE,  hasLive: true  },
+  { id: "seo",       label: "SEO",       Icon: Search,       buildUnit: buildSeoUnitGroups,       liveRunners: [],         hasLive: false },
+  { id: "contenuti", label: "Contenuti", Icon: FileText,     buildUnit: buildContenutiUnitGroups, liveRunners: [],         hasLive: false },
+];
 
-type SectionId = (typeof SECTIONS)[number]["id"];
+type SectionId = "auth" | "rbac" | "seo" | "contenuti";
 
 function buildLiveGroups(runners: LiveRunner[]): TestGroup[] {
   return [{ key: "live", label: "Test sul server reale", emoji: "🔌", open: true, tests: runners.map((r) => ({ name: r.name, status: "idle" as TestStatus })) }];
@@ -355,7 +367,6 @@ export function TestsClient({ initialTab }: { initialTab: string }) {
     setSectionId(id);
     setRunning(false);
     const sec = SECTIONS.find((s) => s.id === id)!;
-    // Se la sezione non ha live, forza unit
     const nextMode: Mode = (!sec.hasLive && mode === "live") ? "unit" : mode;
     setMode(nextMode);
     setGroups(nextMode === "unit" ? sec.buildUnit() : buildLiveGroups(sec.liveRunners));
@@ -387,7 +398,7 @@ export function TestsClient({ initialTab }: { initialTab: string }) {
     setRunning(false);
   }, [section]);
 
-  const runAll  = mode === "live" ? runLive : runUnit;
+  const runAll   = mode === "live" ? runLive : runUnit;
   const resetAll = () => { setGroups(idleGroups(mode === "unit" ? section.buildUnit() : buildLiveGroups(section.liveRunners))); setRunning(false); };
   const toggleGroup = (key: string) => setGroups((prev) => prev.map((g) => g.key === key ? { ...g, open: !g.open } : g));
 
@@ -409,7 +420,7 @@ export function TestsClient({ initialTab }: { initialTab: string }) {
           {SECTIONS.map((sec) => {
             const active = sec.id === sectionId;
             return (
-              <button key={sec.id} onClick={() => switchSection(sec.id)}
+              <button key={sec.id} onClick={() => switchSection(sec.id as SectionId)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all"
                 style={{ background: active ? "var(--admin-accent)" : "transparent", color: active ? "#fff" : "var(--admin-text-muted)", boxShadow: active ? "0 1px 3px oklch(0 0 0/0.15)" : "none" }}>
                 <sec.Icon size={13} />
@@ -422,11 +433,11 @@ export function TestsClient({ initialTab }: { initialTab: string }) {
         {/* Separatore visivo */}
         <div className="w-px h-6" style={{ background: "var(--admin-card-border)" }} />
 
-        {/* Pill modalità Unit / Live — Live disabilitato per SEO e Contenuti */}
+        {/* Pill modalità Unit / Live */}
         <div className="flex items-center gap-1 p-1 rounded-xl" style={{ background: "var(--admin-hover-bg)" }}>
           {(["unit", "live"] as Mode[]).map((m) => {
-            const active = mode === m;
-            const isLive = m === "live";
+            const active   = mode === m;
+            const isLive   = m === "live";
             const disabled = isLive && !section.hasLive;
             return (
               <button key={m} onClick={() => !disabled && switchMode(m)}
