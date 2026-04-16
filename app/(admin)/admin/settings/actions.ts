@@ -4,11 +4,12 @@ import { updateAppSetting } from "@/lib/db/settings-queries";
 import { db } from "@/lib/db/drizzle";
 import { siteSnippets } from "@/lib/db/schema";
 import type { SiteSnippet } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { disposableDomains } from "@/lib/db/schema";
 
 // ---------------------------------------------------------------------------
-// ActionState (usato dai tab con useActionState)
+// ActionState
 // ---------------------------------------------------------------------------
 export type ActionState =
   | {}
@@ -16,7 +17,7 @@ export type ActionState =
   | { error: string; timestamp: number };
 
 // ---------------------------------------------------------------------------
-// Generale  (general-tab.tsx → saveAppSettings)
+// Generale
 // ---------------------------------------------------------------------------
 export async function saveAppSettings(
   _prev: ActionState,
@@ -27,7 +28,6 @@ export async function saveAppSettings(
       .trim()
       .replace(/^https?:\/\//i, "")
       .replace(/\/$/, "");
-
     await updateAppSetting("app_name", formData.get("app_name") as string);
     await updateAppSetting("app_description", formData.get("app_description") as string);
     await updateAppSetting("app_domain", domain ? `https://${domain}` : "");
@@ -39,21 +39,15 @@ export async function saveAppSettings(
 }
 
 // ---------------------------------------------------------------------------
-// Comportamento  (behaviour-tab.tsx → saveBehaviourSettings)
+// Comportamento
 // ---------------------------------------------------------------------------
 export async function saveBehaviourSettings(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
   try {
-    await updateAppSetting(
-      "registrations_enabled",
-      formData.get("registrations_enabled") as string,
-    );
-    await updateAppSetting(
-      "maintenance_mode",
-      formData.get("maintenance_mode") as string,
-    );
+    await updateAppSetting("registrations_enabled", formData.get("registrations_enabled") as string);
+    await updateAppSetting("maintenance_mode", formData.get("maintenance_mode") as string);
     revalidatePath("/admin/settings");
     return { success: "Impostazioni comportamento salvate.", timestamp: Date.now() };
   } catch {
@@ -62,7 +56,7 @@ export async function saveBehaviourSettings(
 }
 
 // ---------------------------------------------------------------------------
-// Sender  (sender-tab.tsx → saveSenderSettings)
+// Sender
 // ---------------------------------------------------------------------------
 export async function saveSenderSettings(
   _prev: ActionState,
@@ -79,11 +73,10 @@ export async function saveSenderSettings(
   }
 }
 
-// Alias retrocompatibilità
 export const saveEmailSettings = saveSenderSettings;
 
 // ---------------------------------------------------------------------------
-// Email Templates  (email-templates-tab.tsx → saveEmailTemplateSettings)
+// Email Templates
 // ---------------------------------------------------------------------------
 export async function saveEmailTemplateSettings(
   _prev: ActionState,
@@ -96,7 +89,6 @@ export async function saveEmailTemplateSettings(
       "email_reset_subject",   "email_reset_bcc",   "email_reset_body",   "email_reset_footer",
       "email_deleted_subject", "email_deleted_bcc", "email_deleted_body", "email_deleted_footer",
     ] as const;
-
     for (const key of keys) {
       const val = (formData.get(key) as string | null) ?? "";
       await updateAppSetting(key, val.trim() || null);
@@ -109,17 +101,14 @@ export async function saveEmailTemplateSettings(
 }
 
 // ---------------------------------------------------------------------------
-// Utenti  (users-tab.tsx → saveUsersSettings)
+// Utenti / SignIn
 // ---------------------------------------------------------------------------
 export async function saveUsersSettings(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
   try {
-    await updateAppSetting(
-      "default_role",
-      formData.get("default_role") as string,
-    );
+    await updateAppSetting("default_role", formData.get("default_role") as string);
     revalidatePath("/admin/settings");
     return { success: "Impostazioni utenti salvate.", timestamp: Date.now() };
   } catch {
@@ -128,7 +117,66 @@ export async function saveUsersSettings(
 }
 
 // ---------------------------------------------------------------------------
-// Alias con suffisso Action (compatibilità)
+// Domini bloccati (disposable_domains)
+// ---------------------------------------------------------------------------
+
+export async function addDisposableDomainAction(
+  domain: string,
+): Promise<ActionState> {
+  try {
+    const clean = domain.trim().toLowerCase();
+    if (!clean) return { error: "Dominio non valido.", timestamp: Date.now() };
+    await db
+      .insert(disposableDomains)
+      .values({ domain: clean })
+      .onConflictDoNothing();
+    revalidatePath("/admin/settings");
+    return { success: `"${clean}" aggiunto.`, timestamp: Date.now() };
+  } catch {
+    return { error: "Errore durante l'aggiunta.", timestamp: Date.now() };
+  }
+}
+
+export async function removeDisposableDomainAction(
+  domain: string,
+): Promise<ActionState> {
+  try {
+    await db
+      .delete(disposableDomains)
+      .where(eq(disposableDomains.domain, domain.trim().toLowerCase()));
+    revalidatePath("/admin/settings");
+    return { success: `"${domain}" rimosso.`, timestamp: Date.now() };
+  } catch {
+    return { error: "Errore durante la rimozione.", timestamp: Date.now() };
+  }
+}
+
+export async function bulkImportDisposableDomainsAction(
+  domains: string[],
+): Promise<ActionState> {
+  try {
+    if (domains.length === 0)
+      return { error: "Nessun dominio da importare.", timestamp: Date.now() };
+    const values = domains
+      .map((d) => d.trim().toLowerCase())
+      .filter(Boolean)
+      .map((domain) => ({ domain }));
+    await db
+      .insert(disposableDomains)
+      .values(values)
+      .onConflictDoNothing();
+    revalidatePath("/admin/settings");
+    return {
+      success: `${values.length} domini importati con successo.`,
+      timestamp: Date.now(),
+    };
+  } catch {
+    return { error: "Errore durante l'importazione bulk.", timestamp: Date.now() };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Alias retrocompatibilità
 // ---------------------------------------------------------------------------
 export const saveGeneralSettingsAction = saveAppSettings;
 export const saveBehaviourSettingsAction = saveBehaviourSettings;
@@ -138,7 +186,6 @@ export const saveUsersSettingsAction = saveUsersSettings;
 // ---------------------------------------------------------------------------
 // Snippets CRUD
 // ---------------------------------------------------------------------------
-
 function invalidateSnippets() {
   revalidatePath("/", "layout");
 }
