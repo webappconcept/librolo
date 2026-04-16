@@ -309,6 +309,18 @@ export const seoPages = pgTable("seo_pages", {
 });
 
 // ---------------------------------------------------------------------------
+// Disposable domains — domini email usa e getta bloccati alla registrazione
+// La tabella disposable_domains esiste già su Supabase.
+// ---------------------------------------------------------------------------
+export const disposableDomains = pgTable("disposable_domains", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  domain: varchar("domain", { length: 255 }).notNull().unique(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export type DisposableDomain = typeof disposableDomains.$inferSelect;
+
+// ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 export type User = typeof users.$inferSelect;

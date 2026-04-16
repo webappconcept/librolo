@@ -2,11 +2,10 @@
 
 import { updateAppSetting } from "@/lib/db/settings-queries";
 import { db } from "@/lib/db/drizzle";
-import { siteSnippets } from "@/lib/db/schema";
+import { siteSnippets, disposableDomains } from "@/lib/db/schema";
 import type { SiteSnippet } from "@/lib/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { disposableDomains } from "@/lib/db/schema";
 
 // ---------------------------------------------------------------------------
 // ActionState
@@ -119,7 +118,6 @@ export async function saveUsersSettings(
 // ---------------------------------------------------------------------------
 // Domini bloccati (disposable_domains)
 // ---------------------------------------------------------------------------
-
 export async function addDisposableDomainAction(
   domain: string,
 ): Promise<ActionState> {
