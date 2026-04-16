@@ -87,7 +87,6 @@ export async function testComparePasswords(): Promise<IntegrationResult> {
 export async function testSignAndVerifyToken(): Promise<IntegrationResult> {
   await requireAdminPage();
   try {
-    // UUID fittizio — solo per testare la firma/verifica JWT, non corrisponde a un utente reale
     const payload = {
       user: { id: "00000000-0000-0000-0000-000000009999", role: "member" },
       expires: new Date(Date.now() + 60_000).toISOString(),
@@ -161,8 +160,8 @@ export async function testDisposableBlacklist(): Promise<IntegrationResult> {
   await requireAdminPage();
   try {
     const start = Date.now();
-    const disposable = isDomainBlacklisted("test@mailinator.com");
-    const legit = isDomainBlacklisted("test@gmail.com");
+    const disposable = await isDomainBlacklisted("test@mailinator.com");
+    const legit = await isDomainBlacklisted("test@gmail.com");
     const durationMs = Date.now() - start;
     if (!disposable) return { ok: false, detail: "mailinator.com non è stato rilevato come disposable", durationMs };
     if (legit) return { ok: false, detail: "gmail.com è stato erroneamente classificato come disposable", durationMs };
@@ -178,18 +177,14 @@ export async function testDisposableBlacklist(): Promise<IntegrationResult> {
 export async function testRateLimitReal(): Promise<IntegrationResult> {
   await requireAdminPage();
   try {
-    // Chiave univoca per questo run — evita collisioni con test precedenti nel DB
     const key = "integration-test-" + Date.now();
     const start = Date.now();
 
-    // Prima verifica: nessun tentativo ancora → non bloccata
     const r1 = await checkGeneralRateLimit(key, 2, 60);
 
-    // Registra i due tentativi (contratto DB-based: check → record → check)
     await recordGeneralAttempt(key);
     await recordGeneralAttempt(key);
 
-    // Seconda verifica: 2 tentativi registrati, max=2 → bloccata
     const r3 = await checkGeneralRateLimit(key, 2, 60);
 
     const durationMs = Date.now() - start;
@@ -317,14 +312,13 @@ export async function testSeoGetAllPages(): Promise<IntegrationResult> {
 }
 
 // ---------------------------------------------------------------------------
-// SEO — upsert + delete (reversibile: crea, verifica, cancella)
+// SEO — upsert + delete (reversibile)
 // ---------------------------------------------------------------------------
 export async function testSeoUpsertAndDelete(): Promise<IntegrationResult> {
   await requireAdminPage();
   const testPathname = "/__test_seo_integration__";
   const start = Date.now();
   try {
-    // 1. Insert
     await upsertSeoPage({
       pathname: testPathname,
       label: "Test SEO Integration",
@@ -334,14 +328,12 @@ export async function testSeoUpsertAndDelete(): Promise<IntegrationResult> {
       jsonLdEnabled: false,
     });
 
-    // 2. Verifica presenza
     const after = await getAllSeoPages();
     const found = after.find((r) => r.pathname === testPathname);
     if (!found) {
       return { ok: false, detail: "Riga non trovata dopo upsert", durationMs: Date.now() - start };
     }
 
-    // 3. Update stesso pathname (onConflictDoUpdate)
     await upsertSeoPage({
       pathname: testPathname,
       label: "Test SEO Integration — updated",
@@ -357,7 +349,6 @@ export async function testSeoUpsertAndDelete(): Promise<IntegrationResult> {
       return { ok: false, detail: "Update non applicato correttamente", durationMs: Date.now() - start };
     }
 
-    // 4. Cleanup
     await deleteSeoPage(testPathname);
     const afterDelete = await getAllSeoPages();
     const stillThere = afterDelete.find((r) => r.pathname === testPathname);
@@ -371,21 +362,19 @@ export async function testSeoUpsertAndDelete(): Promise<IntegrationResult> {
       data: { pathname: testPathname, insertOk: true, updateOk: true, deleteOk: true },
     };
   } catch (e) {
-    // Tentativo di cleanup in caso di eccezione
     try { await deleteSeoPage(testPathname); } catch { /* ignore */ }
     return { ok: false, detail: String(e), durationMs: Date.now() - start };
   }
 }
 
 // ---------------------------------------------------------------------------
-// SEO — robots constraint (solo valori ammessi)
+// SEO — robots constraint
 // ---------------------------------------------------------------------------
 export async function testSeoRobotsConstraint(): Promise<IntegrationResult> {
   await requireAdminPage();
   const testPathname = "/__test_seo_robots__";
   const start = Date.now();
   try {
-    // Inserisce con robots valido
     await upsertSeoPage({
       pathname: testPathname,
       label: "Test Robots",
@@ -399,11 +388,7 @@ export async function testSeoRobotsConstraint(): Promise<IntegrationResult> {
     if (!robotsOk) {
       return { ok: false, detail: `robots atteso 'noindex,nofollow', trovato: ${row?.robots}`, durationMs: Date.now() - start };
     }
-    return {
-      ok: true,
-      durationMs: Date.now() - start,
-      data: { robots: row?.robots },
-    };
+    return { ok: true, durationMs: Date.now() - start, data: { robots: row?.robots } };
   } catch (e) {
     try { await deleteSeoPage(testPathname); } catch { /* ignore */ }
     return { ok: false, detail: String(e), durationMs: Date.now() - start };
@@ -411,7 +396,7 @@ export async function testSeoRobotsConstraint(): Promise<IntegrationResult> {
 }
 
 // ---------------------------------------------------------------------------
-// SEO — jsonLd toggle (lettura/scrittura booleano)
+// SEO — jsonLd toggle
 // ---------------------------------------------------------------------------
 export async function testSeoJsonLdToggle(): Promise<IntegrationResult> {
   await requireAdminPage();
@@ -419,7 +404,6 @@ export async function testSeoJsonLdToggle(): Promise<IntegrationResult> {
   const start = Date.now();
   try {
     await upsertSeoPage({ pathname: testPathname, label: "Test JsonLD", robots: null, jsonLdEnabled: false });
-    // Update con jsonLdEnabled: true
     await upsertSeoPage({ pathname: testPathname, label: "Test JsonLD", robots: null, jsonLdEnabled: true, jsonLdType: "WebPage" });
     const rows = await getAllSeoPages();
     const row = rows.find((r) => r.pathname === testPathname);
@@ -487,13 +471,12 @@ export async function testContenutiGetBySlugMiss(): Promise<IntegrationResult> {
 }
 
 // ---------------------------------------------------------------------------
-// Contenuti — togglePageStatus (reversibile: legge prima pagina reale o skip)
+// Contenuti — togglePageStatus (reversibile)
 // ---------------------------------------------------------------------------
 export async function testContenutiToggleStatus(): Promise<IntegrationResult> {
   await requireAdminPage();
   const start = Date.now();
   try {
-    // Cerca la prima pagina disponibile da usare come cavie
     const pages = await getAllPages();
     if (pages.length === 0) {
       return { ok: true, durationMs: Date.now() - start, data: { skipped: true, reason: "nessuna pagina nel DB" } };
@@ -501,7 +484,6 @@ export async function testContenutiToggleStatus(): Promise<IntegrationResult> {
     const target = pages[0];
     const originalStatus = target.status;
 
-    // Toggle 1: cambia status
     await togglePageStatus(target.id, originalStatus);
     const afterToggle1 = await getPageBySlug(target.slug);
     const expectedAfter1 = originalStatus === "published" ? "draft" : "published";
@@ -513,7 +495,6 @@ export async function testContenutiToggleStatus(): Promise<IntegrationResult> {
       };
     }
 
-    // Toggle 2: ripristina status originale
     await togglePageStatus(target.id, expectedAfter1);
     const afterToggle2 = await getPageBySlug(target.slug);
     if (afterToggle2?.status !== originalStatus) {
@@ -542,7 +523,7 @@ export async function testContenutiToggleStatus(): Promise<IntegrationResult> {
 }
 
 // ---------------------------------------------------------------------------
-// Contenuti — deletePageCascade (reversibile: crea pagina test + figli, elimina tutto)
+// Contenuti — deletePageCascade (reversibile)
 // ---------------------------------------------------------------------------
 export async function testContenutiCascadeDelete(): Promise<IntegrationResult> {
   await requireAdminPage();
@@ -550,26 +531,19 @@ export async function testContenutiCascadeDelete(): Promise<IntegrationResult> {
   const childSlug  = "__test_cascade_child__";
   const start = Date.now();
   try {
-    // Import dinamico per evitare cicli circolari
     const { upsertPage } = await import("@/lib/db/pages-queries");
 
-    // Crea pagina padre
     const parentId = await upsertPage({ slug: parentSlug, title: "Test Parent", status: "draft" });
-
-    // Crea pagina figlia
     await upsertPage({ slug: childSlug, title: "Test Child", status: "draft", parentId });
 
-    // Verifica esistenza
     const parent = await getPageBySlug(parentSlug);
     const child  = await getPageBySlug(childSlug);
     if (!parent || !child) {
       return { ok: false, detail: "Pagine test non create correttamente", durationMs: Date.now() - start };
     }
 
-    // Cascade delete (elimina padre + figlia)
     const deleted = await deletePageCascade(parentSlug);
 
-    // Verifica cleanup
     const parentAfter = await getPageBySlug(parentSlug);
     const childAfter  = await getPageBySlug(childSlug);
     if (parentAfter || childAfter) {
@@ -582,10 +556,7 @@ export async function testContenutiCascadeDelete(): Promise<IntegrationResult> {
       data: { deletedRows: deleted, parentOk: !parentAfter, childOk: !childAfter },
     };
   } catch (e) {
-    // Cleanup di emergenza
-    try {
-      await deletePageCascade(parentSlug);
-    } catch { /* ignore */ }
+    try { await deletePageCascade(parentSlug); } catch { /* ignore */ }
     return { ok: false, detail: String(e), durationMs: Date.now() - start };
   }
 }
