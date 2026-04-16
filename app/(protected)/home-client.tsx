@@ -1,14 +1,14 @@
 "use client";
 
 import LandingPage from "@/components/landing-page";
-import type { User } from "@/lib/db/schema";
+import type { UserWithProfile } from "@/lib/db/schema";
 import { fullName } from "@/lib/utils";
 import useSWR from "swr";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function HomeClient() {
-  const { data: user, isLoading } = useSWR<User>("/api/user", fetcher, {
+  const { data: user, isLoading } = useSWR<UserWithProfile>("/api/user", fetcher, {
     revalidateOnFocus: false,
     revalidateOnMount: true,
     shouldRetryOnError: false,
