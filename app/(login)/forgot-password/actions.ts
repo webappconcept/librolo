@@ -8,7 +8,7 @@ import {
   recordGeneralAttempt,
 } from "@/lib/auth/rate-limit";
 import { db } from "@/lib/db/drizzle";
-import { users } from "@/lib/db/schema";
+import { users, userProfiles } from "@/lib/db/schema";
 import { sendPasswordResetEmail } from "@/lib/email/templates/password-reset";
 import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
@@ -27,7 +27,6 @@ export const forgotPassword = validatedAction(
       headersList.get("x-real-ip") ??
       "unknown";
 
-    // Max 3 richieste per IP ogni 15 minuti — DB-based, serverless-safe
     const rateLimitKey = `forgot-password:${ip}`;
     const { blocked } = await checkGeneralRateLimit(rateLimitKey, 3, 15 * 60);
 
@@ -35,29 +34,32 @@ export const forgotPassword = validatedAction(
       return { error: "Troppe richieste. Riprova tra qualche minuto." };
     }
 
-    // Registra il tentativo prima di procedere
     await recordGeneralAttempt(rateLimitKey);
 
     const { email } = data;
 
-    const [user] = await db
-      .select()
+    const [row] = await db
+      .select({
+        id: users.id,
+        email: users.email,
+        firstName: userProfiles.firstName,
+      })
       .from(users)
+      .leftJoin(userProfiles, eq(userProfiles.userId, users.id))
       .where(eq(users.email, email))
       .limit(1);
 
-    // Risposta generica per non rivelare se l'email esiste
-    if (!user) {
+    if (!row) {
       return {
         success: "Se l'email è registrata, riceverai le istruzioni a breve.",
       };
     }
 
-    const token = await createPasswordResetToken(user.id);
+    const token = await createPasswordResetToken(row.id);
     await sendPasswordResetEmail(
-      user.email,
+      row.email,
       token,
-      user.firstName ?? undefined,
+      row.firstName ?? undefined,
     );
 
     return {

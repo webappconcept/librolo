@@ -2,7 +2,7 @@
 "use server";
 
 import { db } from "@/lib/db/drizzle";
-import { roles, users, activityLogs } from "@/lib/db/schema";
+import { roles, users, userProfiles, activityLogs } from "@/lib/db/schema";
 import { requireAdmin } from "@/lib/rbac/guards";
 import { can } from "@/lib/rbac/can";
 import { ActivityType } from "@/lib/db/schema";
@@ -40,48 +40,48 @@ export async function unbanUser(userId: string) {
 }
 
 export async function deleteUser(userId: string) {
-  // 1. Guard base: deve essere admin
   const adminUser = await requireAdmin();
 
-  // 2. Guard granulare: deve avere users:delete (RBAC)
   const allowed = await can(adminUser, "users:delete");
   if (!allowed) throw new Error("Non hai il permesso users:delete.");
 
-  // 3. Fetch target
-  const [target] = await db
+  const rows = await db
     .select({
       id: users.id,
       email: users.email,
-      firstName: users.firstName,
+      firstName: userProfiles.firstName,
       isAdmin: users.isAdmin,
       deletedAt: users.deletedAt,
     })
     .from(users)
+    .leftJoin(userProfiles, eq(userProfiles.userId, users.id))
     .where(eq(users.id, userId))
     .limit(1);
 
+  const target = rows[0];
   if (!target) throw new Error("Utente non trovato.");
   if (target.isAdmin) throw new Error("Non puoi eliminare un account admin.");
   if (target.deletedAt) throw new Error("Utente già eliminato.");
 
   const deletedAt = new Date();
 
-  // 4. Soft delete
   await db
     .update(users)
     .set({ deletedAt, updatedAt: deletedAt })
     .where(eq(users.id, userId));
 
-  // 5. Activity log
   await db.insert(activityLogs).values({
     userId: adminUser.id,
     action: ActivityType.ADMIN_DELETE_USER,
     timestamp: deletedAt,
   });
 
-  // 6. Email notifica
   try {
-    await sendUserDeletedEmail(target.email, target.firstName, deletedAt);
+    await sendUserDeletedEmail(
+      target.email,
+      target.firstName ?? null,
+      deletedAt,
+    );
   } catch (emailError) {
     console.error("[deleteUser] Errore invio email:", emailError);
   }

@@ -13,14 +13,36 @@ import { relations } from "drizzle-orm";
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
-  firstName: varchar("first_name", { length: 100 }),
-  lastName: varchar("last_name", { length: 100 }),
   email: varchar("email", { length: 255 }).notNull().unique(),
   passwordHash: text("password_hash").notNull(),
   role: varchar("role", { length: 50 }).notNull().default("member"),
   isAdmin: boolean("is_admin").notNull().default(false),
   bannedAt: timestamp("banned_at"),
   bannedReason: varchar("banned_reason", { length: 255 }),
+  emailVerified: boolean("email_verified").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  deletedAt: timestamp("deleted_at"),
+});
+
+export const userProfiles = pgTable("user_profiles", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .notNull()
+    .unique()
+    .references(() => users.id, { onDelete: "cascade" }),
+  firstName: varchar("first_name", { length: 100 }),
+  lastName: varchar("last_name", { length: 100 }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const userSubscriptions = pgTable("user_subscriptions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .notNull()
+    .unique()
+    .references(() => users.id, { onDelete: "cascade" }),
   stripeCustomerId: varchar("stripe_customer_id", { length: 255 }),
   stripeSubscriptionId: varchar("stripe_subscription_id", { length: 255 }),
   stripeProductId: varchar("stripe_product_id", { length: 255 }),
@@ -28,9 +50,35 @@ export const users = pgTable("users", {
   subscriptionStatus: varchar("subscription_status", { length: 50 }),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
-  deletedAt: timestamp("deleted_at"),
-  emailVerified: boolean("email_verified").notNull().default(false),
 });
+
+export const usersRelations = relations(users, ({ one }) => ({
+  profile: one(userProfiles, {
+    fields: [users.id],
+    references: [userProfiles.userId],
+  }),
+  subscription: one(userSubscriptions, {
+    fields: [users.id],
+    references: [userSubscriptions.userId],
+  }),
+}));
+
+export const userProfilesRelations = relations(userProfiles, ({ one }) => ({
+  user: one(users, {
+    fields: [userProfiles.userId],
+    references: [users.id],
+  }),
+}));
+
+export const userSubscriptionsRelations = relations(
+  userSubscriptions,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [userSubscriptions.userId],
+      references: [users.id],
+    }),
+  }),
+);
 
 export const roles = pgTable("roles", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
@@ -87,23 +135,10 @@ export const userPermissions = pgTable(
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
-  (t) => [uniqueIndex("uq_user_permissions_user_perm").on(t.userId, t.permissionId)],
+  (t) => [
+    uniqueIndex("uq_user_permissions_user_perm").on(t.userId, t.permissionId),
+  ],
 );
-
-// ---------------------------------------------------------------------------
-// CMS — Template grafici
-// ---------------------------------------------------------------------------
-
-export type FieldType =
-  | "text"
-  | "textarea"
-  | "richtext"
-  | "image"
-  | "url"
-  | "date"
-  | "select"
-  | "toggle"
-  | "number";
 
 export const pageTemplates = pgTable("page_templates", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
@@ -132,20 +167,21 @@ export const templateFields = pgTable("template_fields", {
   sortOrder: integer("sort_order").notNull().default(0),
 });
 
-export const pageTemplatesRelations = relations(pageTemplates, ({ many }) => ({
-  fields: many(templateFields),
-}));
+export const pageTemplatesRelations = relations(
+  pageTemplates,
+  ({ many }) => ({ fields: many(templateFields) }),
+);
 
-export const templateFieldsRelations = relations(templateFields, ({ one }) => ({
-  template: one(pageTemplates, {
-    fields: [templateFields.templateId],
-    references: [pageTemplates.id],
+export const templateFieldsRelations = relations(
+  templateFields,
+  ({ one }) => ({
+    template: one(pageTemplates, {
+      fields: [templateFields.templateId],
+      references: [pageTemplates.id],
+    }),
   }),
-}));
+);
 
-// ---------------------------------------------------------------------------
-// CMS — Pagine statiche
-// ---------------------------------------------------------------------------
 export const pages = pgTable("pages", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   slug: varchar("slug", { length: 255 }).notNull().unique(),
@@ -178,9 +214,6 @@ export const pagesRelations = relations(pages, ({ one, many }) => ({
   }),
 }));
 
-// ---------------------------------------------------------------------------
-// CMS — Redirect 301/302
-// ---------------------------------------------------------------------------
 export const redirects = pgTable("redirects", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   fromPath: varchar("from_path", { length: 500 }).notNull().unique(),
@@ -191,11 +224,12 @@ export const redirects = pgTable("redirects", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-// ---------------------------------------------------------------------------
-// CMS — Snippet globali frontend (head / body)
-// ---------------------------------------------------------------------------
-
-export type SnippetType = "link_css" | "style" | "script_src" | "script" | "raw";
+export type SnippetType =
+  | "link_css"
+  | "style"
+  | "script_src"
+  | "script"
+  | "raw";
 export type SnippetPosition = "head" | "body_end";
 
 export const siteSnippets = pgTable("site_snippets", {
@@ -210,9 +244,6 @@ export const siteSnippets = pgTable("site_snippets", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-// ---------------------------------------------------------------------------
-// Resto delle tabelle
-// ---------------------------------------------------------------------------
 export const activityLogs = pgTable("activity_logs", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   userId: uuid("user_id").references(() => users.id),
@@ -244,7 +275,6 @@ export const emailVerifications = pgTable("email_verifications", {
   code: varchar("code", { length: 6 }).notNull(),
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-  /** Numero di tentativi falliti — invalidato dopo MAX_OTP_ATTEMPTS */
   attempts: integer("attempts").notNull().default(0),
 });
 
@@ -283,6 +313,22 @@ export const seoPages = pgTable("seo_pages", {
 // ---------------------------------------------------------------------------
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
+export type UserProfile = typeof userProfiles.$inferSelect;
+export type NewUserProfile = typeof userProfiles.$inferInsert;
+export type UserSubscription = typeof userSubscriptions.$inferSelect;
+export type NewUserSubscription = typeof userSubscriptions.$inferInsert;
+
+/** Tipo "idratato" usato ovunque si ha bisogno di user + profilo + subscription */
+export type UserWithProfile = User & {
+  firstName: string | null;
+  lastName: string | null;
+  stripeCustomerId: string | null;
+  stripeSubscriptionId: string | null;
+  stripeProductId: string | null;
+  planName: string | null;
+  subscriptionStatus: string | null;
+};
+
 export type Role = typeof roles.$inferSelect;
 export type NewRole = typeof roles.$inferInsert;
 export type Permission = typeof permissions.$inferSelect;
@@ -368,3 +414,14 @@ export enum ActivityType {
   TEMPLATE_UPDATED = "TEMPLATE_UPDATED",
   TEMPLATE_DELETED = "TEMPLATE_DELETED",
 }
+
+export type FieldType =
+  | "text"
+  | "textarea"
+  | "richtext"
+  | "image"
+  | "url"
+  | "date"
+  | "select"
+  | "toggle"
+  | "number";

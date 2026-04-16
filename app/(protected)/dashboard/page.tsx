@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { User } from "@/lib/db/schema";
+import type { UserWithProfile } from "@/lib/db/schema";
 import { customerPortalAction } from "@/lib/payments/actions";
 import { Suspense } from "react";
 import useSWR from "swr";
@@ -20,7 +20,7 @@ function SubscriptionSkeleton() {
 }
 
 function ManageSubscription() {
-  const { data: user } = useSWR<User>("/api/user", fetcher);
+  const { data: user } = useSWR<UserWithProfile>("/api/user", fetcher);
 
   return (
     <Card className="mb-8">

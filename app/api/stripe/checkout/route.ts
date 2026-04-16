@@ -1,12 +1,11 @@
 import { setSession } from "@/lib/auth/session";
 import { db } from "@/lib/db/drizzle";
-import { users } from "@/lib/db/schema";
+import { users, userSubscriptions } from "@/lib/db/schema";
 import { getStripe } from "@/lib/payments/stripe";
 import { eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 
-// UUID v4 regex
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -43,16 +42,10 @@ export async function GET(request: NextRequest) {
     });
 
     const plan = subscription.items.data[0]?.price;
-
-    if (!plan) {
-      throw new Error("No plan found for this subscription.");
-    }
+    if (!plan) throw new Error("No plan found for this subscription.");
 
     const productId = (plan.product as Stripe.Product).id;
-
-    if (!productId) {
-      throw new Error("No product ID found for this subscription.");
-    }
+    if (!productId) throw new Error("No product ID found for this subscription.");
 
     const userId = session.client_reference_id;
     if (!userId || !UUID_REGEX.test(userId)) {
@@ -65,21 +58,30 @@ export async function GET(request: NextRequest) {
       .where(eq(users.id, userId))
       .limit(1);
 
-    if (!foundUser) {
-      throw new Error("User not found in database.");
-    }
+    if (!foundUser) throw new Error("User not found in database.");
 
+    // Stripe data va in user_subscriptions (upsert)
     await db
-      .update(users)
-      .set({
+      .insert(userSubscriptions)
+      .values({
+        userId: foundUser.id,
         stripeCustomerId: customerId,
         stripeSubscriptionId: subscriptionId,
         stripeProductId: productId,
         planName: (plan.product as Stripe.Product).name,
         subscriptionStatus: subscription.status,
-        updatedAt: new Date(),
       })
-      .where(eq(users.id, foundUser.id));
+      .onConflictDoUpdate({
+        target: userSubscriptions.userId,
+        set: {
+          stripeCustomerId: customerId,
+          stripeSubscriptionId: subscriptionId,
+          stripeProductId: productId,
+          planName: (plan.product as Stripe.Product).name,
+          subscriptionStatus: subscription.status,
+          updatedAt: new Date(),
+        },
+      });
 
     await setSession(foundUser);
     return NextResponse.redirect(new URL("/dashboard", request.url));

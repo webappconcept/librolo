@@ -1,7 +1,7 @@
 "use client";
 
 import { signOut } from "@/app/(login)/actions";
-import { User } from "@/lib/db/schema";
+import { UserWithProfile } from "@/lib/db/schema";
 import { Bell, ChevronDown, LogOut, Moon, Sun } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
@@ -31,7 +31,11 @@ function useTheme() {
   return { theme, toggle };
 }
 
-export default function AdminHeaderRight({ user }: { user: User }) {
+export default function AdminHeaderRight({
+  user,
+}: {
+  user: UserWithProfile;
+}) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const { theme, toggle } = useTheme();
@@ -54,7 +58,6 @@ export default function AdminHeaderRight({ user }: { user: User }) {
 
   return (
     <div className="flex items-center gap-3">
-      {/* Bell */}
       <button
         aria-label="Notifiche"
         className="relative w-9 h-9 rounded-lg flex items-center justify-center transition-colors"
@@ -68,7 +71,6 @@ export default function AdminHeaderRight({ user }: { user: User }) {
         <Bell size={18} />
       </button>
 
-      {/* Theme toggle */}
       <button
         onClick={toggle}
         aria-label="Cambia tema"
@@ -83,7 +85,6 @@ export default function AdminHeaderRight({ user }: { user: User }) {
         {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
       </button>
 
-      {/* Avatar + dropdown */}
       <div ref={ref} className="relative">
         <button
           onClick={() => setOpen((v) => !v)}
@@ -113,7 +114,9 @@ export default function AdminHeaderRight({ user }: { user: User }) {
           </div>
           <ChevronDown
             size={14}
-            className={`hidden sm:block transition-transform ${open ? "rotate-180" : ""}`}
+            className={`hidden sm:block transition-transform ${
+              open ? "rotate-180" : ""
+            }`}
             style={{ color: "var(--admin-text-faint)" }}
           />
         </button>

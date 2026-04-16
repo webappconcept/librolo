@@ -8,12 +8,12 @@ import {
   userPermissions,
   roles,
   users,
+  userProfiles,
 } from "@/lib/db/schema";
 import { and, eq, gt, isNull, lt, or, desc, sql } from "drizzle-orm";
 
 const USERS_WITH_PERMISSION_LIMIT = 200;
 
-/** Tutti i permessi, ordinati per gruppo poi per key */
 export async function getAllPermissions() {
   return db
     .select()
@@ -21,7 +21,6 @@ export async function getAllPermissions() {
     .orderBy(permissions.group, permissions.key);
 }
 
-/** Permessi assegnati a un ruolo specifico (per role.id) */
 export async function getPermissionsByRole(roleId: number) {
   return db
     .select({ id: permissions.id, key: permissions.key, label: permissions.label, group: permissions.group })
@@ -31,7 +30,6 @@ export async function getPermissionsByRole(roleId: number) {
     .orderBy(permissions.group, permissions.key);
 }
 
-/** Override individuali di un utente (attivi e scaduti) */
 export async function getUserPermissionOverrides(userId: string) {
   return db
     .select({
@@ -52,10 +50,6 @@ export async function getUserPermissionOverrides(userId: string) {
     .orderBy(desc(userPermissions.updatedAt));
 }
 
-/**
- * Elimina tutti gli override scaduti di un utente specifico.
- * Restituisce il numero di righe eliminate.
- */
 export async function purgeExpiredOverrides(userId: string): Promise<number> {
   const now = new Date();
   const result = await db
@@ -70,43 +64,38 @@ export async function purgeExpiredOverrides(userId: string): Promise<number> {
   return result.length;
 }
 
-/**
- * Lista utenti che hanno un dato permesso (via ruolo O override attivo).
- * Restituisce al massimo USERS_WITH_PERMISSION_LIMIT utenti.
- * Se il risultato è troncato, `truncated: true` viene incluso nella risposta.
- */
 export async function getUsersWithPermission(permissionKey: string) {
   const now = new Date();
 
-  // Via ruolo
   const viaRole = await db
     .select({
       id: users.id,
       email: users.email,
-      firstName: users.firstName,
-      lastName: users.lastName,
+      firstName: userProfiles.firstName,
+      lastName: userProfiles.lastName,
       role: users.role,
       source: sql<string>`'role'`,
     })
     .from(users)
+    .leftJoin(userProfiles, eq(userProfiles.userId, users.id))
     .innerJoin(roles, eq(users.role, roles.name))
     .innerJoin(rolePermissions, eq(rolePermissions.roleId, roles.id))
     .innerJoin(permissions, eq(rolePermissions.permissionId, permissions.id))
     .where(eq(permissions.key, permissionKey))
     .limit(USERS_WITH_PERMISSION_LIMIT);
 
-  // Via override attivo granted=true
   const viaOverride = await db
     .select({
       id: users.id,
       email: users.email,
-      firstName: users.firstName,
-      lastName: users.lastName,
+      firstName: userProfiles.firstName,
+      lastName: userProfiles.lastName,
       role: users.role,
       source: sql<string>`'override'`,
     })
     .from(userPermissions)
     .innerJoin(users, eq(userPermissions.userId, users.id))
+    .leftJoin(userProfiles, eq(userProfiles.userId, users.id))
     .innerJoin(permissions, eq(userPermissions.permissionId, permissions.id))
     .where(
       and(
@@ -117,7 +106,6 @@ export async function getUsersWithPermission(permissionKey: string) {
     )
     .limit(USERS_WITH_PERMISSION_LIMIT);
 
-  // Deduplicazione per id (override ha priorità)
   const map = new Map<string, (typeof viaRole)[0]>();
   for (const u of viaRole) map.set(u.id, u);
   for (const u of viaOverride) map.set(u.id, u);
@@ -128,7 +116,6 @@ export async function getUsersWithPermission(permissionKey: string) {
   return { users: all, truncated, limit: USERS_WITH_PERMISSION_LIMIT };
 }
 
-/** Aggiunge un permesso a un ruolo */
 export async function addPermissionToRole(roleId: number, permissionId: number) {
   return db
     .insert(rolePermissions)
@@ -136,7 +123,6 @@ export async function addPermissionToRole(roleId: number, permissionId: number) 
     .onConflictDoNothing();
 }
 
-/** Rimuove un permesso da un ruolo */
 export async function removePermissionFromRole(roleId: number, permissionId: number) {
   return db
     .delete(rolePermissions)
@@ -148,12 +134,6 @@ export async function removePermissionFromRole(roleId: number, permissionId: num
     );
 }
 
-/**
- * Aggiunge o aggiorna un override individuale (upsert).
- * Se esiste già un override per (userId, permissionId), aggiorna
- * granted / reason / expiresAt / grantedBy / updatedAt.
- * In questo modo non si creano mai righe duplicate per la stessa coppia.
- */
 export async function addUserPermissionOverride(data: {
   userId: string;
   permissionId: number;
@@ -177,7 +157,6 @@ export async function addUserPermissionOverride(data: {
     });
 }
 
-/** Rimuove un override individuale */
 export async function removeUserPermissionOverride(overrideId: number) {
   return db.delete(userPermissions).where(eq(userPermissions.id, overrideId));
 }

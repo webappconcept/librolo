@@ -3,7 +3,7 @@ import {
   getUserByStripeCustomerId,
   updateUserSubscription,
 } from "@/lib/db/queries";
-import { User } from "@/lib/db/schema";
+import type { UserWithProfile } from "@/lib/db/schema";
 import { redirect } from "next/navigation";
 import Stripe from "stripe";
 
@@ -22,7 +22,7 @@ export async function createCheckoutSession({
   user,
   priceId,
 }: {
-  user: User | null;
+  user: UserWithProfile | null;
   priceId: string;
 }) {
   const stripe = getStripe();
@@ -53,7 +53,7 @@ export async function createCheckoutSession({
   redirect(session.url!);
 }
 
-export async function createCustomerPortalSession(user: User) {
+export async function createCustomerPortalSession(user: UserWithProfile) {
   const stripe = getStripe();
 
   if (!user.stripeCustomerId || !user.stripeProductId) {
