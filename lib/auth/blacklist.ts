@@ -1,13 +1,11 @@
 import { db } from "@/lib/db/drizzle";
 import { ipBlacklist } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { disposableDomains } from "./disposable-domains"; // file statico
+import { isDisposableDomain } from "./disposable-domains";
 
-// Sincrono — file statico
-export function isDomainBlacklisted(email: string): boolean {
-  const domain = email.split("@")[1]?.toLowerCase();
-  if (!domain) return false;
-  return disposableDomains.has(domain);
+// Asincrono — import dinamico JSON
+export async function isDomainBlacklisted(email: string): Promise<boolean> {
+  return isDisposableDomain(email);
 }
 
 // Asincrono — DB
