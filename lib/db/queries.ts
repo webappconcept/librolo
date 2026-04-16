@@ -1,10 +1,10 @@
 // lib/db/queries.ts
 import { verifyToken } from "@/lib/auth/session";
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { cache } from "react";
 import { db } from "./drizzle";
-import { activityLogs, users } from "./schema";
+import { users } from "./schema";
 
 async function getUserInternal() {
   const sessionCookie = (await cookies()).get("session");
@@ -80,25 +80,4 @@ export async function updateUserSubscription(
       updatedAt: new Date(),
     })
     .where(eq(users.id, userId));
-}
-
-export async function getActivityLogs() {
-  const user = await getUser();
-  if (!user) {
-    throw new Error("Utente non loggato");
-  }
-
-  return await db
-    .select({
-      id: activityLogs.id,
-      action: activityLogs.action,
-      timestamp: activityLogs.timestamp,
-      ipAddress: activityLogs.ipAddress,
-      userName: users.firstName,
-    })
-    .from(activityLogs)
-    .leftJoin(users, eq(activityLogs.userId, users.id))
-    .where(eq(activityLogs.userId, user.id))
-    .orderBy(desc(activityLogs.timestamp))
-    .limit(10);
 }
