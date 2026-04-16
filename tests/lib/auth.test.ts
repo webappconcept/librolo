@@ -306,21 +306,11 @@ describe('Auth input validation (unit)', () => {
 // SECTION 6: queries.ts — getUser resiliente a JWT malformato
 // ---------------------------------------------------------------------------
 describe('queries.ts -- getUser con JWT non valido', () => {
-  // Sovrascrive il mock di next/headers per simulare cookie con valore specifico
-  function mockCookieValue(value: string) {
-    const { cookies } = vi.mocked(await import('next/headers') as typeof import('next/headers'))
-    ;(cookies as ReturnType<typeof vi.fn>).mockResolvedValue({
-      get: vi.fn().mockReturnValue({ value }),
-      set: vi.fn(),
-      delete: vi.fn(),
-    })
-  }
-
-  // Helper asincrono per impostare il mock del cookie
+  // Imposta il mock del cookie con un valore specifico per il test
   async function setCookieValue(value: string) {
     const nextHeaders = await import('next/headers')
     vi.mocked(nextHeaders.cookies).mockResolvedValue({
-      get: vi.fn().mockReturnValue({ value }),
+      get: vi.fn().mockReturnValue(value ? { value } : undefined),
       set: vi.fn(),
       delete: vi.fn(),
     } as unknown as Awaited<ReturnType<typeof nextHeaders.cookies>>)
@@ -344,7 +334,7 @@ describe('queries.ts -- getUser con JWT non valido', () => {
     expect(result).toBeNull()
   })
 
-  it('ritorna null su cookie con valore stringa vuota', async () => {
+  it('ritorna null su cookie assente (get ritorna undefined)', async () => {
     await setCookieValue('')
     vi.resetModules()
     const { getUser } = await import('@/lib/db/queries')
