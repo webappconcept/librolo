@@ -3,7 +3,10 @@
 
 import { validatedAction } from "@/lib/auth/middleware";
 import { createPasswordResetToken } from "@/lib/auth/password-reset";
-import { checkGeneralRateLimit } from "@/lib/auth/rate-limit";
+import {
+  checkGeneralRateLimit,
+  recordGeneralAttempt,
+} from "@/lib/auth/rate-limit";
 import { db } from "@/lib/db/drizzle";
 import { users } from "@/lib/db/schema";
 import { sendPasswordResetEmail } from "@/lib/email/templates/password-reset";
@@ -23,16 +26,17 @@ export const forgotPassword = validatedAction(
       headersList.get("x-forwarded-for") ??
       headersList.get("x-real-ip") ??
       "unknown";
-    // Max 3 richieste per IP ogni 15 minuti
-    const { blocked } = checkGeneralRateLimit(
-      `forgot-password:${ip}`,
-      3,
-      15 * 60,
-    );
+
+    // Max 3 richieste per IP ogni 15 minuti — DB-based, serverless-safe
+    const rateLimitKey = `forgot-password:${ip}`;
+    const { blocked } = await checkGeneralRateLimit(rateLimitKey, 3, 15 * 60);
 
     if (blocked) {
       return { error: "Troppe richieste. Riprova tra qualche minuto." };
     }
+
+    // Registra il tentativo prima di procedere
+    await recordGeneralAttempt(rateLimitKey);
 
     const { email } = data;
 
