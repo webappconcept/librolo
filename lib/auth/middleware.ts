@@ -2,10 +2,15 @@ import { getUser } from "@/lib/db/queries";
 import { User } from "@/lib/db/schema";
 import { z } from "zod";
 
+/**
+ * Stato restituito dalle Server Actions.
+ * Se in futuro servono campi aggiuntivi, aggiungili esplicitamente qui
+ * invece di usare un index signature generico.
+ * Esempio: errors?: Record<string, string[]>
+ */
 export type ActionState = {
   error?: string;
   success?: string;
-  [key: string]: any;
 };
 
 type ValidatedActionFunction<S extends z.ZodType<any, any>, T> = (
