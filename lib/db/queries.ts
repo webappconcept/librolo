@@ -4,7 +4,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { cache } from "react";
 import { db } from "./drizzle";
-import { users } from "./schema";
+import { userProfiles, userSubscriptions, users } from "./schema";
 
 async function getUserInternal() {
   const sessionCookie = (await cookies()).get("session");
@@ -33,9 +33,32 @@ async function getUserInternal() {
     return null;
   }
 
-  const user = await db
-    .select()
+  const rows = await db
+    .select({
+      id: users.id,
+      email: users.email,
+      passwordHash: users.passwordHash,
+      role: users.role,
+      isAdmin: users.isAdmin,
+      bannedAt: users.bannedAt,
+      bannedReason: users.bannedReason,
+      emailVerified: users.emailVerified,
+      createdAt: users.createdAt,
+      updatedAt: users.updatedAt,
+      deletedAt: users.deletedAt,
+      // profile
+      firstName: userProfiles.firstName,
+      lastName: userProfiles.lastName,
+      // subscription
+      stripeCustomerId: userSubscriptions.stripeCustomerId,
+      stripeSubscriptionId: userSubscriptions.stripeSubscriptionId,
+      stripeProductId: userSubscriptions.stripeProductId,
+      planName: userSubscriptions.planName,
+      subscriptionStatus: userSubscriptions.subscriptionStatus,
+    })
     .from(users)
+    .leftJoin(userProfiles, eq(userProfiles.userId, users.id))
+    .leftJoin(userSubscriptions, eq(userSubscriptions.userId, users.id))
     .where(
       and(
         eq(users.id, sessionData.user.id),
@@ -45,23 +68,44 @@ async function getUserInternal() {
     )
     .limit(1);
 
-  if (user.length === 0) {
+  if (rows.length === 0) {
     return null;
   }
 
-  return user[0];
+  return rows[0];
 }
 
 export const getUser = cache(getUserInternal);
 
 export async function getUserByStripeCustomerId(customerId: string) {
-  const result = await db
-    .select()
+  const rows = await db
+    .select({
+      id: users.id,
+      email: users.email,
+      passwordHash: users.passwordHash,
+      role: users.role,
+      isAdmin: users.isAdmin,
+      bannedAt: users.bannedAt,
+      bannedReason: users.bannedReason,
+      emailVerified: users.emailVerified,
+      createdAt: users.createdAt,
+      updatedAt: users.updatedAt,
+      deletedAt: users.deletedAt,
+      firstName: userProfiles.firstName,
+      lastName: userProfiles.lastName,
+      stripeCustomerId: userSubscriptions.stripeCustomerId,
+      stripeSubscriptionId: userSubscriptions.stripeSubscriptionId,
+      stripeProductId: userSubscriptions.stripeProductId,
+      planName: userSubscriptions.planName,
+      subscriptionStatus: userSubscriptions.subscriptionStatus,
+    })
     .from(users)
-    .where(eq(users.stripeCustomerId, customerId))
+    .leftJoin(userProfiles, eq(userProfiles.userId, users.id))
+    .innerJoin(userSubscriptions, eq(userSubscriptions.userId, users.id))
+    .where(eq(userSubscriptions.stripeCustomerId, customerId))
     .limit(1);
 
-  return result.length > 0 ? result[0] : null;
+  return rows.length > 0 ? rows[0] : null;
 }
 
 export async function updateUserSubscription(
@@ -74,10 +118,17 @@ export async function updateUserSubscription(
   },
 ) {
   await db
-    .update(users)
-    .set({
+    .insert(userSubscriptions)
+    .values({
+      userId,
       ...subscriptionData,
       updatedAt: new Date(),
     })
-    .where(eq(users.id, userId));
+    .onConflictDoUpdate({
+      target: userSubscriptions.userId,
+      set: {
+        ...subscriptionData,
+        updatedAt: new Date(),
+      },
+    });
 }
