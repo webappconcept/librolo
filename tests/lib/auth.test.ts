@@ -30,19 +30,31 @@ function buildInsertChain() {
   }
 }
 
+/** Chain riusabile per db.update().set().where() — si risolve come Promise<[]> */
+function buildUpdateChain() {
+  const resolved = Promise.resolve([])
+  const whereStep = {
+    where: vi.fn().mockReturnValue(resolved),
+  }
+  return {
+    set: vi.fn().mockReturnValue(whereStep),
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Mock DB
 // ---------------------------------------------------------------------------
 const mockSelectFn = vi.fn()
 const mockDeleteFn = vi.fn()
 const mockInsertFn = vi.fn()
+const mockUpdateFn = vi.fn()
 
 vi.mock('@/lib/db/drizzle', () => ({
   db: {
     select: mockSelectFn,
     insert: mockInsertFn,
     delete: mockDeleteFn,
-    update: vi.fn().mockResolvedValue([]),
+    update: mockUpdateFn,
   },
 }))
 
@@ -87,6 +99,7 @@ beforeEach(() => {
   buildAuthChain([])
   mockDeleteFn.mockReturnValue(buildDeleteChain())
   mockInsertFn.mockReturnValue(buildInsertChain())
+  mockUpdateFn.mockReturnValue(buildUpdateChain())
 })
 
 // ---------------------------------------------------------------------------
@@ -186,12 +199,93 @@ describe('otp.ts', () => {
   })
 
   describe('verifyOtpCode -- logica dominio (mock DB)', () => {
+    const USER_ID = 'a1b2c3d4-0000-0000-0000-000000000001'
+    const VALID_CODE = '123456'
+    const FUTURE = new Date(Date.now() + 15 * 60 * 1000)
+
     it('rifiuta se nessun record trovato (codice non esiste)', async () => {
       buildAuthChain([])
       const { verifyOtpCode } = await import('@/lib/auth/otp')
-      const result = await verifyOtpCode('a1b2c3d4-0000-0000-0000-000000000001', '123456')
+      const result = await verifyOtpCode(USER_ID, VALID_CODE)
       expect(result.success).toBe(false)
       expect(result.error).toBe('Codice non trovato.')
+    })
+
+    it('rifiuta codice scaduto', async () => {
+      buildAuthChain([{
+        id: 1, userId: USER_ID, code: VALID_CODE,
+        expiresAt: new Date(Date.now() - 1000), attempts: 0,
+      }])
+      const { verifyOtpCode } = await import('@/lib/auth/otp')
+      const result = await verifyOtpCode(USER_ID, VALID_CODE)
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('Codice scaduto.')
+    })
+
+    it('rifiuta codice errato e incrementa attempts', async () => {
+      buildAuthChain([{
+        id: 1, userId: USER_ID, code: VALID_CODE,
+        expiresAt: FUTURE, attempts: 0,
+      }])
+      const { verifyOtpCode } = await import('@/lib/auth/otp')
+      const result = await verifyOtpCode(USER_ID, '000000')
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('Codice non corretto.')
+      // db.update() deve essere chiamato per incrementare attempts
+      expect(mockUpdateFn).toHaveBeenCalledTimes(1)
+    })
+
+    it('non chiama update su codice corretto (elimina direttamente)', async () => {
+      buildAuthChain([{
+        id: 1, userId: USER_ID, code: VALID_CODE,
+        expiresAt: FUTURE, attempts: 0,
+      }])
+      const { verifyOtpCode } = await import('@/lib/auth/otp')
+      const result = await verifyOtpCode(USER_ID, VALID_CODE)
+      expect(result.success).toBe(true)
+      expect(mockUpdateFn).not.toHaveBeenCalled()
+      expect(mockDeleteFn).toHaveBeenCalledTimes(1)
+    })
+
+    it('blocca e invalida il record quando attempts >= MAX_OTP_ATTEMPTS', async () => {
+      const { MAX_OTP_ATTEMPTS, verifyOtpCode } = await import('@/lib/auth/otp')
+      buildAuthChain([{
+        id: 1, userId: USER_ID, code: VALID_CODE,
+        expiresAt: FUTURE, attempts: MAX_OTP_ATTEMPTS,
+      }])
+      const result = await verifyOtpCode(USER_ID, VALID_CODE)
+      // Anche il codice corretto viene rifiutato: il record è bruciato
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('Codice non trovato.')
+      // Il record deve essere eliminato per forzare una nuova richiesta
+      expect(mockDeleteFn).toHaveBeenCalledTimes(1)
+      // Non deve incrementare ulteriormente
+      expect(mockUpdateFn).not.toHaveBeenCalled()
+    })
+
+    it('blocca anche con attempts > MAX_OTP_ATTEMPTS (over-limit)', async () => {
+      const { MAX_OTP_ATTEMPTS, verifyOtpCode } = await import('@/lib/auth/otp')
+      buildAuthChain([{
+        id: 1, userId: USER_ID, code: VALID_CODE,
+        expiresAt: FUTURE, attempts: MAX_OTP_ATTEMPTS + 10,
+      }])
+      const result = await verifyOtpCode(USER_ID, '999999')
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('Codice non trovato.')
+      expect(mockDeleteFn).toHaveBeenCalledTimes(1)
+    })
+
+    it('al tentativo (MAX-1) non blocca ancora, incrementa', async () => {
+      const { MAX_OTP_ATTEMPTS, verifyOtpCode } = await import('@/lib/auth/otp')
+      buildAuthChain([{
+        id: 1, userId: USER_ID, code: VALID_CODE,
+        expiresAt: FUTURE, attempts: MAX_OTP_ATTEMPTS - 1,
+      }])
+      const result = await verifyOtpCode(USER_ID, '000000')
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('Codice non corretto.')
+      expect(mockUpdateFn).toHaveBeenCalledTimes(1)
+      expect(mockDeleteFn).not.toHaveBeenCalled()
     })
   })
 })
@@ -306,7 +400,6 @@ describe('Auth input validation (unit)', () => {
 // SECTION 6: queries.ts — getUser resiliente a JWT malformato
 // ---------------------------------------------------------------------------
 describe('queries.ts -- getUser con JWT non valido', () => {
-  // Imposta il mock del cookie con un valore specifico per il test
   async function setCookieValue(value: string) {
     const nextHeaders = await import('next/headers')
     vi.mocked(nextHeaders.cookies).mockResolvedValue({
@@ -325,7 +418,6 @@ describe('queries.ts -- getUser con JWT non valido', () => {
   })
 
   it('ritorna null su token con firma alterata', async () => {
-    // JWT sintatticamente valido ma firma sbagliata
     const fakeJwt = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjMifQ.firma-alterata-non-valida'
     await setCookieValue(fakeJwt)
     vi.resetModules()

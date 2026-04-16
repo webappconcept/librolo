@@ -183,13 +183,9 @@ export const pagesRelations = relations(pages, ({ one, many }) => ({
 // ---------------------------------------------------------------------------
 export const redirects = pgTable("redirects", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
-  /** Percorso sorgente, es. /vecchio-slug */
   fromPath: varchar("from_path", { length: 500 }).notNull().unique(),
-  /** Percorso destinazione, es. /nuovo-slug */
   toPath: varchar("to_path", { length: 500 }).notNull(),
-  /** 301 (permanente) o 302 (temporaneo) */
   statusCode: integer("status_code").notNull().default(301),
-  /** Se false il redirect è salvato ma non applicato */
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -199,36 +195,16 @@ export const redirects = pgTable("redirects", {
 // CMS — Snippet globali frontend (head / body)
 // ---------------------------------------------------------------------------
 
-/**
- * Tipo dello snippet:
- *  - link_css   → <link rel="stylesheet" href="...">
- *  - style      → <style>...</style>
- *  - script_src → <script src="..."></script>
- *  - script     → <script>...</script>
- *  - raw        → markup arbitrario inserito as-is
- */
 export type SnippetType = "link_css" | "style" | "script_src" | "script" | "raw";
-
-/**
- * Posizione di iniezione:
- *  - head      → dentro <head>, prima della chiusura
- *  - body_end  → subito prima di </body>
- */
 export type SnippetPosition = "head" | "body_end";
 
 export const siteSnippets = pgTable("site_snippets", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
-  /** Label visibile solo in admin */
   name: varchar("name", { length: 150 }).notNull(),
-  /** link_css | style | script_src | script | raw */
   type: varchar("type", { length: 20 }).notNull().default("script"),
-  /** head | body_end */
   position: varchar("position", { length: 20 }).notNull().default("head"),
-  /** URL (per link_css / script_src) o codice grezzo (per gli altri) */
   content: text("content").notNull().default(""),
-  /** Se false lo snippet è salvato ma non viene iniettato */
   isActive: boolean("is_active").notNull().default(true),
-  /** Ordine di iniezione (ASC) */
   sortOrder: integer("sort_order").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -268,6 +244,8 @@ export const emailVerifications = pgTable("email_verifications", {
   code: varchar("code", { length: 6 }).notNull(),
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  /** Numero di tentativi falliti — invalidato dopo MAX_OTP_ATTEMPTS */
+  attempts: integer("attempts").notNull().default(0),
 });
 
 export const passwordResetTokens = pgTable("password_reset_tokens", {
