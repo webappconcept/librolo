@@ -2,7 +2,7 @@
 "use client";
 
 import { signOut } from "@/app/(login)/actions";
-import type { User as UserType } from "@/lib/db/schema";
+import type { UserWithProfile } from "@/lib/db/schema";
 import { FOOTER_LINKS, NAV_ITEMS, USER_MENU_ITEMS } from "@/lib/routes";
 import { fullName } from "@/lib/utils";
 import {
@@ -39,14 +39,13 @@ export default function AppNav() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const { data: user } = useSWR<UserType>("/api/user", fetcher, {
+  const { data: user } = useSWR<UserWithProfile>("/api/user", fetcher, {
     revalidateOnFocus: false,
     revalidateOnMount: true,
     shouldRetryOnError: false,
     keepPreviousData: true,
   });
 
-  // Chiudi dropdown cliccando fuori
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (
@@ -60,7 +59,6 @@ export default function AppNav() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Chiudi dropdown al cambio route
   useEffect(() => {
     setDropdownOpen(false);
   }, [pathname]);
@@ -75,7 +73,6 @@ export default function AppNav() {
 
   const initials = user?.firstName?.[0]?.toUpperCase() ?? "U";
 
-  // Avatar button attivo se dropdown aperto o su una route del USER_MENU
   const avatarActive =
     dropdownOpen ||
     USER_MENU_ITEMS.some(({ href }) => pathname.startsWith(href));
