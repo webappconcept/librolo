@@ -8,16 +8,40 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { TextEncoder } from 'util'
 
 // ---------------------------------------------------------------------------
-// Mock DB — auth usa .where().limit(1) come terminale
+// Helpers per costruire mock chain Drizzle
+// ---------------------------------------------------------------------------
+
+/** Chain riusabile per db.delete().where() — si risolve come Promise<void> */
+function buildDeleteChain() {
+  const resolved = Promise.resolve(undefined)
+  const chain = {
+    where: vi.fn().mockReturnValue(resolved),
+    catch: resolved.catch.bind(resolved),
+    then:  resolved.then.bind(resolved),
+    finally: resolved.finally.bind(resolved),
+  }
+  return chain
+}
+
+/** Chain riusabile per db.insert().values() — si risolve come Promise<[]> */
+function buildInsertChain() {
+  return {
+    values: vi.fn().mockResolvedValue([]),
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Mock DB
 // ---------------------------------------------------------------------------
 const mockSelectFn = vi.fn()
+const mockDeleteFn = vi.fn()
+const mockInsertFn = vi.fn()
 
 vi.mock('@/lib/db/drizzle', () => ({
   db: {
     select: mockSelectFn,
-    insert: vi.fn().mockReturnThis(),
-    values: vi.fn().mockResolvedValue([]),
-    delete: vi.fn().mockReturnThis(),
+    insert: mockInsertFn,
+    delete: mockDeleteFn,
     update: vi.fn().mockResolvedValue([]),
   },
 }))
@@ -33,6 +57,9 @@ vi.mock('next/headers', () => ({
 
 vi.mock('server-only', () => ({}))
 
+// ---------------------------------------------------------------------------
+// buildAuthChain — per db.select().from().where().limit()
+// ---------------------------------------------------------------------------
 function buildAuthChain(rows: unknown[] = []) {
   const p        = Promise.resolve(rows)
   const terminal = vi.fn().mockResolvedValue(rows)
@@ -57,7 +84,10 @@ function buildAuthChain(rows: unknown[] = []) {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  // Default: select ritorna [], delete e insert hanno chain funzionanti
   buildAuthChain([])
+  mockDeleteFn.mockReturnValue(buildDeleteChain())
+  mockInsertFn.mockReturnValue(buildInsertChain())
 })
 
 // ---------------------------------------------------------------------------
@@ -104,7 +134,6 @@ describe('session.ts', () => {
         ['sign', 'verify'],
       )
 
-      // sub ora è una stringa UUID-like
       const token = await new SignJWT({ sub: 'a1b2c3d4-0000-0000-0000-000000000001', role: 'member' })
         .setProtectedHeader({ alg: 'HS256' })
         .setIssuedAt()
@@ -196,45 +225,64 @@ describe('password-reset.ts', () => {
 })
 
 // ---------------------------------------------------------------------------
-// SECTION 4: rate-limit.ts
+// SECTION 4: rate-limit.ts — checkGeneralRateLimit (DB-based, async)
 // ---------------------------------------------------------------------------
-describe('rate-limit.ts -- checkGeneralRateLimit', () => {
-  let checkGeneralRateLimit: (key: string, max: number, windowSec: number) => { blocked: boolean; remaining: number }
-
-  beforeEach(async () => {
-    vi.resetModules()
-    const mod = await import('@/lib/auth/rate-limit')
-    checkGeneralRateLimit = mod.checkGeneralRateLimit
+describe('rate-limit.ts -- checkGeneralRateLimit (DB-based)', () => {
+  beforeEach(() => {
+    // delete chain: .where() risolve come Promise<void> (cleanup fire-and-forget)
+    mockDeleteFn.mockReturnValue(buildDeleteChain())
+    // insert chain: .values() risolve come Promise<[]> (recordGeneralAttempt)
+    mockInsertFn.mockReturnValue(buildInsertChain())
   })
 
-  it('prima richiesta non bloccata', () => {
-    const result = checkGeneralRateLimit('test-ip-1', 3, 60)
+  it('non bloccata se DB non ha tentativi (count=0)', async () => {
+    // select ritorna [{ total: 0 }]
+    buildAuthChain([{ total: 0 }])
+    const { checkGeneralRateLimit } = await import('@/lib/auth/rate-limit')
+    const result = await checkGeneralRateLimit('test-key-zero', 3, 60)
     expect(result.blocked).toBe(false)
-    expect(result.remaining).toBe(2)
+    expect(result.remaining).toBe(3)
   })
 
-  it('blocca dopo aver superato il massimo', () => {
-    const key = 'test-ip-block'
-    checkGeneralRateLimit(key, 2, 60)
-    checkGeneralRateLimit(key, 2, 60)
-    const result = checkGeneralRateLimit(key, 2, 60)
+  it('non bloccata se tentativi < max', async () => {
+    buildAuthChain([{ total: 2 }])
+    const { checkGeneralRateLimit } = await import('@/lib/auth/rate-limit')
+    const result = await checkGeneralRateLimit('test-key-partial', 3, 60)
+    expect(result.blocked).toBe(false)
+    expect(result.remaining).toBe(1)
+  })
+
+  it('bloccata se tentativi === max', async () => {
+    buildAuthChain([{ total: 3 }])
+    const { checkGeneralRateLimit } = await import('@/lib/auth/rate-limit')
+    const result = await checkGeneralRateLimit('test-key-exact', 3, 60)
     expect(result.blocked).toBe(true)
     expect(result.remaining).toBe(0)
   })
 
-  it('remaining non scende mai sotto zero', () => {
-    const key = 'test-ip-floor'
-    for (let i = 0; i < 10; i++) checkGeneralRateLimit(key, 2, 60)
-    expect(checkGeneralRateLimit(key, 2, 60).remaining).toBeGreaterThanOrEqual(0)
+  it('bloccata se tentativi > max', async () => {
+    buildAuthChain([{ total: 10 }])
+    const { checkGeneralRateLimit } = await import('@/lib/auth/rate-limit')
+    const result = await checkGeneralRateLimit('test-key-over', 3, 60)
+    expect(result.blocked).toBe(true)
+    expect(result.remaining).toBe(0)
   })
 
-  it('chiavi diverse sono indipendenti', () => {
-    checkGeneralRateLimit('key-a', 2, 60)
-    checkGeneralRateLimit('key-a', 2, 60)
-    const resultA = checkGeneralRateLimit('key-a', 2, 60)
-    const resultB = checkGeneralRateLimit('key-b', 2, 60)
-    expect(resultA.blocked).toBe(true)
-    expect(resultB.blocked).toBe(false)
+  it('remaining non scende mai sotto zero', async () => {
+    buildAuthChain([{ total: 999 }])
+    const { checkGeneralRateLimit } = await import('@/lib/auth/rate-limit')
+    const result = await checkGeneralRateLimit('test-key-floor', 3, 60)
+    expect(result.remaining).toBeGreaterThanOrEqual(0)
+  })
+
+  it('recordGeneralAttempt chiama db.insert().values() con ip marker corretto', async () => {
+    const { recordGeneralAttempt } = await import('@/lib/auth/rate-limit')
+    await recordGeneralAttempt('otp:user-123')
+    expect(mockInsertFn).toHaveBeenCalled()
+    const insertValues = mockInsertFn.mock.results[0]?.value
+    expect(insertValues.values).toHaveBeenCalledWith(
+      expect.objectContaining({ ip: '__general__', email: 'otp:user-123', success: false }),
+    )
   })
 })
 

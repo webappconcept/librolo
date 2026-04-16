@@ -10,7 +10,7 @@ import { requireAdminPage } from "@/lib/rbac/guards";
 import { hashPassword, comparePasswords, signToken, verifyToken } from "@/lib/auth/session";
 import { generateOtpCode } from "@/lib/auth/otp";
 import { isDomainBlacklisted } from "@/lib/auth/blacklist";
-import { checkGeneralRateLimit } from "@/lib/auth/rate-limit";
+import { checkGeneralRateLimit, recordGeneralAttempt } from "@/lib/auth/rate-limit";
 import { can, getUserPermissions } from "@/lib/rbac/can";
 import { getAppSettings } from "@/lib/db/settings-queries";
 import { getAllSeoPages, upsertSeoPage, deleteSeoPage } from "@/lib/db/seo-queries";
@@ -173,21 +173,37 @@ export async function testDisposableBlacklist(): Promise<IntegrationResult> {
 }
 
 // ---------------------------------------------------------------------------
-// Auth — Rate limit in-memory (checkGeneralRateLimit)
+// Auth — Rate limit DB-based (checkGeneralRateLimit)
 // ---------------------------------------------------------------------------
 export async function testRateLimitReal(): Promise<IntegrationResult> {
   await requireAdminPage();
   try {
+    // Chiave univoca per questo run — evita collisioni con test precedenti nel DB
     const key = "integration-test-" + Date.now();
     const start = Date.now();
-    const r1 = checkGeneralRateLimit(key, 2, 60);
-    const r2 = checkGeneralRateLimit(key, 2, 60);
-    const r3 = checkGeneralRateLimit(key, 2, 60); // dovrebbe bloccare
+
+    // Prima verifica: nessun tentativo ancora → non bloccata
+    const r1 = await checkGeneralRateLimit(key, 2, 60);
+
+    // Registra i due tentativi (contratto DB-based: check → record → check)
+    await recordGeneralAttempt(key);
+    await recordGeneralAttempt(key);
+
+    // Seconda verifica: 2 tentativi registrati, max=2 → bloccata
+    const r3 = await checkGeneralRateLimit(key, 2, 60);
+
     const durationMs = Date.now() - start;
-    if (r1.blocked) return { ok: false, detail: "Prima richiesta bloccata inaspettatamente", durationMs };
-    if (r3.remaining !== 0) return { ok: false, detail: `remaining atteso 0, ricevuto ${r3.remaining}`, durationMs };
-    if (!r3.blocked) return { ok: false, detail: "Terza richiesta non bloccata (max=2)", durationMs };
-    return { ok: true, durationMs, data: { r1, r2, r3 } };
+
+    if (r1.blocked)
+      return { ok: false, detail: "Prima verifica bloccata inaspettatamente (0 tentativi)", durationMs };
+    if (r1.remaining !== 2)
+      return { ok: false, detail: `Prima verifica: remaining atteso 2, ricevuto ${r1.remaining}`, durationMs };
+    if (!r3.blocked)
+      return { ok: false, detail: "Terza verifica non bloccata dopo 2 tentativi registrati (max=2)", durationMs };
+    if (r3.remaining !== 0)
+      return { ok: false, detail: `Terza verifica: remaining atteso 0, ricevuto ${r3.remaining}`, durationMs };
+
+    return { ok: true, durationMs, data: { key, r1, r3 } };
   } catch (e) {
     return { ok: false, detail: String(e), durationMs: 0 };
   }
