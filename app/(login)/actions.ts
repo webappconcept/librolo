@@ -13,10 +13,9 @@ import { getUser } from "@/lib/db/queries";
 import {
   activityLogs,
   ActivityType,
-  User,
+  userProfiles,
   users,
   type NewActivityLog,
-  type NewUser,
 } from "@/lib/db/schema";
 import { getAppSettings } from "@/lib/db/settings-queries";
 import { sendSignupVerificationEmail } from "@/lib/email/templates/signup-verification";
@@ -52,7 +51,6 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
     headersList.get("x-real-ip") ??
     "unknown";
 
-  // Controlla rate limit
   const { blocked } = await checkRateLimit(email, ip);
   if (blocked) {
     return {
@@ -70,11 +68,7 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
 
   if (!foundUser) {
     await recordLoginAttempt(email, ip, false);
-    return {
-      error: "Email o password errate, riprova.",
-      email,
-      password,
-    };
+    return { error: "Email o password errate, riprova.", email, password };
   }
 
   if (foundUser.bannedAt !== null) {
@@ -92,19 +86,15 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
 
   if (!isPasswordValid) {
     await recordLoginAttempt(email, ip, false);
-    return {
-      error: "Email o password errate, riprova.",
-      email,
-      password,
-    };
+    return { error: "Email o password errate, riprova.", email, password };
   }
 
-  // Blocca utenti non-admin durante la manutenzione
   if (foundUser.role !== "admin") {
     const settings = await getAppSettings();
     if (settings.maintenance_mode === "true") {
       return {
-        error: "Il sito è in manutenzione. Solo gli amministratori possono accedere.",
+        error:
+          "Il sito è in manutenzione. Solo gli amministratori possono accedere.",
         email,
         password,
       };
@@ -112,7 +102,6 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
   }
 
   await recordLoginAttempt(email, ip, true);
-
   await Promise.all([
     setSession(foundUser),
     logActivity(foundUser.id, ActivityType.SIGN_IN),
@@ -151,19 +140,16 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
     };
   }
 
-  // Recupera IP
   const headersList = await headers();
   const ip =
     headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ??
     headersList.get("x-real-ip") ??
     "unknown";
 
-  // Controlla IP blacklist
   if (await isIpBlacklisted(ip)) {
     return { error: "Accesso non consentito.", email, password };
   }
 
-  // Controlla dominio email
   if (await isDomainBlacklisted(email)) {
     return { error: "Questo dominio email non è accettato.", email, password };
   }
@@ -175,27 +161,16 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
     .limit(1);
 
   if (existingUser.length > 0) {
-    return {
-      error: "Questa email è già stata registrata",
-      email,
-      password,
-    };
+    return { error: "Questa email è già stata registrata", email, password };
   }
 
   const passwordHash = await hashPassword(password);
-
-  // Usa il ruolo predefinito configurato nelle impostazioni
   const defaultRole = settings.default_role || "member";
 
-  const newUser: NewUser = {
-    firstName,
-    lastName,
-    email,
-    passwordHash,
-    role: defaultRole,
-  };
-
-  const [createdUser] = await db.insert(users).values(newUser).returning();
+  const [createdUser] = await db
+    .insert(users)
+    .values({ email, passwordHash, role: defaultRole })
+    .returning();
 
   if (!createdUser) {
     return {
@@ -205,36 +180,33 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
     };
   }
 
-  // Genera OTP e invia email di verifica
-  const code = await createVerificationCode(createdUser.id);
-  await sendSignupVerificationEmail(
-    createdUser.email,
-    code,
-    createdUser.firstName ?? undefined,
-  );
+  // Crea profilo separato
+  await db.insert(userProfiles).values({
+    userId: createdUser.id,
+    firstName,
+    lastName,
+  });
 
+  const code = await createVerificationCode(createdUser.id);
+  await sendSignupVerificationEmail(createdUser.email, code, firstName);
   await logActivity(createdUser.id, ActivityType.SIGN_UP);
 
-  // Cookie temporaneo per identificare l'utente in attesa di verifica
-  (await cookies()).set(
-    "pending_verification_user_id",
-    createdUser.id,
-    {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 60 * 20, // 20 minuti
-      path: "/",
-    },
-  );
+  (await cookies()).set("pending_verification_user_id", createdUser.id, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 60 * 20,
+    path: "/",
+  });
 
   redirect("/verify-email");
 });
 
 export async function signOut() {
-  const user = (await getUser()) as User;
-  await logActivity(user.id, ActivityType.SIGN_OUT);
+  const user = await getUser();
+  if (user) await logActivity(user.id, ActivityType.SIGN_OUT);
   (await cookies()).delete("session");
+  redirect("/sign-in");
 }
 
 const updatePasswordSchema = z.object({
@@ -281,7 +253,6 @@ export const updatePassword = validatedActionWithUser(
     }
 
     const newPasswordHash = await hashPassword(newPassword);
-
     await Promise.all([
       db
         .update(users)
@@ -305,14 +276,10 @@ export const deleteAccount = validatedActionWithUser(
 
     const isPasswordValid = await comparePasswords(password, user.passwordHash);
     if (!isPasswordValid) {
-      return {
-        password,
-        error: "Incorrect password. Account deletion failed.",
-      };
+      return { password, error: "Incorrect password. Account deletion failed." };
     }
 
     await logActivity(user.id, ActivityType.DELETE_ACCOUNT);
-
     await db
       .update(users)
       .set({
@@ -338,10 +305,16 @@ export const updateAccount = validatedActionWithUser(
     const { firstName, lastName, email } = data;
 
     await Promise.all([
+      // email rimane su users
+      db.update(users).set({ email, updatedAt: new Date() }).where(eq(users.id, user.id)),
+      // nome/cognome su user_profiles (upsert)
       db
-        .update(users)
-        .set({ firstName, lastName, email })
-        .where(eq(users.id, user.id)),
+        .insert(userProfiles)
+        .values({ userId: user.id, firstName, lastName })
+        .onConflictDoUpdate({
+          target: userProfiles.userId,
+          set: { firstName, lastName, updatedAt: new Date() },
+        }),
       logActivity(user.id, ActivityType.UPDATE_ACCOUNT),
     ]);
 
