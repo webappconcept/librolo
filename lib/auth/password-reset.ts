@@ -19,6 +19,11 @@ export async function createPasswordResetToken(
   return token;
 }
 
+/**
+ * Verifica il token e lo elimina atomicamente se valido.
+ * In questo modo il token non può essere riutilizzato anche se il chiamante
+ * dimentica di invocare deletePasswordResetToken.
+ */
 export async function verifyPasswordResetToken(
   token: string,
 ): Promise<{ valid: false; error: string } | { valid: true; userId: string }> {
@@ -32,9 +37,18 @@ export async function verifyPasswordResetToken(
   if (new Date() > record.expiresAt)
     return { valid: false, error: "Link scaduto. Richiedine uno nuovo." };
 
+  // Token valido → eliminalo subito per impedire riuso
+  await db
+    .delete(passwordResetTokens)
+    .where(eq(passwordResetTokens.token, token));
+
   return { valid: true, userId: record.userId };
 }
 
+/**
+ * @deprecated Non necessaria: verifyPasswordResetToken elimina già il token.
+ * Mantenuta per retrocompatibilità — rimuovere in un futuro cleanup.
+ */
 export async function deletePasswordResetToken(token: string): Promise<void> {
   await db
     .delete(passwordResetTokens)

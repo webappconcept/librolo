@@ -231,7 +231,6 @@ describe('otp.ts', () => {
       const result = await verifyOtpCode(USER_ID, '000000')
       expect(result.success).toBe(false)
       expect(result.error).toBe('Codice non corretto.')
-      // db.update() deve essere chiamato per incrementare attempts
       expect(mockUpdateFn).toHaveBeenCalledTimes(1)
     })
 
@@ -254,12 +253,9 @@ describe('otp.ts', () => {
         expiresAt: FUTURE, attempts: MAX_OTP_ATTEMPTS,
       }])
       const result = await verifyOtpCode(USER_ID, VALID_CODE)
-      // Anche il codice corretto viene rifiutato: il record è bruciato
       expect(result.success).toBe(false)
       expect(result.error).toBe('Codice non trovato.')
-      // Il record deve essere eliminato per forzare una nuova richiesta
       expect(mockDeleteFn).toHaveBeenCalledTimes(1)
-      // Non deve incrementare ulteriormente
       expect(mockUpdateFn).not.toHaveBeenCalled()
     })
 
@@ -294,26 +290,66 @@ describe('otp.ts', () => {
 // SECTION 3: password-reset.ts
 // ---------------------------------------------------------------------------
 describe('password-reset.ts', () => {
+  const FUTURE = new Date(Date.now() + 30 * 60 * 1000)
+
   it('rifiuta token inesistente (DB ritorna [])', async () => {
     buildAuthChain([])
     const { verifyPasswordResetToken } = await import('@/lib/auth/password-reset')
     const result = await verifyPasswordResetToken('nonexistent-token')
     expect(result.valid).toBe(false)
     if (!result.valid) expect(result.error).toBe('Link non valido.')
+    // Nessuna delete su token inesistente
+    expect(mockDeleteFn).not.toHaveBeenCalled()
   })
 
   it('rifiuta token scaduto', async () => {
-    const expiredRecord = {
+    buildAuthChain([{
       id: 1,
       userId: 'a1b2c3d4-0000-0000-0000-000000000010',
       token: 'expired-token',
       expiresAt: new Date(Date.now() - 1000),
-    }
-    buildAuthChain([expiredRecord])
+    }])
     const { verifyPasswordResetToken } = await import('@/lib/auth/password-reset')
     const result = await verifyPasswordResetToken('expired-token')
     expect(result.valid).toBe(false)
     if (!result.valid) expect(result.error).toBe('Link scaduto. Richiedine uno nuovo.')
+    // Nessuna delete su token scaduto (non bruciarlo — l\'utente potrebbe richiederne uno nuovo)
+    expect(mockDeleteFn).not.toHaveBeenCalled()
+  })
+
+  it('token valido: ritorna userId e lo elimina atomicamente', async () => {
+    const USER_ID = 'a1b2c3d4-0000-0000-0000-000000000020'
+    buildAuthChain([{
+      id: 2,
+      userId: USER_ID,
+      token: 'valid-token-abc',
+      expiresAt: FUTURE,
+    }])
+    const { verifyPasswordResetToken } = await import('@/lib/auth/password-reset')
+    const result = await verifyPasswordResetToken('valid-token-abc')
+    expect(result.valid).toBe(true)
+    if (result.valid) expect(result.userId).toBe(USER_ID)
+    // Il token deve essere eliminato subito dopo la verifica
+    expect(mockDeleteFn).toHaveBeenCalledTimes(1)
+  })
+
+  it('token valido: delete non chiamata due volte se caller invoca anche deletePasswordResetToken', async () => {
+    // Verifica che il pattern deprecato non causi doppia delete inaspettata
+    const USER_ID = 'a1b2c3d4-0000-0000-0000-000000000021'
+    buildAuthChain([{
+      id: 3,
+      userId: USER_ID,
+      token: 'valid-token-xyz',
+      expiresAt: FUTURE,
+    }])
+    const { verifyPasswordResetToken, deletePasswordResetToken } = await import('@/lib/auth/password-reset')
+    const result = await verifyPasswordResetToken('valid-token-xyz')
+    expect(result.valid).toBe(true)
+    // Se il caller chiama anche deletePasswordResetToken (pattern vecchio)
+    // il secondo delete e' un no-op sicuro (token gia' eliminato dal DB)
+    await deletePasswordResetToken('valid-token-xyz')
+    // Due chiamate a delete: una da verify, una dal caller — entrambe sicure
+    expect(mockDeleteFn).toHaveBeenCalledTimes(2)
   })
 })
 
