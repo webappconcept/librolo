@@ -84,7 +84,6 @@ function buildAuthChain(rows: unknown[] = []) {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  // Default: select ritorna [], delete e insert hanno chain funzionanti
   buildAuthChain([])
   mockDeleteFn.mockReturnValue(buildDeleteChain())
   mockInsertFn.mockReturnValue(buildInsertChain())
@@ -229,14 +228,11 @@ describe('password-reset.ts', () => {
 // ---------------------------------------------------------------------------
 describe('rate-limit.ts -- checkGeneralRateLimit (DB-based)', () => {
   beforeEach(() => {
-    // delete chain: .where() risolve come Promise<void> (cleanup fire-and-forget)
     mockDeleteFn.mockReturnValue(buildDeleteChain())
-    // insert chain: .values() risolve come Promise<[]> (recordGeneralAttempt)
     mockInsertFn.mockReturnValue(buildInsertChain())
   })
 
   it('non bloccata se DB non ha tentativi (count=0)', async () => {
-    // select ritorna [{ total: 0 }]
     buildAuthChain([{ total: 0 }])
     const { checkGeneralRateLimit } = await import('@/lib/auth/rate-limit')
     const result = await checkGeneralRateLimit('test-key-zero', 3, 60)
@@ -304,4 +300,45 @@ describe('Auth input validation (unit)', () => {
   it('rifiuta password troppo corta (<8 caratteri)', () => expect(validateLoginInput('user@test.com', 'abc').error).toBe('Password troppo corta'))
   it('accetta credenziali valide',                   () => expect(validateLoginInput('user@test.com', 'password123').ok).toBe(true))
   it('normalizza email (lowercase + trim)',           () => expect(normalizeEmail('  User@Example.COM  ')).toBe('user@example.com'))
+})
+
+// ---------------------------------------------------------------------------
+// SECTION 6: queries.ts — getUser resiliente a JWT malformato
+// ---------------------------------------------------------------------------
+describe('queries.ts -- getUser con JWT non valido', () => {
+  // Imposta il mock del cookie con un valore specifico per il test
+  async function setCookieValue(value: string) {
+    const nextHeaders = await import('next/headers')
+    vi.mocked(nextHeaders.cookies).mockResolvedValue({
+      get: vi.fn().mockReturnValue(value ? { value } : undefined),
+      set: vi.fn(),
+      delete: vi.fn(),
+    } as unknown as Awaited<ReturnType<typeof nextHeaders.cookies>>)
+  }
+
+  it('ritorna null su token malformato (non crasha)', async () => {
+    await setCookieValue('questo.non.e.un.jwt')
+    vi.resetModules()
+    const { getUser } = await import('@/lib/db/queries')
+    const result = await getUser()
+    expect(result).toBeNull()
+  })
+
+  it('ritorna null su token con firma alterata', async () => {
+    // JWT sintatticamente valido ma firma sbagliata
+    const fakeJwt = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjMifQ.firma-alterata-non-valida'
+    await setCookieValue(fakeJwt)
+    vi.resetModules()
+    const { getUser } = await import('@/lib/db/queries')
+    const result = await getUser()
+    expect(result).toBeNull()
+  })
+
+  it('ritorna null su cookie assente (get ritorna undefined)', async () => {
+    await setCookieValue('')
+    vi.resetModules()
+    const { getUser } = await import('@/lib/db/queries')
+    const result = await getUser()
+    expect(result).toBeNull()
+  })
 })

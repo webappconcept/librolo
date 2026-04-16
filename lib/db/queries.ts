@@ -12,7 +12,15 @@ async function getUserInternal() {
     return null;
   }
 
-  const sessionData = await verifyToken(sessionCookie.value);
+  // verifyToken (jose jwtVerify) throws on malformed / tampered / expired
+  // tokens — catch and treat as "no session" instead of crashing the request.
+  let sessionData: Awaited<ReturnType<typeof verifyToken>> | null = null;
+  try {
+    sessionData = await verifyToken(sessionCookie.value);
+  } catch {
+    return null;
+  }
+
   if (
     !sessionData ||
     !sessionData.user ||
