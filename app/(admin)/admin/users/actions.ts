@@ -79,7 +79,7 @@ export async function deleteUser(userId: string) {
   try {
     await sendUserDeletedEmail(
       target.email,
-      target.firstName ?? undefined,
+      target.firstName ?? null,
       deletedAt,
     );
   } catch (emailError) {
