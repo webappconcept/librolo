@@ -32,7 +32,10 @@ export type SettingKey =
   | "email_deleted_subject"
   | "email_deleted_bcc"
   | "email_deleted_body"
-  | "email_deleted_footer";
+  | "email_deleted_footer"
+  // SEO
+  | "robots_txt"
+  | "humans_txt";
 
 export type AppSettings = {
   app_name: string;
@@ -64,6 +67,9 @@ export type AppSettings = {
   email_deleted_bcc: string | null;
   email_deleted_body: string | null;
   email_deleted_footer: string | null;
+  // SEO
+  robots_txt: string | null;
+  humans_txt: string | null;
 };
 
 const DEFAULTS: AppSettings = {
@@ -92,6 +98,8 @@ const DEFAULTS: AppSettings = {
   email_deleted_bcc: null,
   email_deleted_body: null,
   email_deleted_footer: null,
+  robots_txt: null,
+  humans_txt: null,
 };
 
 async function fetchAppSettings(): Promise<AppSettings> {
