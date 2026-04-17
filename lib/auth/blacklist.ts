@@ -3,7 +3,7 @@ import { ipBlacklist } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { isDisposableDomain } from "./disposable-domains";
 
-// Asincrono — import dinamico JSON
+// Query al DB tramite cache in-memory (vedi disposable-domains.ts)
 export async function isDomainBlacklisted(email: string): Promise<boolean> {
   return isDisposableDomain(email);
 }
