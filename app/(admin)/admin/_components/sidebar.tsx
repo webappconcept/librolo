@@ -13,11 +13,14 @@ import {
   KeyRound,
   LayoutDashboard,
   Layers,
+  ListFilter,
+  Lock,
   Map,
   PanelTop,
   Search,
   Settings,
   ShieldAlert,
+  ShieldBan,
   ShieldCheck,
   UserCog,
   Users,
@@ -33,6 +36,7 @@ const ICON_MAP: Record<string, React.ElementType> = {
   Users,
   UserCog,
   ShieldCheck,
+  ShieldBan,
   KeyRound,
   Layers,
   PanelTop,
@@ -47,6 +51,8 @@ const ICON_MAP: Record<string, React.ElementType> = {
   ClipboardList,
   ArrowRight,
   FlaskConical,
+  Lock,
+  ListFilter,
 };
 
 interface AdminSidebarProps {

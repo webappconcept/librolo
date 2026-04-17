@@ -70,6 +70,17 @@ export const ADMIN_NAV: NavItem[] = [
     permission: "admin:moderation",
   },
   {
+    key: "security",
+    label: "Sicurezza",
+    icon: "Lock",
+    permission: "admin:security",
+    childrenMaxHeight: "120px",
+    children: [
+      { href: "/admin/security/bruteforce", label: "Bruteforce",      icon: "ShieldBan",  permission: "admin:security" },
+      { href: "/admin/security/ip-rules",   label: "Regole IP",       icon: "ListFilter", permission: "admin:security" },
+    ],
+  },
+  {
     key: "billing",
     label: "Billing & Pagamenti",
     icon: "CreditCard",
