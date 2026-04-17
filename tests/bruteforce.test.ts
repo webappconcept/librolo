@@ -29,7 +29,7 @@ vi.mock("@/lib/db/settings-queries", () => ({
 // ---------------------------------------------------------------------------
 function makeChain(finalValue: unknown) {
   const chain: Record<string, unknown> = {};
-  const methods = ["from", "where", "groupBy", "orderBy", "limit", "values", "onConflictDoNothing", "onConflictDoUpdate"];
+  const methods = ["from", "where", "groupBy", "orderBy", "limit", "values", "onConflictDoNothing", "onConflictDoUpdate", "catch"];
   methods.forEach((m) => { chain[m] = vi.fn(() => chain); });
   chain["then"] = (resolve: (v: unknown) => unknown) => Promise.resolve(finalValue).then(resolve);
   return chain;
@@ -41,6 +41,8 @@ function makeChain(finalValue: unknown) {
 describe("Bruteforce config — soglie dal DB", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // delete ritorna sempre una chain (usata da cleanupOldAttempts e unblockIp)
+    mockDelete.mockReturnValue(makeChain(undefined));
   });
 
   it("blocca l'IP quando i tentativi superano maxAttempts dal DB", async () => {
@@ -54,7 +56,7 @@ describe("Bruteforce config — soglie dal DB", () => {
 
     expect(result.blocked).toBe(true);
     expect(result.remaining).toBe(0);
-    expect(result.lockoutMinutes).toBe(20); // dal mock settings
+    expect(result.lockoutMinutes).toBe(20);
   });
 
   it("non blocca se i tentativi sono sotto la soglia", async () => {
@@ -78,15 +80,10 @@ describe("Bruteforce config — soglie dal DB", () => {
 
     expect(result.blocked).toBe(true);
     expect(result.remaining).toBe(0);
-    // Non fa la seconda query (count) perché si ferma alla blacklist
     expect(mockSelect).toHaveBeenCalledTimes(1);
   });
 
   it("unblockIp cancella solo i tentativi nella finestra attiva", async () => {
-    const deleteChain = makeChain(undefined);
-    mockSelect.mockReturnValueOnce(makeChain([{ bf_max_attempts: "3", bf_window_minutes: "10", bf_lockout_minutes: "20", bf_alert_threshold: "15" }]));
-    mockDelete.mockReturnValue(deleteChain);
-
     const { unblockIp } = await import("@/lib/auth/rate-limit");
     await unblockIp("1.2.3.4");
 
@@ -94,8 +91,7 @@ describe("Bruteforce config — soglie dal DB", () => {
   });
 
   it("blacklistIp inserisce l'IP con onConflictDoNothing", async () => {
-    const insertChain = makeChain(undefined);
-    mockInsert.mockReturnValue(insertChain);
+    mockInsert.mockReturnValue(makeChain(undefined));
 
     const { blacklistIp } = await import("@/lib/auth/rate-limit");
     await blacklistIp("9.9.9.9", "attacco massiccio");
