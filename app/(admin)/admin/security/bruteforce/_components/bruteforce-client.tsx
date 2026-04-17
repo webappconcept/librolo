@@ -147,7 +147,6 @@ export function BruteforceClient({ offenders, blacklist, config }: Props) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
 
-      {/* Feedback */}
       {feedback && (
         <div style={{
           borderRadius: 8,

@@ -14,7 +14,7 @@ async function BruteforceContent() {
   return <BruteforceClient {...data} />;
 }
 
-export default async function BruteforcePage() {
+export default async function AdminBruteforcePage() {
   await requireAdminPage();
 
   return (
