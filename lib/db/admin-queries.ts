@@ -78,7 +78,6 @@ export async function getDashboardStats() {
           sql`${users.createdAt} < NOW() - INTERVAL '30 days'`,
         ),
       ),
-    // premium: join userSubscriptions
     db
       .select({ count: count() })
       .from(users)
@@ -213,6 +212,7 @@ export type AdminUser = {
   id: string;
   firstName: string | null;
   lastName: string | null;
+  username: string | null;
   email: string;
   role: string;
   roleLabel: string | null;
@@ -264,7 +264,8 @@ export async function getAdminUsers({
       ? sql`(
           ${users.email} ILIKE ${"%" + search + "%"} OR
           ${userProfiles.firstName} ILIKE ${"%" + search + "%"} OR
-          ${userProfiles.lastName} ILIKE ${"%" + search + "%"}
+          ${userProfiles.lastName} ILIKE ${"%" + search + "%"} OR
+          ${userProfiles.username} ILIKE ${"%" + search + "%"}
         )`
       : undefined,
     role ? eq(users.role, role) : undefined,
@@ -293,6 +294,7 @@ export async function getAdminUsers({
         id: users.id,
         firstName: userProfiles.firstName,
         lastName: userProfiles.lastName,
+        username: userProfiles.username,
         email: users.email,
         role: users.role,
         roleLabel: roles.label,
@@ -354,7 +356,8 @@ export async function getStaffUsers({
       ? sql`(
           ${users.email} ILIKE ${"%" + search + "%"} OR
           ${userProfiles.firstName} ILIKE ${"%" + search + "%"} OR
-          ${userProfiles.lastName} ILIKE ${"%" + search + "%"}
+          ${userProfiles.lastName} ILIKE ${"%" + search + "%"} OR
+          ${userProfiles.username} ILIKE ${"%" + search + "%"}
         )`
       : undefined,
     role ? eq(users.role, role) : undefined,
@@ -366,6 +369,7 @@ export async function getStaffUsers({
         id: users.id,
         firstName: userProfiles.firstName,
         lastName: userProfiles.lastName,
+        username: userProfiles.username,
         email: users.email,
         role: users.role,
         roleLabel: roles.label,
@@ -411,6 +415,7 @@ export async function getAdminUserById(id: string) {
       id: users.id,
       firstName: userProfiles.firstName,
       lastName: userProfiles.lastName,
+      username: userProfiles.username,
       email: users.email,
       role: users.role,
       isAdmin: users.isAdmin,
