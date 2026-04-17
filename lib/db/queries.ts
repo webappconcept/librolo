@@ -12,8 +12,6 @@ async function getUserInternal() {
     return null;
   }
 
-  // verifyToken (jose jwtVerify) throws on malformed / tampered / expired
-  // tokens — catch and treat as "no session" instead of crashing the request.
   let sessionData: Awaited<ReturnType<typeof verifyToken>> | null = null;
   try {
     sessionData = await verifyToken(sessionCookie.value);
@@ -49,6 +47,7 @@ async function getUserInternal() {
       // profile
       firstName: userProfiles.firstName,
       lastName: userProfiles.lastName,
+      username: userProfiles.username,
       // subscription
       stripeCustomerId: userSubscriptions.stripeCustomerId,
       stripeSubscriptionId: userSubscriptions.stripeSubscriptionId,
@@ -93,6 +92,7 @@ export async function getUserByStripeCustomerId(customerId: string) {
       deletedAt: users.deletedAt,
       firstName: userProfiles.firstName,
       lastName: userProfiles.lastName,
+      username: userProfiles.username,
       stripeCustomerId: userSubscriptions.stripeCustomerId,
       stripeSubscriptionId: userSubscriptions.stripeSubscriptionId,
       stripeProductId: userSubscriptions.stripeProductId,
