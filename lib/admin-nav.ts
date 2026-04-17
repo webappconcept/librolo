@@ -74,10 +74,11 @@ export const ADMIN_NAV: NavItem[] = [
     label: "Sicurezza",
     icon: "Lock",
     permission: "admin:security",
-    childrenMaxHeight: "120px",
+    childrenMaxHeight: "180px",
     children: [
-      { href: "/admin/security/bruteforce", label: "Bruteforce",      icon: "ShieldBan",  permission: "admin:security" },
-      { href: "/admin/security/ip-rules",   label: "Regole IP",       icon: "ListFilter", permission: "admin:security" },
+      { href: "/admin/security/bruteforce",      label: "Bruteforce",      icon: "ShieldBan",  permission: "admin:security" },
+      { href: "/admin/security/ip-rules",        label: "Regole IP",       icon: "ListFilter", permission: "admin:security" },
+      { href: "/admin/security/blocked-domains", label: "Domini Bloccati", icon: "Globe",      permission: "admin:security" },
     ],
   },
   {
