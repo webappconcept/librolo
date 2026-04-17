@@ -24,7 +24,7 @@ import { BanButton, DeleteButton, RoleSelector } from "./_components/user-detail
 import { UserAccessTab } from "./_components/user-access-tab";
 import { UserDetailTabs } from "./_components/user-detail-tabs";
 
-// UUID v4 regex — es. "550e8400-e29b-41d4-a716-446655440000"
+// UUID v4 regex
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -52,10 +52,8 @@ async function UserContent({ id, canDelete }: { id: string; canDelete: boolean }
 
   if (!user) notFound();
 
-  // Auto-purge override scaduti — silenzioso, nessun await bloccante per l'UI
   void purgeExpiredOverrides(id);
 
-  // Carica permessi del ruolo e override in parallelo
   const userRoleRow = await db
     .select()
     .from(roles)
@@ -76,10 +74,8 @@ async function UserContent({ id, canDelete }: { id: string; canDelete: boolean }
 
   const isPremium = user.subscriptionStatus === "active";
 
-  // Contenuto tab Info
   const infoContent = (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      {/* Info account */}
       <div className="rounded-xl shadow-sm p-5"
         style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-card-border)" }}>
         <h4 className="text-sm font-semibold mb-4" style={{ color: "var(--admin-text)" }}>Informazioni account</h4>
@@ -104,7 +100,6 @@ async function UserContent({ id, canDelete }: { id: string; canDelete: boolean }
         </div>
       </div>
 
-      {/* Gestione ruolo */}
       <div className="rounded-xl shadow-sm p-5"
         style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-card-border)" }}>
         <div className="flex items-center justify-between mb-4">
@@ -118,7 +113,6 @@ async function UserContent({ id, canDelete }: { id: string; canDelete: boolean }
     </div>
   );
 
-  // Contenuto tab Attività
   const activityContent = (
     <div className="rounded-xl shadow-sm p-5"
       style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-card-border)" }}>
@@ -132,7 +126,6 @@ async function UserContent({ id, canDelete }: { id: string; canDelete: boolean }
     </div>
   );
 
-  // Contenuto tab Accessi
   const accessContent = (
     <UserAccessTab
       userId={id}
@@ -161,9 +154,25 @@ async function UserContent({ id, canDelete }: { id: string; canDelete: boolean }
             </h2>
             <StatusBadge user={user} />
           </div>
-          <p className="text-sm mt-0.5" style={{ color: "var(--admin-text-muted)" }}>
-            {user.email} · ID {user.id}
-          </p>
+          <div className="flex items-center gap-2 flex-wrap mt-0.5">
+            {user.username && (
+              <span
+                className="text-sm font-semibold"
+                style={{ color: "var(--admin-accent)" }}>
+                @{user.username}
+              </span>
+            )}
+            {user.username && (
+              <span style={{ color: "var(--admin-divider)" }}>·</span>
+            )}
+            <p className="text-sm" style={{ color: "var(--admin-text-muted)" }}>
+              {user.email}
+            </p>
+            <span style={{ color: "var(--admin-divider)" }}>·</span>
+            <p className="text-sm" style={{ color: "var(--admin-text-faint)" }}>
+              ID {user.id}
+            </p>
+          </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <BanButton user={user} />
@@ -189,10 +198,8 @@ export default async function AdminUserPage({
 }) {
   const { id } = await params;
 
-  // Valida che il parametro sia un UUID valido prima di interrogare il DB
   if (!UUID_REGEX.test(id)) notFound();
 
-  // Calcola canDelete per l'admin corrente
   const currentUser = await getUser();
   const canDelete = currentUser
     ? currentUser.isAdmin || (await can(currentUser, "users:delete"))
