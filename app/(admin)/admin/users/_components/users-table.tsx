@@ -59,7 +59,7 @@ function UserRow({ user }: { user: AdminUser }) {
         (e.currentTarget.style.background = "transparent")
       }>
 
-      {/* Avatar + nome */}
+      {/* Avatar + nome + @username + email */}
       <td className="px-4 py-3">
         <div className="flex items-center gap-3">
           <div
@@ -74,6 +74,13 @@ function UserRow({ user }: { user: AdminUser }) {
               style={{ color: "var(--admin-text)" }}>
               {user.firstName} {user.lastName}
             </Link>
+            {user.username && (
+              <p
+                className="text-[11px] font-medium mt-0.5 leading-none"
+                style={{ color: "var(--admin-accent)" }}>
+                @{user.username}
+              </p>
+            )}
             <p
               className="text-xs mt-0.5"
               style={{ color: "var(--admin-text-faint)" }}>
