@@ -1,25 +1,35 @@
 /**
  * disposable-domains.ts
  *
- * Carica dinamicamente la lista dei domini usa-e-getta dal file JSON.
- * In questo modo il bundle principale non include 63KB di dati statici:
- * il JSON viene letto una sola volta al primo controllo, poi tenuto in memoria.
+ * Verifica se un dominio email è usa-e-getta.
+ * I domini sono gestiti tramite la tabella `disposable_domains` su Supabase
+ * e amministrabili dalle Impostazioni → SignIn → Domini bloccati.
  *
- * Per aggiornare la lista: modifica lib/auth/disposable-domains.json
- *
- * Alternativa esterna (zero bundle):
- *   https://open.kickbox.com/v1/disposable/{domain}
+ * Cache in-memory: la lista viene caricata dal DB una volta ogni 5 minuti
+ * per evitare una query a ogni registrazione.
  */
 
-let _domains: Set<string> | null = null;
+import { db } from "@/lib/db/drizzle";
+import { disposableDomains } from "@/lib/db/schema";
+
+let _cache: Set<string> | null = null;
+let _cacheTime = 0;
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minuti
 
 async function loadDomains(): Promise<Set<string>> {
-  if (_domains) return _domains;
-  const list = (await import("./disposable-domains.json")) as {
-    default: string[];
-  };
-  _domains = new Set(list.default);
-  return _domains;
+  const now = Date.now();
+  if (_cache && now - _cacheTime < CACHE_TTL_MS) return _cache;
+
+  const rows = await db.select({ domain: disposableDomains.domain }).from(disposableDomains);
+  _cache = new Set(rows.map((r) => r.domain.toLowerCase()));
+  _cacheTime = now;
+  return _cache;
+}
+
+/** Invalida la cache (chiamare dopo add/remove da Settings) */
+export function invalidateDisposableDomainsCache(): void {
+  _cache = null;
+  _cacheTime = 0;
 }
 
 export async function isDisposableDomain(email: string): Promise<boolean> {
