@@ -35,7 +35,12 @@ export type SettingKey =
   | "email_deleted_footer"
   // SEO
   | "robots_txt"
-  | "humans_txt";
+  | "humans_txt"
+  // Bruteforce
+  | "bf_max_attempts"
+  | "bf_window_minutes"
+  | "bf_lockout_minutes"
+  | "bf_alert_threshold";
 
 export type AppSettings = {
   app_name: string;
@@ -47,29 +52,29 @@ export type AppSettings = {
   resend_api_key: string | null;
   email_from_name: string | null;
   email_from_address: string | null;
-  // Welcome
   email_welcome_subject: string | null;
   email_welcome_bcc: string | null;
   email_welcome_body: string | null;
   email_welcome_footer: string | null;
-  // Signup verification
   email_signup_subject: string | null;
   email_signup_bcc: string | null;
   email_signup_body: string | null;
   email_signup_footer: string | null;
-  // Password reset
   email_reset_subject: string | null;
   email_reset_bcc: string | null;
   email_reset_body: string | null;
   email_reset_footer: string | null;
-  // User deleted
   email_deleted_subject: string | null;
   email_deleted_bcc: string | null;
   email_deleted_body: string | null;
   email_deleted_footer: string | null;
-  // SEO
   robots_txt: string | null;
   humans_txt: string | null;
+  // Bruteforce
+  bf_max_attempts: string;
+  bf_window_minutes: string;
+  bf_lockout_minutes: string;
+  bf_alert_threshold: string;
 };
 
 const DEFAULTS: AppSettings = {
@@ -100,6 +105,11 @@ const DEFAULTS: AppSettings = {
   email_deleted_footer: null,
   robots_txt: null,
   humans_txt: null,
+  // Bruteforce defaults
+  bf_max_attempts: "5",
+  bf_window_minutes: "15",
+  bf_lockout_minutes: "30",
+  bf_alert_threshold: "20",
 };
 
 async function fetchAppSettings(): Promise<AppSettings> {
