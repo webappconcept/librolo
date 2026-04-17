@@ -33,6 +33,7 @@ export const userProfiles = pgTable("user_profiles", {
     .references(() => users.id, { onDelete: "cascade" }),
   firstName: varchar("first_name", { length: 100 }),
   lastName: varchar("last_name", { length: 100 }),
+  username: varchar("username", { length: 50 }).unique(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -334,6 +335,7 @@ export type NewUserSubscription = typeof userSubscriptions.$inferInsert;
 export type UserWithProfile = User & {
   firstName: string | null;
   lastName: string | null;
+  username: string | null;
   stripeCustomerId: string | null;
   stripeSubscriptionId: string | null;
   stripeProductId: string | null;
@@ -381,59 +383,4 @@ export enum ActivityType {
   UPDATE_PASSWORD = "UPDATE_PASSWORD",
   DELETE_ACCOUNT = "DELETE_ACCOUNT",
   UPDATE_ACCOUNT = "UPDATE_ACCOUNT",
-  EMAIL_VERIFIED = "EMAIL_VERIFIED",
-  EMAIL_CHANGED = "EMAIL_CHANGED",
-  PASSWORD_RESET_REQUESTED = "PASSWORD_RESET_REQUESTED",
-  PASSWORD_RESET_COMPLETED = "PASSWORD_RESET_COMPLETED",
-  SUBSCRIPTION_STARTED = "SUBSCRIPTION_STARTED",
-  SUBSCRIPTION_CANCELLED = "SUBSCRIPTION_CANCELLED",
-  SUBSCRIPTION_RENEWED = "SUBSCRIPTION_RENEWED",
-  SUBSCRIPTION_UPGRADED = "SUBSCRIPTION_UPGRADED",
-  SUBSCRIPTION_DOWNGRADED = "SUBSCRIPTION_DOWNGRADED",
-  PAYMENT_FAILED = "PAYMENT_FAILED",
-  ADMIN_BAN_USER = "ADMIN_BAN_USER",
-  ADMIN_UNBAN_USER = "ADMIN_UNBAN_USER",
-  ADMIN_CHANGE_ROLE = "ADMIN_CHANGE_ROLE",
-  ADMIN_DELETE_USER = "ADMIN_DELETE_USER",
-  AVATAR_UPDATED = "AVATAR_UPDATED",
-  BIO_UPDATED = "BIO_UPDATED",
-  PROFILE_VIEWED = "PROFILE_VIEWED",
-  POST_CREATED = "POST_CREATED",
-  POST_EDITED = "POST_EDITED",
-  POST_DELETED = "POST_DELETED",
-  COMMENT_CREATED = "COMMENT_CREATED",
-  COMMENT_DELETED = "COMMENT_DELETED",
-  LIKE_ADDED = "LIKE_ADDED",
-  LIKE_REMOVED = "LIKE_REMOVED",
-  FOLLOW_USER = "FOLLOW_USER",
-  UNFOLLOW_USER = "UNFOLLOW_USER",
-  BLOCK_USER = "BLOCK_USER",
-  UNBLOCK_USER = "UNBLOCK_USER",
-  NOTIFICATION_READ = "NOTIFICATION_READ",
-  MESSAGE_SENT = "MESSAGE_SENT",
-  CONTENT_REPORTED = "CONTENT_REPORTED",
-  CONTENT_REMOVED = "CONTENT_REMOVED",
-  PERMISSION_GRANTED = "PERMISSION_GRANTED",
-  PERMISSION_REVOKED = "PERMISSION_REVOKED",
-  ROLE_PERMISSION_ADDED = "ROLE_PERMISSION_ADDED",
-  ROLE_PERMISSION_REMOVED = "ROLE_PERMISSION_REMOVED",
-  PAGE_CREATED = "PAGE_CREATED",
-  PAGE_UPDATED = "PAGE_UPDATED",
-  PAGE_DELETED = "PAGE_DELETED",
-  PAGE_PUBLISHED = "PAGE_PUBLISHED",
-  PAGE_UNPUBLISHED = "PAGE_UNPUBLISHED",
-  TEMPLATE_CREATED = "TEMPLATE_CREATED",
-  TEMPLATE_UPDATED = "TEMPLATE_UPDATED",
-  TEMPLATE_DELETED = "TEMPLATE_DELETED",
 }
-
-export type FieldType =
-  | "text"
-  | "textarea"
-  | "richtext"
-  | "image"
-  | "url"
-  | "date"
-  | "select"
-  | "toggle"
-  | "number";
