@@ -55,6 +55,8 @@ export function Login({
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [confirmError, setConfirmError] = useState("");
+  const [username, setUsername] = useState("");
+  const [usernameError, setUsernameError] = useState("");
 
   const validateEmail = (value: string) => {
     if (!value) {
@@ -74,6 +76,22 @@ export function Login({
       return;
     }
     setConfirmError(value === password ? "" : "Le password non coincidono");
+  };
+
+  const validateUsername = (value: string) => {
+    if (!value) {
+      setUsernameError("");
+      return;
+    }
+    if (value.length < 3) {
+      setUsernameError("Minimo 3 caratteri");
+      return;
+    }
+    if (!/^[a-zA-Z0-9_]+$/.test(value)) {
+      setUsernameError("Solo lettere, numeri e underscore (_)");
+      return;
+    }
+    setUsernameError("");
   };
 
   return (
@@ -121,6 +139,7 @@ export function Login({
               <input type="hidden" name="redirect" value={redirect || ""} />
               <input type="hidden" name="priceId" value={priceId || ""} />
 
+              {/* NOME + COGNOME */}
               {mode === "signup" && (
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
@@ -155,6 +174,56 @@ export function Login({
                       placeholder="Rossi"
                     />
                   </div>
+                </div>
+              )}
+
+              {/* USERNAME — solo signup */}
+              {mode === "signup" && (
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor="username"
+                    className="text-xs font-semibold uppercase tracking-wide text-brand-label">
+                    Username
+                  </Label>
+                  <div
+                    className={`flex rounded-md overflow-hidden border transition-colors ${
+                      usernameError
+                        ? "border-brand-destructive"
+                        : username && !usernameError
+                          ? "border-brand-accent"
+                          : "border-brand-border"
+                    } focus-within:ring-2 focus-within:ring-brand-accent focus-within:ring-offset-0`}>
+                    <span className="flex items-center px-3 text-sm font-semibold select-none bg-brand-surface-offset text-brand-text-muted border-r border-brand-border">
+                      @
+                    </span>
+                    <Input
+                      id="username"
+                      name="username"
+                      type="text"
+                      autoComplete="username"
+                      required
+                      minLength={3}
+                      maxLength={50}
+                      placeholder="mario_rossi"
+                      value={username}
+                      onChange={(e) => {
+                        setUsername(e.target.value);
+                        validateUsername(e.target.value);
+                      }}
+                      aria-invalid={!!usernameError}
+                      className="flex-1 rounded-none border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                    />
+                  </div>
+                  {usernameError && (
+                    <p className="text-xs flex items-center gap-1 text-brand-destructive">
+                      <X className="h-3 w-3" /> {usernameError}
+                    </p>
+                  )}
+                  {username && !usernameError && (
+                    <p className="text-xs flex items-center gap-1 text-brand-accent-hover">
+                      <Check className="h-3 w-3" /> Username disponibile
+                    </p>
+                  )}
                 </div>
               )}
 
