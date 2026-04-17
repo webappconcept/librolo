@@ -1,10 +1,11 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { ShieldAlert } from "lucide-react";
-import { requireAdminPage } from "@/app/(admin)/admin/_lib/require-admin";
+import { requireAdminPage } from "@/lib/rbac/guards";
 import { getBruteforceData } from "./actions";
 import { BruteforceClient } from "./_components/bruteforce-client";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Protezione Bruteforce",
 };
 
@@ -17,14 +18,22 @@ export default async function BruteforcePage() {
   await requireAdminPage();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div className="flex items-center gap-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--color-primary-highlight)]">
-          <ShieldAlert className="h-5 w-5 text-[var(--color-primary)]" />
+        <div
+          className="w-9 h-9 rounded-xl flex items-center justify-center"
+          style={{
+            background: "color-mix(in srgb, var(--admin-accent) 12%, var(--admin-card-bg))",
+            border: "1px solid color-mix(in srgb, var(--admin-accent) 25%, transparent)",
+          }}
+        >
+          <ShieldAlert size={18} style={{ color: "var(--admin-accent)" }} />
         </div>
         <div>
-          <h1 className="text-lg font-semibold">Protezione Bruteforce</h1>
-          <p className="text-sm text-[var(--color-text-muted)]">
+          <h2 className="text-lg font-bold" style={{ color: "var(--admin-text)" }}>
+            Protezione Bruteforce
+          </h2>
+          <p className="text-sm mt-0.5" style={{ color: "var(--admin-text-faint)" }}>
             Monitora i tentativi di accesso sospetti e gestisci le regole di blocco.
           </p>
         </div>
@@ -32,7 +41,12 @@ export default async function BruteforcePage() {
 
       <Suspense
         fallback={
-          <div className="h-64 animate-pulse rounded-lg bg-[var(--color-surface-offset)]" />
+          <div className="flex items-center justify-center h-40">
+            <div
+              className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin"
+              style={{ borderColor: "var(--admin-accent)", borderTopColor: "transparent" }}
+            />
+          </div>
         }
       >
         <BruteforceContent />

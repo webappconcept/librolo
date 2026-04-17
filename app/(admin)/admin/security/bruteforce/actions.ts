@@ -1,6 +1,6 @@
 "use server";
 
-import { requireAdminPage } from "@/app/(admin)/admin/_lib/require-admin";
+import { requireAdminPage } from "@/lib/rbac/guards";
 import {
   getTopOffenders,
   unblockIp,
@@ -16,10 +16,6 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 const PATH = "/admin/security/bruteforce";
-
-// ---------------------------------------------------------------------------
-// READ
-// ---------------------------------------------------------------------------
 
 export async function getBruteforceData() {
   await requireAdminPage();
@@ -39,10 +35,6 @@ export async function getBruteforceData() {
     },
   };
 }
-
-// ---------------------------------------------------------------------------
-// ACTIONS
-// ---------------------------------------------------------------------------
 
 export async function actionUnblockIp(formData: FormData) {
   await requireAdminPage();

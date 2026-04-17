@@ -29,16 +29,42 @@ type Props = {
 function Badge({ blocked }: { blocked: boolean }) {
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-        blocked
-          ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-          : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
-      }`}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        borderRadius: 9999,
+        padding: "2px 8px",
+        fontSize: 11,
+        fontWeight: 500,
+        background: blocked
+          ? "color-mix(in srgb, #ef4444 15%, var(--admin-card-bg))"
+          : "color-mix(in srgb, #f59e0b 15%, var(--admin-card-bg))",
+        color: blocked ? "#ef4444" : "#d97706",
+        border: `1px solid ${blocked ? "#fca5a5" : "#fcd34d"}`,
+      }}
     >
       {blocked ? "Blacklistato" : "Sospetto"}
     </span>
   );
 }
+
+const btnBase: React.CSSProperties = {
+  borderRadius: 6,
+  padding: "3px 10px",
+  fontSize: 12,
+  cursor: "pointer",
+  border: "1px solid var(--admin-border)",
+  background: "var(--admin-card-bg)",
+  color: "var(--admin-text)",
+  transition: "opacity 0.15s",
+};
+
+const btnDanger: React.CSSProperties = {
+  ...btnBase,
+  background: "color-mix(in srgb, #ef4444 12%, var(--admin-card-bg))",
+  color: "#ef4444",
+  border: "1px solid color-mix(in srgb, #ef4444 30%, transparent)",
+};
 
 export function BruteforceClient({ offenders, blacklist, config }: Props) {
   const [pending, startTransition] = useTransition();
@@ -89,7 +115,7 @@ export function BruteforceClient({ offenders, blacklist, config }: Props) {
     startTransition(async () => {
       const res = await actionUpdateBruteforceConfig(fd);
       if (res.ok) showFeedback("Configurazione salvata");
-      else showFeedback("Errore: " + res.error);
+      else showFeedback("Errore: " + (res as { ok: false; error: string }).error);
     });
   }
 
@@ -99,110 +125,124 @@ export function BruteforceClient({ offenders, blacklist, config }: Props) {
     { key: "config" as const, label: "Configurazione" },
   ];
 
+  const thStyle: React.CSSProperties = {
+    padding: "10px 14px",
+    textAlign: "left",
+    fontSize: 11,
+    fontWeight: 600,
+    textTransform: "uppercase",
+    letterSpacing: "0.05em",
+    color: "var(--admin-text-faint)",
+    background: "var(--admin-sidebar-bg)",
+    borderBottom: "1px solid var(--admin-border)",
+  };
+
+  const tdStyle: React.CSSProperties = {
+    padding: "10px 14px",
+    borderBottom: "1px solid var(--admin-border)",
+    color: "var(--admin-text)",
+    fontSize: 13,
+  };
+
   return (
-    <div className="space-y-6">
-      {/* Feedback toast */}
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+
+      {/* Feedback */}
       {feedback && (
-        <div className="rounded-md bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 px-4 py-3 text-sm text-green-700 dark:text-green-400">
+        <div style={{
+          borderRadius: 8,
+          background: "color-mix(in srgb, #22c55e 12%, var(--admin-card-bg))",
+          border: "1px solid color-mix(in srgb, #22c55e 30%, transparent)",
+          padding: "10px 14px",
+          fontSize: 13,
+          color: "#16a34a",
+        }}>
           {feedback}
         </div>
       )}
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 12 }}>
         {[
           { label: "IP sospetti (24h)", value: offenders.length },
           { label: "IP blacklistati", value: blacklist.length },
           { label: "Max tentativi", value: configValues.maxAttempts },
           { label: "Finestra (min)", value: configValues.windowMinutes },
         ].map((s) => (
-          <div
-            key={s.label}
-            className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3"
-          >
-            <p className="text-xs text-[var(--color-text-muted)]">{s.label}</p>
-            <p className="mt-1 text-2xl font-semibold tabular-nums">{s.value}</p>
+          <div key={s.label} style={{
+            borderRadius: 10,
+            border: "1px solid var(--admin-border)",
+            background: "var(--admin-card-bg)",
+            padding: "12px 16px",
+          }}>
+            <p style={{ fontSize: 11, color: "var(--admin-text-faint)", marginBottom: 4 }}>{s.label}</p>
+            <p style={{ fontSize: 22, fontWeight: 700, fontVariantNumeric: "tabular-nums", color: "var(--admin-text)" }}>{s.value}</p>
           </div>
         ))}
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-[var(--color-border)]">
-        <nav className="-mb-px flex gap-6">
-          {tabs.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
-                tab === t.key
-                  ? "border-[var(--color-primary)] text-[var(--color-primary)]"
-                  : "border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </nav>
+      <div style={{ borderBottom: "1px solid var(--admin-border)", display: "flex", gap: 24 }}>
+        {tabs.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            style={{
+              paddingBottom: 10,
+              fontSize: 13,
+              fontWeight: 500,
+              background: "none",
+              border: "none",
+              borderBottom: tab === t.key ? "2px solid var(--admin-accent)" : "2px solid transparent",
+              color: tab === t.key ? "var(--admin-accent)" : "var(--admin-text-faint)",
+              cursor: "pointer",
+              transition: "color 0.15s",
+              marginBottom: -1,
+            }}
+          >
+            {t.label}
+          </button>
+        ))}
       </div>
 
       {/* Tab: Tentativi */}
       {tab === "offenders" && (
-        <div className="overflow-x-auto rounded-lg border border-[var(--color-border)]">
-          <table className="w-full text-sm">
-            <thead className="bg-[var(--color-surface-offset)] text-xs uppercase tracking-wide text-[var(--color-text-muted)]">
+        <div style={{ overflowX: "auto", borderRadius: 10, border: "1px solid var(--admin-border)" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
               <tr>
                 {["IP", "Email", "Tentativi (24h)", "Ultimo", "Stato", "Azioni"].map((h) => (
-                  <th key={h} className="px-4 py-3 text-left font-medium">{h}</th>
+                  <th key={h} style={thStyle}>{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-[var(--color-divider)]">
+            <tbody>
               {offenders.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-[var(--color-text-muted)]">
+                  <td colSpan={6} style={{ ...tdStyle, textAlign: "center", padding: 32, color: "var(--admin-text-faint)" }}>
                     Nessun IP sospetto nelle ultime 24h
                   </td>
                 </tr>
               )}
               {offenders.map((o) => (
-                <tr key={`${o.ip}-${o.email}`} className="hover:bg-[var(--color-surface-offset)]">
-                  <td className="px-4 py-3 font-mono text-xs">{o.ip}</td>
-                  <td className="px-4 py-3 max-w-[200px] truncate">{o.email}</td>
-                  <td className="px-4 py-3 tabular-nums font-medium">{o.attempts}</td>
-                  <td className="px-4 py-3 text-[var(--color-text-muted)] tabular-nums">
+                <tr key={`${o.ip}-${o.email}`}>
+                  <td style={tdStyle}><code style={{ fontSize: 11 }}>{o.ip}</code></td>
+                  <td style={{ ...tdStyle, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{o.email}</td>
+                  <td style={{ ...tdStyle, fontVariantNumeric: "tabular-nums", fontWeight: 600 }}>{o.attempts}</td>
+                  <td style={{ ...tdStyle, color: "var(--admin-text-faint)", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>
                     {new Date(o.lastAttempt).toLocaleString("it-IT")}
                   </td>
-                  <td className="px-4 py-3">
-                    <Badge blocked={o.isBlacklisted} />
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-2">
+                  <td style={tdStyle}><Badge blocked={o.isBlacklisted} /></td>
+                  <td style={tdStyle}>
+                    <div style={{ display: "flex", gap: 6 }}>
                       {!o.isBlacklisted && (
                         <>
-                          <button
-                            disabled={pending}
-                            onClick={() => handleUnblock(o.ip)}
-                            className="rounded px-2 py-1 text-xs border border-[var(--color-border)] hover:bg-[var(--color-surface-dynamic)] disabled:opacity-50"
-                          >
-                            Sblocca
-                          </button>
-                          <button
-                            disabled={pending}
-                            onClick={() => handleBlacklist(o.ip)}
-                            className="rounded px-2 py-1 text-xs bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800 disabled:opacity-50"
-                          >
-                            Blacklist
-                          </button>
+                          <button disabled={pending} onClick={() => handleUnblock(o.ip)} style={{ ...btnBase, opacity: pending ? 0.5 : 1 }}>Sblocca</button>
+                          <button disabled={pending} onClick={() => handleBlacklist(o.ip)} style={{ ...btnDanger, opacity: pending ? 0.5 : 1 }}>Blacklist</button>
                         </>
                       )}
                       {o.isBlacklisted && (
-                        <button
-                          disabled={pending}
-                          onClick={() => handleRemoveBlacklist(o.ip)}
-                          className="rounded px-2 py-1 text-xs border border-[var(--color-border)] hover:bg-[var(--color-surface-dynamic)] disabled:opacity-50"
-                        >
-                          Rimuovi
-                        </button>
+                        <button disabled={pending} onClick={() => handleRemoveBlacklist(o.ip)} style={{ ...btnBase, opacity: pending ? 0.5 : 1 }}>Rimuovi</button>
                       )}
                     </div>
                   </td>
@@ -215,38 +255,32 @@ export function BruteforceClient({ offenders, blacklist, config }: Props) {
 
       {/* Tab: Blacklist */}
       {tab === "blacklist" && (
-        <div className="overflow-x-auto rounded-lg border border-[var(--color-border)]">
-          <table className="w-full text-sm">
-            <thead className="bg-[var(--color-surface-offset)] text-xs uppercase tracking-wide text-[var(--color-text-muted)]">
+        <div style={{ overflowX: "auto", borderRadius: 10, border: "1px solid var(--admin-border)" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
               <tr>
                 {["IP", "Motivo", "Aggiunto il", "Azioni"].map((h) => (
-                  <th key={h} className="px-4 py-3 text-left font-medium">{h}</th>
+                  <th key={h} style={thStyle}>{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-[var(--color-divider)]">
+            <tbody>
               {blacklist.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-[var(--color-text-muted)]">
+                  <td colSpan={4} style={{ ...tdStyle, textAlign: "center", padding: 32, color: "var(--admin-text-faint)" }}>
                     Nessun IP in blacklist
                   </td>
                 </tr>
               )}
               {blacklist.map((b) => (
-                <tr key={b.ip} className="hover:bg-[var(--color-surface-offset)]">
-                  <td className="px-4 py-3 font-mono text-xs">{b.ip}</td>
-                  <td className="px-4 py-3 text-[var(--color-text-muted)]">{b.reason ?? "—"}</td>
-                  <td className="px-4 py-3 tabular-nums text-[var(--color-text-muted)]">
+                <tr key={b.ip}>
+                  <td style={tdStyle}><code style={{ fontSize: 11 }}>{b.ip}</code></td>
+                  <td style={{ ...tdStyle, color: "var(--admin-text-faint)" }}>{b.reason ?? "—"}</td>
+                  <td style={{ ...tdStyle, color: "var(--admin-text-faint)", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>
                     {new Date(b.createdAt).toLocaleString("it-IT")}
                   </td>
-                  <td className="px-4 py-3">
-                    <button
-                      disabled={pending}
-                      onClick={() => handleRemoveBlacklist(b.ip)}
-                      className="rounded px-2 py-1 text-xs border border-[var(--color-border)] hover:bg-[var(--color-surface-dynamic)] disabled:opacity-50"
-                    >
-                      Rimuovi
-                    </button>
+                  <td style={tdStyle}>
+                    <button disabled={pending} onClick={() => handleRemoveBlacklist(b.ip)} style={{ ...btnBase, opacity: pending ? 0.5 : 1 }}>Rimuovi</button>
                   </td>
                 </tr>
               ))}
@@ -257,40 +291,29 @@ export function BruteforceClient({ offenders, blacklist, config }: Props) {
 
       {/* Tab: Configurazione */}
       {tab === "config" && (
-        <div className="max-w-lg space-y-5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-6">
-          <h3 className="text-sm font-semibold">Soglie protezione bruteforce</h3>
-          <p className="text-xs text-[var(--color-text-muted)]">
-            Le modifiche si applicano immediatamente ai nuovi tentativi di login.
-          </p>
+        <div style={{
+          maxWidth: 480,
+          borderRadius: 10,
+          border: "1px solid var(--admin-border)",
+          background: "var(--admin-card-bg)",
+          padding: 24,
+          display: "flex",
+          flexDirection: "column",
+          gap: 16,
+        }}>
+          <div>
+            <h3 style={{ fontSize: 14, fontWeight: 600, color: "var(--admin-text)", marginBottom: 4 }}>Soglie protezione bruteforce</h3>
+            <p style={{ fontSize: 12, color: "var(--admin-text-faint)" }}>Le modifiche si applicano immediatamente ai nuovi tentativi di login.</p>
+          </div>
 
           {([
-            {
-              key: "maxAttempts" as const,
-              label: "Tentativi massimi",
-              desc: "Numero di tentativi falliti prima del blocco",
-              min: 1, max: 100,
-            },
-            {
-              key: "windowMinutes" as const,
-              label: "Finestra (minuti)",
-              desc: "Intervallo di tempo in cui vengono contati i tentativi",
-              min: 1, max: 1440,
-            },
-            {
-              key: "lockoutMinutes" as const,
-              label: "Durata blocco (minuti)",
-              desc: "Per quanto tempo rimane bloccato l'IP dopo aver superato il limite",
-              min: 1, max: 10080,
-            },
-            {
-              key: "alertThreshold" as const,
-              label: "Soglia alert email",
-              desc: "Numero tentativi totali (24h) per ricevere un alert via Resend",
-              min: 1, max: 1000,
-            },
+            { key: "maxAttempts" as const, label: "Tentativi massimi", desc: "Tentativi falliti prima del blocco", min: 1, max: 100 },
+            { key: "windowMinutes" as const, label: "Finestra (minuti)", desc: "Intervallo in cui vengono contati i tentativi", min: 1, max: 1440 },
+            { key: "lockoutMinutes" as const, label: "Durata blocco (minuti)", desc: "Per quanto tempo rimane bloccato l'IP", min: 1, max: 10080 },
+            { key: "alertThreshold" as const, label: "Soglia alert email", desc: "Tentativi totali (24h) per ricevere un alert via Resend", min: 1, max: 1000 },
           ] as const).map((field) => (
             <div key={field.key}>
-              <label className="block text-xs font-medium mb-1">
+              <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--admin-text)", marginBottom: 4 }}>
                 {field.label}
               </label>
               <input
@@ -304,16 +327,37 @@ export function BruteforceClient({ offenders, blacklist, config }: Props) {
                     [field.key]: parseInt(e.target.value, 10) || prev[field.key],
                   }))
                 }
-                className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                style={{
+                  width: "100%",
+                  borderRadius: 6,
+                  border: "1px solid var(--admin-border)",
+                  background: "var(--admin-bg)",
+                  color: "var(--admin-text)",
+                  padding: "7px 10px",
+                  fontSize: 13,
+                  outline: "none",
+                }}
               />
-              <p className="mt-1 text-xs text-[var(--color-text-muted)]">{field.desc}</p>
+              <p style={{ marginTop: 3, fontSize: 11, color: "var(--admin-text-faint)" }}>{field.desc}</p>
             </div>
           ))}
 
           <button
             disabled={pending}
             onClick={handleConfigSave}
-            className="rounded-md bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-primary-hover)] disabled:opacity-50 transition-colors"
+            style={{
+              borderRadius: 7,
+              background: "var(--admin-accent)",
+              color: "#fff",
+              border: "none",
+              padding: "8px 18px",
+              fontSize: 13,
+              fontWeight: 500,
+              cursor: pending ? "not-allowed" : "pointer",
+              opacity: pending ? 0.6 : 1,
+              alignSelf: "flex-start",
+              transition: "opacity 0.15s",
+            }}
           >
             {pending ? "Salvataggio…" : "Salva configurazione"}
           </button>
