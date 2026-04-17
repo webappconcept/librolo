@@ -1,28 +1,46 @@
 /**
  * app/robots.txt/route.ts
- * Genera robots.txt dinamicamente via Next.js Route Handler.
- * Aggiornare NEXT_PUBLIC_SITE_URL nelle variabili d'ambiente.
+ * Genera robots.txt dinamicamente leggendo il contenuto da app_settings.
+ * Modificabile da Admin → SEO → Robots.
  */
+import { db } from "@/lib/db/drizzle";
+import { appSettings } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://librolo.it";
 
-export function GET() {
-  const content = [
-    "User-agent: *",
-    "Allow: /",
-    "Disallow: /admin/",
-    "Disallow: /api/",
-    "Disallow: /dashboard/",
-    "",
-    `Sitemap: ${SITE_URL}/sitemap.xml`,
-  ].join("\n");
+const DEFAULT_ROBOTS = [
+  "User-agent: *",
+  "Allow: /",
+  "Disallow: /admin/",
+  "Disallow: /api/",
+  "Disallow: /dashboard/",
+  "",
+  `Sitemap: ${SITE_URL}/sitemap.xml`,
+].join("\n");
+
+export async function GET() {
+  let content = DEFAULT_ROBOTS;
+
+  try {
+    const rows = await db
+      .select()
+      .from(appSettings)
+      .where(eq(appSettings.key, "robots_txt"))
+      .limit(1);
+    if (rows[0]?.value) {
+      content = rows[0].value;
+    }
+  } catch (err) {
+    console.error("[robots.txt] DB error, using default:", err);
+  }
 
   return new NextResponse(content, {
     status: 200,
     headers: {
       "Content-Type": "text/plain; charset=utf-8",
-      "Cache-Control": "public, max-age=86400, stale-while-revalidate=3600",
+      "Cache-Control": "public, max-age=3600, stale-while-revalidate=60",
     },
   });
 }
