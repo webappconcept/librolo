@@ -33,6 +33,7 @@ export const userProfiles = pgTable("user_profiles", {
     .references(() => users.id, { onDelete: "cascade" }),
   firstName: varchar("first_name", { length: 100 }),
   lastName: varchar("last_name", { length: 100 }),
+  username: varchar("username", { length: 50 }).unique(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -310,7 +311,6 @@ export const seoPages = pgTable("seo_pages", {
 
 // ---------------------------------------------------------------------------
 // Disposable domains — domini email usa e getta bloccati alla registrazione
-// La tabella disposable_domains esiste già su Supabase.
 // ---------------------------------------------------------------------------
 export const disposableDomains = pgTable("disposable_domains", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
@@ -334,6 +334,7 @@ export type NewUserSubscription = typeof userSubscriptions.$inferInsert;
 export type UserWithProfile = User & {
   firstName: string | null;
   lastName: string | null;
+  username: string | null;
   stripeCustomerId: string | null;
   stripeSubscriptionId: string | null;
   stripeProductId: string | null;
