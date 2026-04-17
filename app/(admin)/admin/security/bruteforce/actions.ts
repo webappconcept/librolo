@@ -17,6 +17,14 @@ import { z } from "zod";
 
 const PATH = "/admin/security/bruteforce";
 
+// Validazione IP compatibile con Zod v3
+const ipSchema = z
+  .string()
+  .regex(
+    /^(\d{1,3}\.){3}\d{1,3}$|^([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}$/,
+    "IP non valido",
+  );
+
 export async function getBruteforceData() {
   await requireAdminPage();
   const [offenders, blacklist, settings] = await Promise.all([
@@ -38,7 +46,7 @@ export async function getBruteforceData() {
 
 export async function actionUnblockIp(formData: FormData) {
   await requireAdminPage();
-  const ip = z.string().ip().parse(formData.get("ip"));
+  const ip = ipSchema.parse(formData.get("ip"));
   await unblockIp(ip);
   revalidatePath(PATH);
   return { ok: true };
@@ -46,7 +54,7 @@ export async function actionUnblockIp(formData: FormData) {
 
 export async function actionBlacklistIp(formData: FormData) {
   await requireAdminPage();
-  const ip = z.string().ip().parse(formData.get("ip"));
+  const ip = ipSchema.parse(formData.get("ip"));
   const reason = (formData.get("reason") as string | null) ?? undefined;
   await blacklistIp(ip, reason);
   revalidatePath(PATH);
@@ -55,7 +63,7 @@ export async function actionBlacklistIp(formData: FormData) {
 
 export async function actionRemoveFromBlacklist(formData: FormData) {
   await requireAdminPage();
-  const ip = z.string().ip().parse(formData.get("ip"));
+  const ip = ipSchema.parse(formData.get("ip"));
   await removeFromBlacklist(ip);
   revalidatePath(PATH);
   return { ok: true };
