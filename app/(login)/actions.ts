@@ -114,6 +114,14 @@ const signUpSchema = z
   .object({
     firstName: z.string().min(1, "Il nome è obbligatorio").max(100),
     lastName: z.string().min(1, "Il cognome è obbligatorio").max(100),
+    username: z
+      .string()
+      .min(3, "Username minimo 3 caratteri")
+      .max(50, "Username massimo 50 caratteri")
+      .regex(
+        /^[a-zA-Z0-9_]+$/,
+        "Solo lettere, numeri e underscore (_)",
+      ),
     email: z.email(),
     password: z
       .string()
@@ -129,7 +137,7 @@ const signUpSchema = z
   });
 
 export const signUp = validatedAction(signUpSchema, async (data) => {
-  const { firstName, lastName, email, password } = data;
+  const { firstName, lastName, username, email, password } = data;
 
   const settings = await getAppSettings();
   if (settings.registrations_enabled === "false") {
@@ -164,6 +172,17 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
     return { error: "Questa email è già stata registrata", email, password };
   }
 
+  // Verifica unicità username
+  const existingUsername = await db
+    .select({ id: userProfiles.id })
+    .from(userProfiles)
+    .where(eq(userProfiles.username, username))
+    .limit(1);
+
+  if (existingUsername.length > 0) {
+    return { error: "Questo username è già in uso.", email, password };
+  }
+
   const passwordHash = await hashPassword(password);
   const defaultRole = settings.default_role || "member";
 
@@ -180,11 +199,12 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
     };
   }
 
-  // Crea profilo separato
+  // Crea profilo con username
   await db.insert(userProfiles).values({
     userId: createdUser.id,
     firstName,
     lastName,
+    username,
   });
 
   const code = await createVerificationCode(createdUser.id);
@@ -305,9 +325,7 @@ export const updateAccount = validatedActionWithUser(
     const { firstName, lastName, email } = data;
 
     await Promise.all([
-      // email rimane su users
       db.update(users).set({ email, updatedAt: new Date() }).where(eq(users.id, user.id)),
-      // nome/cognome su user_profiles (upsert)
       db
         .insert(userProfiles)
         .values({ userId: user.id, firstName, lastName })
