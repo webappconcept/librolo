@@ -29,12 +29,10 @@ export function SettingsTabs({
   settings,
   snippets,
   roles,
-  disposableDomains,
 }: {
   settings: AppSettings;
   snippets: SiteSnippet[];
   roles: Role[];
-  disposableDomains: string[];
 }) {
   const [active, setActive] = useState<TabId>("general");
 
@@ -68,13 +66,7 @@ export function SettingsTabs({
       {/* Pannelli */}
       {active === "general"         && <GeneralTab settings={settings} />}
       {active === "behaviour"       && <BehaviourTab settings={settings} />}
-      {active === "signin"          && (
-        <SignInTab
-          settings={settings}
-          roles={roles}
-          initialDomains={disposableDomains}
-        />
-      )}
+      {active === "signin"          && <SignInTab settings={settings} roles={roles} />}
       {active === "sender"          && <SenderTab settings={settings} />}
       {active === "email-templates" && <EmailTemplatesTab settings={settings} />}
       {active === "routes"          && <RoutesTab />}
