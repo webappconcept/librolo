@@ -186,14 +186,14 @@ export function Login({
                     Username
                   </Label>
                   <div
-                    className={`flex rounded-md overflow-hidden border transition-colors ${
+                    className={`flex rounded-full overflow-hidden border transition-colors ${
                       usernameError
                         ? "border-brand-destructive"
                         : username && !usernameError
                           ? "border-brand-accent"
                           : "border-brand-border"
                     } focus-within:ring-2 focus-within:ring-brand-accent focus-within:ring-offset-0`}>
-                    <span className="flex items-center px-3 text-sm font-semibold select-none bg-brand-surface-offset text-brand-text-muted border-r border-brand-border">
+                    <span className="flex items-center px-3 text-sm font-semibold select-none border-r border-brand-border">
                       @
                     </span>
                     <Input
