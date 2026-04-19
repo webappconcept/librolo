@@ -1,29 +1,76 @@
 // proxy.ts
 import { signToken, verifyToken } from "@/lib/auth/session";
 import { getRedirectByFromPath } from "@/lib/db/redirects-queries";
-import { ADMIN_ROUTES, ADMIN_SIGNIN_ROUTE, AUTH_ROUTES, PUBLIC_ROUTES } from "@/lib/routes";
+import {
+  getActiveRoutes,
+} from "@/lib/db/route-registry-queries";
+import type { RouteVisibility } from "@/lib/db/schema";
+import {
+  ADMIN_ROUTES,
+  ADMIN_SIGNIN_ROUTE,
+  AUTH_ROUTES,
+  PUBLIC_ROUTES,
+} from "@/lib/routes";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
-/**
- * Route private conosciute: solo queste richiedono autenticazione.
- * Qualsiasi percorso che non inizia con uno di questi prefissi
- * viene lasciato passare — se non esiste, Next.js mostrerà il 404.
- */
-const PRIVATE_ROUTE_PREFIXES = [
-  "/dashboard",
-  "/profilo",
-  "/account",
-  "/libreria",
-  "/esplora",
-  "/assistenza",
-  "/segnala",
-];
-
-function isKnownPrivateRoute(pathname: string): boolean {
-  return PRIVATE_ROUTE_PREFIXES.some(
-    (prefix) => pathname === prefix || pathname.startsWith(prefix + "/"),
+// ---------------------------------------------------------------------------
+// Helpers per confronto pathname → array di prefissi
+// ---------------------------------------------------------------------------
+function matchesPrefix(pathname: string, routes: string[]): boolean {
+  return routes.some(
+    (r) => pathname === r || pathname.startsWith(r + "/"),
   );
+}
+
+/**
+ * Carica le route dal DB registry e le suddivide per visibilità.
+ * Se il DB non risponde o è vuoto, usa le costanti statiche di fallback.
+ */
+async function resolveRoutes(): Promise<{
+  publicRoutes: string[];
+  authRoutes: string[];
+  adminRoutes: string[];
+  privateRoutes: string[];
+}> {
+  // Fallback statico garantito anche se il DB è irraggiungibile
+  const fallback = {
+    publicRoutes: PUBLIC_ROUTES,
+    authRoutes: AUTH_ROUTES,
+    adminRoutes: ADMIN_ROUTES,
+    privateRoutes: [
+      "/dashboard",
+      "/profilo",
+      "/account",
+      "/libreria",
+      "/esplora",
+      "/assistenza",
+      "/segnala",
+    ],
+  };
+
+  try {
+    const rows = await getActiveRoutes();
+    if (!rows || rows.length === 0) return fallback;
+
+    const byVisibility = (v: RouteVisibility) =>
+      rows.filter((r) => r.visibility === v).map((r) => r.pathname);
+
+    const publicRoutes  = byVisibility("public");
+    const authRoutes    = byVisibility("auth-only");
+    const adminRoutes   = byVisibility("admin");
+    const privateRoutes = byVisibility("private");
+
+    return {
+      publicRoutes:  publicRoutes.length  > 0 ? publicRoutes  : fallback.publicRoutes,
+      authRoutes:    authRoutes.length    > 0 ? authRoutes    : fallback.authRoutes,
+      adminRoutes:   adminRoutes.length   > 0 ? adminRoutes   : fallback.adminRoutes,
+      privateRoutes: privateRoutes.length > 0 ? privateRoutes : fallback.privateRoutes,
+    };
+  } catch {
+    // DB non risponde → degradazione silenziosa con fallback statico
+    return fallback;
+  }
 }
 
 export async function proxy(request: NextRequest) {
@@ -56,18 +103,15 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  // --- ROUTE PUBBLICHE (non-auth) ---
-  const isPublicRoute = PUBLIC_ROUTES.some(
-    (route) => pathname === route || pathname.startsWith(route + "/"),
-  );
-  const isAuthRoute = AUTH_ROUTES.some(
-    (route) => pathname === route || pathname.startsWith(route + "/"),
-  );
-  const isAdminRoute = ADMIN_ROUTES.some(
-    (route) => pathname === route || pathname.startsWith(route + "/"),
-  );
-  const isAdminSignIn = pathname === ADMIN_SIGNIN_ROUTE;
-  const isPrivateRoute = isKnownPrivateRoute(pathname);
+  // --- RISOLVI ROUTE DAL REGISTRY (con fallback statico) ---
+  const { publicRoutes, authRoutes, adminRoutes, privateRoutes } =
+    await resolveRoutes();
+
+  const isPublicRoute  = matchesPrefix(pathname, publicRoutes);
+  const isAuthRoute    = matchesPrefix(pathname, authRoutes);
+  const isAdminRoute   = matchesPrefix(pathname, adminRoutes);
+  const isAdminSignIn  = pathname === ADMIN_SIGNIN_ROUTE;
+  const isPrivateRoute = matchesPrefix(pathname, privateRoutes);
 
   // --- ADMIN SIGN-IN: sempre accessibile ---
   // NON facciamo redirect verso /admin anche se la sessione è valida:
