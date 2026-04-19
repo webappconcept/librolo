@@ -57,6 +57,8 @@ export function Login({
   const [confirmError, setConfirmError] = useState("");
   const [username, setUsername] = useState("");
   const [usernameError, setUsernameError] = useState("");
+  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [acceptPrivacy, setAcceptPrivacy] = useState(false);
 
   const validateEmail = (value: string) => {
     if (!value) {
@@ -368,6 +370,52 @@ export function Login({
                 </div>
               )}
 
+              {/* CHECKBOX TERMINI E PRIVACY — solo signup */}
+              {mode === "signup" && (
+                <div className="space-y-3 pt-1">
+                  <label className="flex items-start gap-3 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      name="acceptTerms"
+                      required
+                      checked={acceptTerms}
+                      onChange={(e) => setAcceptTerms(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 shrink-0 rounded border-brand-border accent-brand-accent cursor-pointer"
+                    />
+                    <span className="text-xs text-brand-text-muted leading-relaxed">
+                      Ho letto e accetto i{" "}
+                      <Link
+                        href="/termini-e-condizioni"
+                        target="_blank"
+                        className="font-medium text-brand-primary underline underline-offset-2 hover:text-brand-primary-hover">
+                        Termini e Condizioni
+                      </Link>
+                      {" "}d&apos;uso
+                    </span>
+                  </label>
+
+                  <label className="flex items-start gap-3 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      name="acceptPrivacy"
+                      required
+                      checked={acceptPrivacy}
+                      onChange={(e) => setAcceptPrivacy(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 shrink-0 rounded border-brand-border accent-brand-accent cursor-pointer"
+                    />
+                    <span className="text-xs text-brand-text-muted leading-relaxed">
+                      Ho letto e accetto la{" "}
+                      <Link
+                        href="/privacy-policy"
+                        target="_blank"
+                        className="font-medium text-brand-primary underline underline-offset-2 hover:text-brand-primary-hover">
+                        Privacy Policy
+                      </Link>
+                    </span>
+                  </label>
+                </div>
+              )}
+
               {state?.error && (
                 <div className="rounded-xl px-4 py-3 text-sm flex items-center gap-2 bg-brand-error-bg text-brand-destructive">
                   <X className="h-4 w-4 shrink-0" />
@@ -375,7 +423,13 @@ export function Login({
                 </div>
               )}
 
-              <Button type="submit" disabled={pending} className="w-full">
+              <Button
+                type="submit"
+                disabled={
+                  pending ||
+                  (mode === "signup" && (!acceptTerms || !acceptPrivacy))
+                }
+                className="w-full">
                 {pending ? (
                   <>
                     <Loader2 className="animate-spin h-4 w-4" /> Caricamento...
