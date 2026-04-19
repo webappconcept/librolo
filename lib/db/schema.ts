@@ -312,6 +312,34 @@ export const seoPages = pgTable("seo_pages", {
 });
 
 // ---------------------------------------------------------------------------
+// Route Registry — fonte di verità per tutte le route pubbliche/private del sito.
+// Usata da: proxy.ts (middleware auth), SEO meta-tags (select pagine),
+// sitemap, nav pubblica, footer.
+// ---------------------------------------------------------------------------
+export const routeVisibility = [
+  "public",
+  "private",
+  "admin",
+  "auth-only",
+] as const;
+export type RouteVisibility = (typeof routeVisibility)[number];
+
+export const routeRegistry = pgTable("route_registry", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  pathname: varchar("pathname", { length: 500 }).notNull().unique(),
+  label: varchar("label", { length: 150 }).notNull(),
+  visibility: varchar("visibility", { length: 20 })
+    .notNull()
+    .default("public").$type<RouteVisibility>(),
+  inNav: boolean("in_nav").notNull().default(false),
+  inFooter: boolean("in_footer").notNull().default(false),
+  inSitemap: boolean("in_sitemap").notNull().default(true),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// ---------------------------------------------------------------------------
 // Disposable domains — domini email usa e getta bloccati alla registrazione
 // ---------------------------------------------------------------------------
 export const disposableDomains = pgTable("disposable_domains", {
@@ -366,6 +394,8 @@ export type Redirect = typeof redirects.$inferSelect;
 export type NewRedirect = typeof redirects.$inferInsert;
 export type SiteSnippet = typeof siteSnippets.$inferSelect;
 export type NewSiteSnippet = typeof siteSnippets.$inferInsert;
+export type RouteRegistry = typeof routeRegistry.$inferSelect;
+export type NewRouteRegistry = typeof routeRegistry.$inferInsert;
 
 export interface TemplateStyleConfig {
   fontBody?: string;
