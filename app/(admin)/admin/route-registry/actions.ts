@@ -25,7 +25,7 @@ const schema = z.object({
     .min(1, "L'etichetta è obbligatoria")
     .max(150, "Max 150 caratteri"),
   visibility: z.enum(["public", "private", "admin", "auth-only"], {
-    errorMap: () => ({ message: "Visibilità non valida" }),
+    error: "Visibilità non valida",
   }),
   inNav:     z.string().optional(),
   inFooter:  z.string().optional(),

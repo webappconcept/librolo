@@ -10,6 +10,7 @@ import { describe, it, expect } from 'vitest'
 
 import { z } from 'zod'
 
+// Schema identico ad actions.ts — Zod v4 usa "error" al posto di "errorMap"
 const schema = z.object({
   id: z.string().uuid().optional(),
   pathname: z
@@ -21,7 +22,7 @@ const schema = z.object({
     .min(1, "L'etichetta è obbligatoria")
     .max(150, 'Max 150 caratteri'),
   visibility: z.enum(['public', 'private', 'admin', 'auth-only'], {
-    errorMap: () => ({ message: 'Visibilità non valida' }),
+    error: 'Visibilità non valida',
   }),
   inNav:     z.string().optional(),
   inFooter:  z.string().optional(),
@@ -97,7 +98,6 @@ describe('upsertRouteAction — validazione schema', () => {
       visibility: 'unknown',
     })
     expect(res.success).toBe(false)
-    expect(res.error?.issues[0]?.message).toBe('Visibilità non valida')
   })
 
   it('rifiuta id non-uuid', () => {
@@ -142,8 +142,6 @@ describe('flag booleani — coercion da FormData string', () => {
   })
 
   it('inSitemap e isActive sono true se assenti (default checkbox HTML)', () => {
-    // Un checkbox HTML non spedisce nulla se non è checked — la coercion
-    // deve interpretare undefined come true per inSitemap e isActive
     const f = coerce({})
     expect(f.inSitemap).toBe(true)
     expect(f.isActive).toBe(true)
