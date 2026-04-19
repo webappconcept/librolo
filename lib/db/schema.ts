@@ -331,6 +331,7 @@ export const routeRegistry = pgTable("route_registry", {
     .notNull()
     .default("public").$type<RouteVisibility>(),
   isActive: boolean("is_active").notNull().default(true),
+  isSystemRoute: boolean("is_system_route").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
