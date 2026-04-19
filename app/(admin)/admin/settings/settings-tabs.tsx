@@ -3,12 +3,11 @@
 
 import type { AppSettings } from "@/lib/db/settings-queries";
 import type { Role, SiteSnippet } from "@/lib/db/schema";
-import { Code2, LogIn, Mail, MailOpen, Map, Send, Settings, SlidersHorizontal } from "lucide-react";
+import { Code2, LogIn, Mail, MailOpen, Send, Settings, SlidersHorizontal } from "lucide-react";
 import { useState } from "react";
 import { BehaviourTab } from "./tabs/behaviour-tab";
 import { EmailTemplatesTab } from "./tabs/email-templates-tab";
 import { GeneralTab } from "./tabs/general-tab";
-import { RoutesTab } from "./tabs/routes-tab";
 import { SenderTab } from "./tabs/sender-tab";
 import { SignInTab } from "./tabs/signin-tab";
 import { SnippetsTab } from "./tabs/snippets-tab";
@@ -19,7 +18,6 @@ const TABS = [
   { id: "signin",          label: "SignIn",         icon: LogIn },
   { id: "sender",          label: "Sender",         icon: Send },
   { id: "email-templates", label: "Email",          icon: MailOpen },
-  { id: "routes",          label: "Route",          icon: Map },
   { id: "snippets",        label: "Contenuti",      icon: Code2 },
 ] as const;
 
@@ -69,7 +67,6 @@ export function SettingsTabs({
       {active === "signin"          && <SignInTab settings={settings} roles={roles} />}
       {active === "sender"          && <SenderTab settings={settings} />}
       {active === "email-templates" && <EmailTemplatesTab settings={settings} />}
-      {active === "routes"          && <RoutesTab />}
       {active === "snippets"        && <SnippetsTab initialSnippets={snippets} />}
     </div>
   );

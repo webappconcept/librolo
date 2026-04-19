@@ -1,5 +1,16 @@
-// lib/routes.ts
+/**
+ * @deprecated lib/routes.ts
+ *
+ * Questo file è mantenuto SOLO come fallback statico nel middleware (proxy.ts).
+ * La fonte di verità è ora la tabella `route_registry` su DB.
+ * Gestione route: Admin → SEO → Route Registry (/admin/route-registry)
+ *
+ * NAV_ITEMS, USER_MENU_ITEMS e FOOTER_LINKS sono ancora usati dai componenti
+ * di navigazione frontend fino a quando non verranno migrati a lettura da DB.
+ * Non aggiungere nuove route qui.
+ */
 
+// Fallback statico per proxy.ts — NON modificare
 export const PUBLIC_ROUTES = [
   "/",
   "/sign-in",
@@ -10,17 +21,13 @@ export const PUBLIC_ROUTES = [
   "/admin/sign-in",
 ];
 
-// Route che un utente già loggato non dovrebbe vedere
 export const AUTH_ROUTES = ["/sign-in", "/sign-up"];
 
-// Sign-in dedicato agli amministratori — gestito separatamente nel middleware
 export const ADMIN_SIGNIN_ROUTE = "/admin/sign-in";
 
-// Route admin protette (richiedono ruolo admin)
-// NOTA: /admin/sign-in è esclusa — viene gestita da ADMIN_SIGNIN_ROUTE
 export const ADMIN_ROUTES = ["/admin"];
 
-// Navigazione principale — unica fonte di verità
+// Navigazione frontend — ancora in uso, migrazione pianificata
 export const NAV_ITEMS = [
   { href: "/", label: "Home", icon: "Home" },
   { href: "/esplora", label: "Esplora", icon: "Search" },
