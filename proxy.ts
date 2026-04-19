@@ -1,27 +1,20 @@
 // proxy.ts
 import { signToken, verifyToken } from "@/lib/auth/session";
 import { getRedirectByFromPath } from "@/lib/db/redirects-queries";
-import { ADMIN_ROUTES, ADMIN_SIGNIN_ROUTE, AUTH_ROUTES, PUBLIC_ROUTES } from "@/lib/routes";
+import { getActiveRoutes } from "@/lib/db/route-registry-queries";
+import { ADMIN_SIGNIN_ROUTE, ADMIN_ROUTES } from "@/lib/routes";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
 /**
- * Route private conosciute: solo queste richiedono autenticazione.
- * Qualsiasi percorso che non inizia con uno di questi prefissi
- * viene lasciato passare — se non esiste, Next.js mostrerà il 404.
+ * Route admin conosciute: hard-coded perché le route /admin/* non sono
+ * nel route_registry (non sono route pubbliche del sito) e devono
+ * essere protette anche se il DB non risponde.
  */
-const PRIVATE_ROUTE_PREFIXES = [
-  "/dashboard",
-  "/profilo",
-  "/account",
-  "/libreria",
-  "/esplora",
-  "/assistenza",
-  "/segnala",
-];
+const ADMIN_ROUTE_PREFIXES = ADMIN_ROUTES;
 
-function isKnownPrivateRoute(pathname: string): boolean {
-  return PRIVATE_ROUTE_PREFIXES.some(
+function isAdminRoute(pathname: string): boolean {
+  return ADMIN_ROUTE_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(prefix + "/"),
   );
 }
@@ -34,9 +27,6 @@ export async function proxy(request: NextRequest) {
   requestHeaders.set("x-pathname", pathname);
 
   // --- REDIRECT DA DB (301/302/307/308) ---
-  // Eseguito prima di qualsiasi check auth, così i redirect funzionano
-  // per tutti gli utenti indipendentemente dallo stato di login.
-  // Skippiamo asset statici, API routes e route admin per evitare overhead inutile.
   const isStaticOrApi =
     pathname.startsWith("/_next/") ||
     pathname.startsWith("/api/") ||
@@ -52,112 +42,108 @@ export async function proxy(request: NextRequest) {
         });
       }
     } catch {
-      // Se il DB non risponde non blocchiamo la request — degradiamo silenziosamente
+      // Degrada silenziosamente se il DB non risponde
     }
   }
 
-  // --- ROUTE PUBBLICHE (non-auth) ---
-  const isPublicRoute = PUBLIC_ROUTES.some(
-    (route) => pathname === route || pathname.startsWith(route + "/"),
-  );
-  const isAuthRoute = AUTH_ROUTES.some(
-    (route) => pathname === route || pathname.startsWith(route + "/"),
-  );
-  const isAdminRoute = ADMIN_ROUTES.some(
-    (route) => pathname === route || pathname.startsWith(route + "/"),
-  );
-  const isAdminSignIn = pathname === ADMIN_SIGNIN_ROUTE;
-  const isPrivateRoute = isKnownPrivateRoute(pathname);
-
   // --- ADMIN SIGN-IN: sempre accessibile ---
-  // NON facciamo redirect verso /admin anche se la sessione è valida:
-  // non possiamo sapere qui se l'utente ha davvero admin:access (no DB sull'edge).
-  // Il redirect post-login è compito della server action di login.
-  // Se reindirizzassimo qui creeremmo un loop quando requireAdminPage() nega l'accesso
-  // e manda a /admin/sign-in, che ci rimanda a /admin, che rimanda a /admin/sign-in...
-  if (isAdminSignIn) {
-    return NextResponse.next({ request: { headers: requestHeaders } });
-  }
-
-  if (isPublicRoute && !isAuthRoute) {
-    return NextResponse.next({ request: { headers: requestHeaders } });
-  }
-
-  const isLoggedIn = !!sessionCookie;
-
-  // Utente loggato su /sign-in o /sign-up → home
-  if (isAuthRoute && isLoggedIn) {
-    return NextResponse.redirect(new URL("/", request.url));
-  }
-
-  // Utente non loggato su /sign-in o /sign-up → lascia passare
-  if (isAuthRoute && !isLoggedIn) {
+  if (pathname === ADMIN_SIGNIN_ROUTE) {
     return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
   // --- ROUTE ADMIN ---
-  // Il proxy verifica SOLO che esista una sessione valida e non scaduta.
-  // La verifica RBAC reale (isAdmin flag o permesso admin:access via ruolo)
-  // avviene nel Server Component tramite requireAdminPage() in lib/rbac/guards.ts.
-  if (isAdminRoute) {
+  if (isAdminRoute(pathname)) {
+    const isLoggedIn = !!sessionCookie;
     if (!isLoggedIn) {
       const url = new URL("/admin/sign-in", request.url);
       url.searchParams.set("from", pathname);
       return NextResponse.redirect(url);
     }
     try {
-      const parsed = await verifyToken(sessionCookie!.value);
-      const notExpired = new Date(parsed.expires) > new Date();
-      if (!notExpired) {
+      const payload = await verifyToken(sessionCookie.value);
+      if (!payload) {
         const url = new URL("/admin/sign-in", request.url);
         url.searchParams.set("from", pathname);
         return NextResponse.redirect(url);
       }
-      // Sessione valida → passa al Server Component che farà il check RBAC
-    } catch {
-      return NextResponse.redirect(new URL("/admin/sign-in", request.url));
-    }
-  }
-
-  // --- ROUTE PRIVATE CONOSCIUTE: richiede login ---
-  if (isPrivateRoute && !isLoggedIn) {
-    return NextResponse.redirect(new URL("/sign-in", request.url));
-  }
-
-  // --- REFRESH SESSION ---
-  let res = NextResponse.next({ request: { headers: requestHeaders } });
-
-  if (sessionCookie && request.method === "GET") {
-    try {
-      const parsed = await verifyToken(sessionCookie.value);
-      const expiresInOneDay = new Date(Date.now() + 24 * 60 * 60 * 1000);
-      res.cookies.set({
-        name: "session",
-        value: await signToken({
-          user: {
-            id: parsed.user.id,
-            role: parsed.user.role ?? "member",
-          },
-          expires: expiresInOneDay.toISOString(),
-        }),
+      const newToken = await signToken(payload);
+      const response = NextResponse.next({ request: { headers: requestHeaders } });
+      response.cookies.set("session", newToken, {
         httpOnly: true,
         secure: true,
         sameSite: "lax",
-        expires: expiresInOneDay,
+        expires: new Date(payload.expires),
       });
+      return response;
     } catch {
-      res.cookies.delete("session");
-      if (isPrivateRoute || isAdminRoute) {
-        return NextResponse.redirect(new URL("/sign-in", request.url));
-      }
+      const url = new URL("/admin/sign-in", request.url);
+      url.searchParams.set("from", pathname);
+      return NextResponse.redirect(url);
     }
   }
 
-  return res;
-}
+  // --- ROUTE REGISTRY DAL DB ---
+  // Fallback statico: se il DB non risponde lasciamo passare la request
+  // e lasciamo che Next.js mostri 404 o la pagina corretta.
+  let routes: Awaited<ReturnType<typeof getActiveRoutes>> = [];
+  try {
+    routes = await getActiveRoutes();
+  } catch {
+    return NextResponse.next({ request: { headers: requestHeaders } });
+  }
 
-export const config = {
-  matcher: [
-    "/((?!_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
-  ],
-};
+  const matched = routes.find(
+    (r) => pathname === r.pathname || pathname.startsWith(r.pathname + "/"),
+  );
+
+  // Pathname non registrato nel registry → lascia passare (Next.js gestisce 404)
+  if (!matched) {
+    return NextResponse.next({ request: { headers: requestHeaders } });
+  }
+
+  const isLoggedIn = !!sessionCookie;
+  const { visibility } = matched;
+
+  // Rotta auth-only (/sign-in, /sign-up, ecc.)
+  if (visibility === "auth-only") {
+    if (isLoggedIn) {
+      // Utente già loggato → rimanda alla home
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+    return NextResponse.next({ request: { headers: requestHeaders } });
+  }
+
+  // Rotta pubblica → sempre accessibile
+  if (visibility === "public") {
+    return NextResponse.next({ request: { headers: requestHeaders } });
+  }
+
+  // Rotta privata o admin → richiede sessione valida
+  if (!isLoggedIn) {
+    const url = new URL("/sign-in", request.url);
+    url.searchParams.set("from", pathname);
+    return NextResponse.redirect(url);
+  }
+
+  try {
+    const payload = await verifyToken(sessionCookie.value);
+    if (!payload) {
+      const url = new URL("/sign-in", request.url);
+      url.searchParams.set("from", pathname);
+      return NextResponse.redirect(url);
+    }
+    const newToken = await signToken(payload);
+    const response = NextResponse.next({ request: { headers: requestHeaders } });
+    response.cookies.set("session", newToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "lax",
+      expires: new Date(payload.expires),
+    });
+    return response;
+  } catch {
+    const url = new URL("/sign-in", request.url);
+    url.searchParams.set("from", pathname);
+    return NextResponse.redirect(url);
+  }
+}
