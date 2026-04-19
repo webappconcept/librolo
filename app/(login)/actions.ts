@@ -130,12 +130,8 @@ const signUpSchema = z
       .regex(/[A-Z]/, "La password deve contenere almeno una lettera maiuscola")
       .regex(/[0-9]/, "La password deve contenere almeno un numero"),
     confirmPassword: z.string().min(8).max(30),
-    acceptTerms: z.literal("on", {
-      errorMap: () => ({ message: "Devi accettare i Termini e Condizioni per procedere" }),
-    }),
-    acceptPrivacy: z.literal("on", {
-      errorMap: () => ({ message: "Devi accettare la Privacy Policy per procedere" }),
-    }),
+    acceptTerms: z.literal("on", "Devi accettare i Termini e Condizioni per procedere"),
+    acceptPrivacy: z.literal("on", "Devi accettare la Privacy Policy per procedere"),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Le password non sono uguali",
