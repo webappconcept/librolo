@@ -1,4 +1,3 @@
-// app/(admin)/admin/route-registry/actions.ts
 "use server";
 
 import {
@@ -27,10 +26,7 @@ const schema = z.object({
   visibility: z.enum(["public", "private", "admin", "auth-only"], {
     error: "Visibilità non valida",
   }),
-  inNav:     z.string().optional(),
-  inFooter:  z.string().optional(),
-  inSitemap: z.string().optional(),
-  isActive:  z.string().optional(),
+  isActive: z.string().optional(),
 });
 
 type ActionResult = { error?: string; success?: boolean; savedAt?: string };
@@ -46,19 +42,16 @@ export async function upsertRouteAction(
   if (!parsed.success)
     return { error: parsed.error.issues[0]?.message ?? "Dati non validi" };
 
-  const { id, inNav, inFooter, inSitemap, isActive, ...rest } = parsed.data;
+  const { id, isActive, ...rest } = parsed.data;
   const data = {
     ...rest,
     visibility: rest.visibility as RouteVisibility,
-    inNav:      inNav      === "true",
-    inFooter:   inFooter   === "true",
-    inSitemap:  inSitemap  !== "false",
-    isActive:   isActive   !== "false",
+    isActive: isActive !== "false",
   };
 
   try {
     if (id) await updateRoute(id, data);
-    else    await createRoute(data);
+    else await createRoute(data);
     revalidatePath(REVALIDATE);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "";

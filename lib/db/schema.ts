@@ -313,8 +313,7 @@ export const seoPages = pgTable("seo_pages", {
 
 // ---------------------------------------------------------------------------
 // Route Registry — fonte di verità per tutte le route pubbliche/private del sito.
-// Usata da: proxy.ts (middleware auth), SEO meta-tags (select pagine),
-// sitemap, nav pubblica, footer.
+// Usata da: proxy.ts (middleware auth), SEO meta-tags (select pagine).
 // ---------------------------------------------------------------------------
 export const routeVisibility = [
   "public",
@@ -331,9 +330,6 @@ export const routeRegistry = pgTable("route_registry", {
   visibility: varchar("visibility", { length: 20 })
     .notNull()
     .default("public").$type<RouteVisibility>(),
-  inNav: boolean("in_nav").notNull().default(false),
-  inFooter: boolean("in_footer").notNull().default(false),
-  inSitemap: boolean("in_sitemap").notNull().default(true),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
