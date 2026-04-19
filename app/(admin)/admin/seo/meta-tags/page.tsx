@@ -1,33 +1,20 @@
+// app/(admin)/admin/seo/meta-tags/page.tsx
 import { getAllPages } from "@/lib/db/pages-queries";
 import { getAllSeoPages } from "@/lib/db/seo-queries";
 import { getAppSettings } from "@/lib/db/settings-queries";
-import {
-  FOOTER_LINKS,
-  NAV_ITEMS,
-  PUBLIC_ROUTES,
-  USER_MENU_ITEMS,
-} from "@/lib/routes";
+import { getActiveRoutes } from "@/lib/db/route-registry-queries";
 import { SearchCheck } from "lucide-react";
 import { Suspense } from "react";
 import SeoManager from "../_components/seo-manager";
 
 export const dynamic = "force-dynamic";
 
-function getStaticAppRoutes(): string[] {
-  const paths = new Set<string>([
-    ...PUBLIC_ROUTES,
-    ...NAV_ITEMS.map((i) => i.href),
-    ...USER_MENU_ITEMS.map((i) => i.href),
-    ...FOOTER_LINKS.map((i) => i.href),
-  ]);
-  return [...paths].filter((p) => !p.startsWith("/admin")).sort();
-}
-
 async function SeoContent() {
-  const [seoPagesList, cmsPages, settings] = await Promise.all([
+  const [seoPagesList, cmsPages, settings, registryRoutes] = await Promise.all([
     getAllSeoPages(),
     getAllPages(),
     getAppSettings(),
+    getActiveRoutes(),
   ]);
 
   let domain = settings.app_domain?.trim() ?? "";
@@ -36,9 +23,12 @@ async function SeoContent() {
 
   const appName = settings.app_name?.trim() ?? "";
 
-  const staticRoutes = getStaticAppRoutes();
+  // Route dal registry (escludi admin) + route CMS dinamiche
+  const registryPaths = registryRoutes
+    .filter((r) => r.visibility !== "admin")
+    .map((r) => r.pathname);
   const cmsRoutes = cmsPages.map((p) => `/${p.slug}`);
-  const allRoutes = [...new Set([...staticRoutes, ...cmsRoutes])].sort();
+  const allRoutes = [...new Set([...registryPaths, ...cmsRoutes])].sort();
 
   const configuredPaths = new Set(seoPagesList.map((p) => p.pathname));
   const unconfiguredRoutes = allRoutes.filter((r) => !configuredPaths.has(r));
