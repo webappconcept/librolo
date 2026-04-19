@@ -86,6 +86,15 @@ export async function updateRoute(
 }
 
 export async function deleteRoute(id: string): Promise<void> {
+  const [row] = await db
+    .select()
+    .from(routeRegistry)
+    .where(eq(routeRegistry.id, id));
+
+  if (row?.isSystemRoute) {
+    throw new Error("Le route di sistema non possono essere eliminate.");
+  }
+
   await db.delete(routeRegistry).where(eq(routeRegistry.id, id));
   invalidateRouteRegistryCache();
 }

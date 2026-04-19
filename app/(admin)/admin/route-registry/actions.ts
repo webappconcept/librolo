@@ -3,6 +3,7 @@
 import {
   createRoute,
   deleteRoute,
+  getAllRoutes,
   toggleRouteActive,
   updateRoute,
 } from "@/lib/db/route-registry-queries";
@@ -69,6 +70,12 @@ export async function deleteRouteAction(
 ): Promise<ActionResult> {
   await requireAdmin();
   try {
+    const rows = await getAllRoutes();
+    const route = rows.find((row) => row.id === id);
+    if (route?.isSystemRoute) {
+      return { error: "Le route di sistema non possono essere eliminate." };
+    }
+
     await deleteRoute(id);
     revalidatePath(REVALIDATE);
   } catch (err) {

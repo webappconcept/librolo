@@ -260,7 +260,7 @@ export default function RouteRegistryClient({
               A cosa serve Routes
             </p>
             <p>
-              Questa sezione gestisce dinamicamente i metadata delle pagine. Tutte le route presenti in questa lista sono accessibili dalla sezione SEO / Meta data, dove puoi impostare i meta delle pagine di sistema o di nuove pagine gestite direttamente tramite files.
+              Questa sezione gestisce dinamicamente i metadata delle pagine. Tutte le route presenti in questa lista sono accessibili dalla sezione SEO / Meta Tags, dove puoi impostare i meta delle pagine di sistema o di nuove pagine gestite direttamente tramite files.
             </p>
             <p>
               Tutte le altre route vengono invece gestite dalla sezione Contenuti, dove è possibile creare pagine con contenuti HTML.
@@ -460,6 +460,7 @@ export default function RouteRegistryClient({
 
           {filtered.map((row, i) => {
             const isHome = row.pathname === HOME_PATH;
+            const isSystem = row.isSystemRoute === true;
             const isToggling = togglingId === row.id;
             const isDeleting = deletingId === row.id;
 
@@ -489,9 +490,13 @@ export default function RouteRegistryClient({
                       {row.label}
                     </span>
                   </div>
-                  {isHome && (
+                  {isSystem && (
                     <span
-                      title="La home / è protetta e non può essere disattivata o eliminata"
+                      title={
+                        isHome
+                          ? "La home / è protetta e non può essere disattivata o eliminata"
+                          : "Route di sistema: può essere disattivata ma non eliminata"
+                      }
                       className="flex-shrink-0"
                       style={{ color: "var(--admin-text-faint)" }}
                     >
@@ -536,12 +541,16 @@ export default function RouteRegistryClient({
 
                   <button
                     type="button"
-                    title={isHome ? "La home non può essere eliminata" : "Elimina"}
-                    disabled={isHome || isDeleting}
+                    title={
+                      isSystem
+                        ? "Le route di sistema non possono essere eliminate"
+                        : "Elimina"
+                    }
+                    disabled={isSystem || isDeleting}
                     onClick={() => setDeleteTarget({ id: row.id, pathname: row.pathname })}
                     className="p-1.5 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                     style={{ color: "var(--admin-text-muted)" }}
-                    onMouseEnter={(e) => { if (!isHome) e.currentTarget.style.color = "#ef4444"; }}
+                    onMouseEnter={(e) => { if (!isSystem) e.currentTarget.style.color = "#ef4444"; }}
                     onMouseLeave={(e) => (e.currentTarget.style.color = "var(--admin-text-muted)")}
                   >
                     {isDeleting
