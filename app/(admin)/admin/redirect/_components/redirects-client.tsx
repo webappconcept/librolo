@@ -1,8 +1,15 @@
 "use client";
 
+import ConfirmModal from "@/app/(admin)/admin/_components/confirm-modal";
 import type { Redirect } from "@/lib/db/schema";
 import {
-  ArrowRight, Check, GitMerge, Pencil, Plus, Trash2, X, AlertTriangle,
+  AlertTriangle,
+  ArrowRight,
+  GitMerge,
+  Pencil,
+  Plus,
+  Trash2,
+  X,
 } from "lucide-react";
 import { useActionState, useState } from "react";
 
@@ -49,6 +56,8 @@ function StatusBadge({ code }: { code: number }) {
 
 type RedirectRow = Redirect;
 
+type DeleteTarget = { id: number; fromPath: string };
+
 type Props = {
   rows: RedirectRow[];
   upsertAction: (prev: unknown, formData: FormData) => Promise<{ error?: string; success?: boolean; savedAt?: string }>;
@@ -62,13 +71,12 @@ export default function RedirectsClient({ rows: initialRows, upsertAction, delet
   const [mode, setMode] = useState<FormMode | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [savedAt, setSavedAt] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
 
   const [formState, formAction, isPending] = useActionState(
     async (prev: unknown, fd: FormData) => {
       const res = await upsertAction(prev, fd);
       if (res.success) {
-        // Refresh locale ottimistico: ricarica la pagina
         window.location.reload();
       }
       return res;
@@ -76,23 +84,56 @@ export default function RedirectsClient({ rows: initialRows, upsertAction, delet
     {},
   );
 
-  async function handleDelete(id: number) {
-    if (!confirm("Eliminare questo redirect?")) return;
-    setDeletingId(id);
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    setDeletingId(deleteTarget.id);
     setDeleteError(null);
-    const res = await deleteAction(id);
+    const res = await deleteAction(deleteTarget.id);
     if (res.error) {
       setDeleteError(res.error);
     } else {
-      setRows((prev) => prev.filter((r) => r.id !== id));
+      setRows((prev) => prev.filter((r) => r.id !== deleteTarget.id));
     }
     setDeletingId(null);
+    setDeleteTarget(null);
   }
 
   const editRow = mode?.type === "edit" ? mode.row : null;
 
   return (
     <div className="space-y-6">
+      <ConfirmModal
+        open={deleteTarget !== null}
+        title="Elimina redirect"
+        message={
+          <>
+            Stai per eliminare il redirect da{" "}
+            <code
+              style={{
+                fontFamily: "monospace",
+                fontSize: "0.8rem",
+                padding: "1px 5px",
+                borderRadius: "4px",
+                background: "var(--admin-page-bg)",
+                color: "var(--admin-text)",
+              }}
+            >
+              {deleteTarget?.fromPath}
+            </code>
+            .<br />
+            <span style={{ marginTop: "6px", display: "block" }}>
+              Questa operazione è irreversibile.
+            </span>
+          </>
+        }
+        variant="danger"
+        confirmLabel="Elimina redirect"
+        cancelLabel="Annulla"
+        loading={deletingId !== null}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -297,13 +338,15 @@ export default function RedirectsClient({ rows: initialRows, upsertAction, delet
                   type="button"
                   title="Elimina"
                   disabled={deletingId === row.id}
-                  onClick={() => handleDelete(row.id)}
+                  onClick={() => setDeleteTarget({ id: row.id, fromPath: row.fromPath })}
                   className="p-1.5 rounded transition-colors disabled:opacity-40"
                   style={{ color: "var(--admin-text-muted)" }}
                   onMouseEnter={(e) => (e.currentTarget.style.color = "#ef4444")}
                   onMouseLeave={(e) => (e.currentTarget.style.color = "var(--admin-text-muted)")}
                 >
-                  <Trash2 size={13} />
+                  {deletingId === row.id
+                    ? <span className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin block" />
+                    : <Trash2 size={13} />}
                 </button>
               </div>
             </div>
