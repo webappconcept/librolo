@@ -101,12 +101,13 @@ export const ADMIN_NAV: NavItem[] = [
     label: "SEO",
     icon: "Search",
     permission: "admin:seo",
-    childrenMaxHeight: "200px",
+    childrenMaxHeight: "240px",
     children: [
-      { href: "/admin/seo/meta-tags", label: "Meta Tags", icon: "FileText",  permission: "admin:seo" },
-      { href: "/admin/seo/robots",    label: "Robots",    icon: "Globe",     permission: "admin:seo" },
-      { href: "/admin/seo/sitemap",   label: "Sitemap",   icon: "Map",       permission: "admin:seo" },
-      { href: "/admin/redirect",      label: "Redirect",  icon: "GitMerge",  permission: "admin:seo" },
+      { href: "/admin/seo/meta-tags",     label: "Meta Tags",       icon: "FileText", permission: "admin:seo" },
+      { href: "/admin/seo/robots",        label: "Robots",          icon: "Globe",    permission: "admin:seo" },
+      { href: "/admin/seo/sitemap",       label: "Sitemap",         icon: "Map",      permission: "admin:seo" },
+      { href: "/admin/redirect",          label: "Redirect",        icon: "GitMerge", permission: "admin:seo" },
+      { href: "/admin/route-registry",   label: "Route Registry",  icon: "Map",      permission: "admin:seo" },
     ],
   },
   {
