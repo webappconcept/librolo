@@ -6,7 +6,7 @@ import { PanelTop, Plus, Copy } from "lucide-react";
 import { duplicateTemplateAction } from "./actions";
 import DeleteTemplateButton from "./_components/delete-template-button";
 
-export const metadata: Metadata = { title: "Template pagine" };
+export const metadata: Metadata = { title: "Contenuti / Template" };
 export const dynamic = "force-dynamic";
 
 export default async function TemplatePage() {
@@ -26,10 +26,12 @@ export default async function TemplatePage() {
             <PanelTop size={18} style={{ color: "var(--admin-accent)" }} />
           </div>
           <div className="min-w-0">
-            <h1 className="text-xl font-bold" style={{ color: "var(--admin-text)" }}>
-              Template pagine
+            <h1 className="text-lg font-bold" style={{ color: "var(--admin-text)" }}>
+              <span style={{ color: "var(--admin-text-muted)" }}>Contenuti</span>
+              <span style={{ color: "var(--admin-text-faint)" }}> / </span>
+              <span>Template</span>
             </h1>
-            <p className="text-sm mt-0.5" style={{ color: "var(--admin-text-muted)" }}>
+            <p className="text-sm mt-0.5" style={{ color: "var(--admin-text-faint)" }}>
               Definisci i layout grafici riutilizzabili per le pagine del sito
             </p>
           </div>

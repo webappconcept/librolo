@@ -7,7 +7,7 @@ import { FileText } from "lucide-react";
 import { Suspense } from "react";
 import PageManager from "./_components/page-manager";
 
-export const metadata: Metadata = { title: "Contenuti" };
+export const metadata: Metadata = { title: "Contenuti / Pagine" };
 export const dynamic = "force-dynamic";
 
 async function ContenutiContent() {
@@ -46,13 +46,15 @@ export default function ContenutiPage() {
         </div>
         <div className="min-w-0">
           <h2
-            className="text-xl font-bold"
+            className="text-lg font-bold"
             style={{ color: "var(--admin-text)" }}>
-            Pagine
+            <span style={{ color: "var(--admin-text-muted)" }}>Contenuti</span>
+            <span style={{ color: "var(--admin-text-faint)" }}> / </span>
+            <span>Pagine</span>
           </h2>
           <p
             className="text-sm mt-0.5"
-            style={{ color: "var(--admin-text-muted)" }}>
+            style={{ color: "var(--admin-text-faint)" }}>
             Gestisci i contenuti statici del sito.
           </p>
         </div>
