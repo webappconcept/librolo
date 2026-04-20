@@ -1,8 +1,10 @@
-// app/(admin)/admin/settings/generale/page.tsx
 import { getAppSettings } from "@/lib/db/settings-queries";
-import { GeneralTab } from "../tabs/general-tab";
+import type { Metadata } from "next";
+import { GeneraleTab } from "../tabs/generale-tab";
+
+export const metadata: Metadata = { title: "Impostazioni / Generale" };
 
 export default async function SettingsGeneralePage() {
   const settings = await getAppSettings();
-  return <GeneralTab settings={settings} />;
+  return <GeneraleTab settings={settings} />;
 }

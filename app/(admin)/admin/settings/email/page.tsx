@@ -1,8 +1,10 @@
-// app/(admin)/admin/settings/email/page.tsx
 import { getAppSettings } from "@/lib/db/settings-queries";
-import { EmailTemplatesTab } from "../tabs/email-templates-tab";
+import type { Metadata } from "next";
+import { EmailTab } from "../tabs/email-tab";
+
+export const metadata: Metadata = { title: "Impostazioni / Email" };
 
 export default async function SettingsEmailPage() {
   const settings = await getAppSettings();
-  return <EmailTemplatesTab settings={settings} />;
+  return <EmailTab settings={settings} />;
 }

@@ -1,8 +1,10 @@
-// app/(admin)/admin/settings/comportamento/page.tsx
 import { getAppSettings } from "@/lib/db/settings-queries";
-import { BehaviourTab } from "../tabs/behaviour-tab";
+import type { Metadata } from "next";
+import { ComportamentoTab } from "../tabs/comportamento-tab";
+
+export const metadata: Metadata = { title: "Impostazioni / Comportamento" };
 
 export default async function SettingsComportamentoPage() {
   const settings = await getAppSettings();
-  return <BehaviourTab settings={settings} />;
+  return <ComportamentoTab settings={settings} />;
 }
