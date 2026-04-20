@@ -1,6 +1,8 @@
-// app/(admin)/admin/settings/contenuti/page.tsx
 import { getAllSnippets } from "@/lib/db/snippets-queries";
+import type { Metadata } from "next";
 import { SnippetsTab } from "../tabs/snippets-tab";
+
+export const metadata: Metadata = { title: "Impostazioni / Contenuti" };
 
 export default async function SettingsContenutiPage() {
   const snippets = await getAllSnippets();
