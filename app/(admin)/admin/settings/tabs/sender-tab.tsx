@@ -41,6 +41,19 @@ function SenderTabInner({ settings }: { settings: AppSettings }) {
     if ("success" in saveState) setToast({ message: saveState.success, type: "success" });
     if ("error" in saveState) setToast({ message: saveState.error, type: "error" });
   }, [saveState]);
+    if (!("timestamp" in testState)) return;
+    if (testState.timestamp === lastTestTs.current) return;
+    lastTestTs.current = testState.timestamp;
+    if ("success" in testState) setToast({ message: testState.success, type: "success" });
+    if ("error" in testState) setToast({ message: testState.error, type: "error" });
+  }, [testState]);
+
+  // Testa usando il valore live dell'input (non ancora salvato)
+  function handleTest() {
+    const fd = new FormData();
+    fd.append("resend_api_key", apiKeyRef.current?.value ?? "");
+    testAction(fd);
+  }
 
   useEffect(() => {
     if (!("timestamp" in testState)) return;
