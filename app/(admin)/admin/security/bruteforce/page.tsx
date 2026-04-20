@@ -6,7 +6,7 @@ import { getBruteforceData } from "./actions";
 import { BruteforceClient } from "./_components/bruteforce-client";
 
 export const metadata: Metadata = {
-  title: "Protezione Bruteforce",
+  title: "Sicurezza / Bruteforce",
 };
 
 async function BruteforceContent() {
@@ -31,7 +31,9 @@ export default async function AdminBruteforcePage() {
         </div>
         <div>
           <h2 className="text-lg font-bold" style={{ color: "var(--admin-text)" }}>
-            Protezione Bruteforce
+            <span style={{ color: "var(--admin-text-muted)" }}>Sicurezza</span>
+            <span style={{ color: "var(--admin-text-faint)" }}> / </span>
+            <span>Bruteforce</span>
           </h2>
           <p className="text-sm mt-0.5" style={{ color: "var(--admin-text-faint)" }}>
             Monitora i tentativi di accesso sospetti e gestisci le regole di blocco.
