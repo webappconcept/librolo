@@ -24,15 +24,15 @@ function normalizeEmail(email: string): string {
  */
 export async function ensureBloomFilter(): Promise<void> {
   try {
-    await redis.call(
+    await redis.sendCommand([
       'BF.RESERVE',
       BLOOM_KEY,
       String(BLOOM_ERROR_RATE),
       String(BLOOM_INITIAL_CAPACITY),
       'EXPANSION',
       '2',
-      'NONSCALING'
-    )
+      'NONSCALING',
+    ])
   } catch (err: unknown) {
     // ERR item exists = filter already created, safe to ignore
     if (
@@ -51,7 +51,7 @@ export async function ensureBloomFilter(): Promise<void> {
  */
 export async function addEmailToBloom(email: string): Promise<void> {
   const normalized = normalizeEmail(email)
-  await redis.call('BF.ADD', BLOOM_KEY, normalized)
+  await redis.sendCommand(['BF.ADD', BLOOM_KEY, normalized])
 }
 
 /**
@@ -60,7 +60,7 @@ export async function addEmailToBloom(email: string): Promise<void> {
 export async function addEmailsBulkToBloom(emails: string[]): Promise<void> {
   if (emails.length === 0) return
   const normalized = emails.map(normalizeEmail)
-  await redis.call('BF.MADD', BLOOM_KEY, ...normalized)
+  await redis.sendCommand(['BF.MADD', BLOOM_KEY, ...normalized])
 }
 
 /**
@@ -78,7 +78,11 @@ export async function checkEmailAvailability(
 ): Promise<BloomEmailCheckResult> {
   const normalized = normalizeEmail(email)
 
-  const bloomResult = await redis.call('BF.EXISTS', BLOOM_KEY, normalized)
+  const bloomResult = await redis.sendCommand<number>([
+    'BF.EXISTS',
+    BLOOM_KEY,
+    normalized,
+  ])
 
   // Bloom says "certainly not present" → no DB query needed
   if (bloomResult === 0) {

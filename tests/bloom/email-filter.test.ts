@@ -2,17 +2,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // --- Mocks ---
 
-// Mock Upstash Redis
-const mockRedisCall = vi.fn()
+const mockSendCommand = vi.fn()
 vi.mock('@upstash/redis', () => ({
   Redis: vi.fn().mockImplementation(() => ({
-    call: mockRedisCall,
+    sendCommand: mockSendCommand,
   })),
 }))
 
-// Mock Drizzle DB query
 const mockDbSelect = vi.fn()
-vi.mock('@/lib/db', () => ({
+vi.mock('@/lib/db/drizzle', () => ({
   db: {
     select: () => ({
       from: () => ({
@@ -24,17 +22,14 @@ vi.mock('@/lib/db', () => ({
   },
 }))
 
-// Mock schema
 vi.mock('@/lib/db/schema', () => ({
   users: { id: 'id', email: 'email' },
 }))
 
-// Mock drizzle-orm eq
 vi.mock('drizzle-orm', () => ({
   eq: vi.fn(),
 }))
 
-// Mock server-only
 vi.mock('server-only', () => ({}))
 
 import {
@@ -55,7 +50,7 @@ describe('Bloom Filter — Email', () => {
 
   describe('checkEmailAvailability', () => {
     it('returns available=true without DB query when Bloom says 0 (certainly absent)', async () => {
-      mockRedisCall.mockResolvedValueOnce(0)
+      mockSendCommand.mockResolvedValueOnce(0)
 
       const result = await checkEmailAvailability('nuovo@example.com')
 
@@ -65,7 +60,7 @@ describe('Bloom Filter — Email', () => {
     })
 
     it('returns available=false when Bloom says 1 and DB confirms email exists', async () => {
-      mockRedisCall.mockResolvedValueOnce(1)
+      mockSendCommand.mockResolvedValueOnce(1)
       mockDbSelect.mockResolvedValueOnce([{ id: '123' }])
 
       const result = await checkEmailAvailability('esistente@example.com')
@@ -75,7 +70,7 @@ describe('Bloom Filter — Email', () => {
     })
 
     it('returns available=true when Bloom says 1 but DB finds nothing (false positive)', async () => {
-      mockRedisCall.mockResolvedValueOnce(1)
+      mockSendCommand.mockResolvedValueOnce(1)
       mockDbSelect.mockResolvedValueOnce([])
 
       const result = await checkEmailAvailability('falsopos@example.com')
@@ -85,78 +80,78 @@ describe('Bloom Filter — Email', () => {
     })
 
     it('normalizes email to lowercase before checking', async () => {
-      mockRedisCall.mockResolvedValueOnce(0)
+      mockSendCommand.mockResolvedValueOnce(0)
 
       await checkEmailAvailability('  UTENTE@Example.COM  ')
 
-      expect(mockRedisCall).toHaveBeenCalledWith(
+      expect(mockSendCommand).toHaveBeenCalledWith([
         'BF.EXISTS',
         'bloom:emails',
-        'utente@example.com'
-      )
+        'utente@example.com',
+      ])
     })
   })
 
   describe('addEmailToBloom', () => {
     it('calls BF.ADD with normalized email', async () => {
-      mockRedisCall.mockResolvedValueOnce(1)
+      mockSendCommand.mockResolvedValueOnce(1)
 
       await addEmailToBloom('  NUOVO@Test.COM  ')
 
-      expect(mockRedisCall).toHaveBeenCalledWith(
+      expect(mockSendCommand).toHaveBeenCalledWith([
         'BF.ADD',
         'bloom:emails',
-        'nuovo@test.com'
-      )
+        'nuovo@test.com',
+      ])
     })
   })
 
   describe('addEmailsBulkToBloom', () => {
     it('calls BF.MADD with all normalized emails', async () => {
-      mockRedisCall.mockResolvedValueOnce([1, 1, 1])
+      mockSendCommand.mockResolvedValueOnce([1, 1, 1])
 
       await addEmailsBulkToBloom(['A@B.com', 'C@D.com', 'E@F.com'])
 
-      expect(mockRedisCall).toHaveBeenCalledWith(
+      expect(mockSendCommand).toHaveBeenCalledWith([
         'BF.MADD',
         'bloom:emails',
         'a@b.com',
         'c@d.com',
-        'e@f.com'
-      )
+        'e@f.com',
+      ])
     })
 
     it('does nothing when given an empty array', async () => {
       await addEmailsBulkToBloom([])
-      expect(mockRedisCall).not.toHaveBeenCalled()
+      expect(mockSendCommand).not.toHaveBeenCalled()
     })
   })
 
   describe('ensureBloomFilter', () => {
     it('calls BF.RESERVE with correct params', async () => {
-      mockRedisCall.mockResolvedValueOnce('OK')
+      mockSendCommand.mockResolvedValueOnce('OK')
 
       await ensureBloomFilter()
 
-      expect(mockRedisCall).toHaveBeenCalledWith(
+      expect(mockSendCommand).toHaveBeenCalledWith([
         'BF.RESERVE',
         'bloom:emails',
         '0.01',
         '10000',
         'EXPANSION',
         '2',
-        'NONSCALING'
-      )
+        'NONSCALING',
+      ])
     })
 
     it('silently ignores "item exists" error (filter already created)', async () => {
-      mockRedisCall.mockRejectedValueOnce(new Error('ERR item exists'))
+      mockSendCommand.mockRejectedValueOnce(new Error('ERR item exists'))
 
       await expect(ensureBloomFilter()).resolves.not.toThrow()
     })
 
     it('rethrows unexpected errors', async () => {
-      mockRedisCall.mockRejectedValueOnce(new Error('Connection refused'))
+      mockSendCommand.mockRejectedValueOnce(new Error('Connection refused'))
 
       await expect(ensureBloomFilter()).rejects.toThrow('Connection refused')
     })
