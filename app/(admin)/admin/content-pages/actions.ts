@@ -1,11 +1,16 @@
 "use server";
 
-import { deletePageCascade, getPageBySlug, togglePageStatus, upsertPage } from "@/lib/db/pages-queries";
-import { upsertRedirect } from "@/lib/db/redirects-queries";
-import { deleteSeoPage, getSeoPage, renameSeoPage } from "@/lib/db/seo-queries";
 import { logContentActivity } from "@/lib/db/content-activity";
-import { ActivityType } from "@/lib/db/schema";
+import {
+  deletePageCascade,
+  getPageBySlug,
+  togglePageStatus,
+  upsertPage,
+} from "@/lib/db/pages-queries";
 import { getUser } from "@/lib/db/queries";
+import { upsertRedirect } from "@/lib/db/redirects-queries";
+import { ActivityType } from "@/lib/db/schema";
+import { deleteSeoPage, getSeoPage, renameSeoPage } from "@/lib/db/seo-queries";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -17,7 +22,8 @@ const schema = z.object({
     .min(1, "Lo slug è obbligatorio")
     .max(255)
     .regex(/^[a-z0-9]+(?:[/-][a-z0-9]+)*$/, {
-      message: "Slug non valido: usa solo lettere minuscole, numeri, trattini e slash",
+      message:
+        "Slug non valido: usa solo lettere minuscole, numeri, trattini e slash",
     }),
   title: z.string().min(1, "Il titolo è obbligatorio").max(255),
   content: z.string().default(""),
@@ -34,7 +40,12 @@ const schema = z.object({
 export async function upsertPageAction(
   _: unknown,
   formData: FormData,
-): Promise<{ error?: string; success?: boolean; savedAt?: string; createdId?: number }> {
+): Promise<{
+  error?: string;
+  success?: boolean;
+  savedAt?: string;
+  createdId?: number;
+}> {
   const raw = {
     id: formData.get("id") || undefined,
     originalSlug: formData.get("originalSlug") || undefined,
@@ -56,7 +67,18 @@ export async function upsertPageAction(
     return { error: parsed.error.issues[0]?.message ?? "Dati non validi" };
   }
 
-  const { id, originalSlug, publishedAt, expiresAt, parentId, templateId, customFields, pageType, sortOrder, ...data } = parsed.data;
+  const {
+    id,
+    originalSlug,
+    publishedAt,
+    expiresAt,
+    parentId,
+    templateId,
+    customFields,
+    pageType,
+    sortOrder,
+    ...data
+  } = parsed.data;
   const isCreating = !id;
 
   let resolvedPublishedAt: Date | null = null;
@@ -70,7 +92,11 @@ export async function upsertPageAction(
 
   let parsedCustomFields: Record<string, unknown> = {};
   if (customFields) {
-    try { parsedCustomFields = JSON.parse(customFields); } catch { /* noop */ }
+    try {
+      parsedCustomFields = JSON.parse(customFields);
+    } catch {
+      /* noop */
+    }
   }
 
   const slugChanged = originalSlug && originalSlug !== data.slug;
@@ -106,7 +132,7 @@ export async function upsertPageAction(
       });
     }
 
-    revalidatePath("/admin/contenuti");
+    revalidatePath("/admin/pages");
     revalidatePath(`/${data.slug}`);
     if (slugChanged) {
       revalidatePath(`/${originalSlug}`);
@@ -149,7 +175,7 @@ export async function deletePageAction(
     const deleted = await deletePageCascade(slug);
     await deleteSeoPage(`/${slug}`);
 
-    revalidatePath("/admin/contenuti");
+    revalidatePath("/admin/pages");
     revalidatePath(`/${slug}`);
     revalidatePath("/admin/seo/meta-tags");
 
@@ -177,7 +203,7 @@ export async function togglePageStatusAction(
 ): Promise<{ error?: string; success?: boolean }> {
   try {
     await togglePageStatus(id, currentStatus);
-    revalidatePath("/admin/contenuti");
+    revalidatePath("/admin/pages");
 
     const user = await getUser();
     const nextStatus = currentStatus === "published" ? "draft" : "published";

@@ -1,8 +1,8 @@
 import { getAllTemplates } from "@/lib/db/template-queries";
-import { saveTemplateAction } from "../actions";
 import TemplateFormClient from "../_components/template-form-client";
+import { saveTemplateAction } from "../actions";
 
-export const metadata = { title: "Nuovo template" };
+export const metadata = { title: "New template" };
 export const dynamic = "force-dynamic";
 
 export default async function NuovoTemplatePage() {
@@ -10,7 +10,11 @@ export default async function NuovoTemplatePage() {
   return (
     <div className="p-4 sm:p-6 max-w-3xl">
       <TemplateFormClient
-        allTemplates={allTemplates.map((t) => ({ id: t.id, name: t.name, slug: t.slug }))}
+        allTemplates={allTemplates.map((t) => ({
+          id: t.id,
+          name: t.name,
+          slug: t.slug,
+        }))}
         saveAction={saveTemplateAction}
       />
     </div>

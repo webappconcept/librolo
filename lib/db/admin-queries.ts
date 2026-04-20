@@ -1,5 +1,4 @@
 // lib/db/admin-queries.ts
-import { unstable_noStore as noStore } from "next/cache";
 import { db } from "@/lib/db/drizzle";
 import {
   activityLogs,
@@ -14,6 +13,7 @@ import {
   users,
 } from "@/lib/db/schema";
 import { and, count, desc, eq, isNotNull, isNull, sql } from "drizzle-orm";
+import { unstable_noStore as noStore } from "next/cache";
 import "server-only";
 
 // ---------------------------------------------------------------------------
@@ -122,8 +122,7 @@ export async function getDashboardStats() {
     premiumUsers: premium,
     freeUsers: free,
     verifiedUsers: verified,
-    conversionRate:
-      total > 0 ? Math.round((premium / total) * 100) : 0,
+    conversionRate: total > 0 ? Math.round((premium / total) * 100) : 0,
   };
 }
 
@@ -143,15 +142,9 @@ export async function getFullDashboardStats() {
       .select({ count: count() })
       .from(pages)
       .where(eq(pages.status, "published")),
-    db
-      .select({ count: count() })
-      .from(pages)
-      .where(eq(pages.status, "draft")),
+    db.select({ count: count() }).from(pages).where(eq(pages.status, "draft")),
     db.select({ count: count() }).from(pageTemplates),
-    db
-      .select({ count: count() })
-      .from(roles)
-      .where(eq(roles.isSystem, false)),
+    db.select({ count: count() }).from(roles).where(eq(roles.isSystem, false)),
     db
       .select({ count: count() })
       .from(users)
@@ -512,7 +505,7 @@ export async function getActivityLogs({
       ? RBAC_ACTIONS
       : tab === "auth"
         ? AUTH_ACTIONS
-        : tab === "contenuti"
+        : tab === "pages"
           ? CONTENT_ACTIONS
           : null;
 

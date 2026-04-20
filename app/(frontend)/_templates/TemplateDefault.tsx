@@ -1,9 +1,7 @@
 import type { TemplateProps } from "./types";
 
 /**
- * Template di fallback.
- * Usato quando nessun template corrisponde allo slug della pagina.
- * Layout minimale: titolo + contenuto HTML grezzo.
+ * Fallback Template.
  */
 export function TemplateDefault({ page }: TemplateProps) {
   return (

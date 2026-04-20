@@ -1,12 +1,12 @@
 // app/(admin)/admin/template/page.tsx
-import type { Metadata } from "next";
 import { getAllTemplatesWithPageCount } from "@/lib/db/template-queries";
+import { Copy, PanelTop, Plus } from "lucide-react";
+import type { Metadata } from "next";
 import Link from "next/link";
-import { PanelTop, Plus, Copy } from "lucide-react";
-import { duplicateTemplateAction } from "./actions";
 import DeleteTemplateButton from "./_components/delete-template-button";
+import { duplicateTemplateAction } from "./actions";
 
-export const metadata: Metadata = { title: "Contenuti / Template" };
+export const metadata: Metadata = { title: "Content / Template" };
 export const dynamic = "force-dynamic";
 
 export default async function TemplatePage() {
@@ -19,19 +19,24 @@ export default async function TemplatePage() {
           <div
             className="w-9 h-9 shrink-0 rounded-xl flex items-center justify-center"
             style={{
-              background: "color-mix(in srgb, var(--admin-accent) 12%, var(--admin-card-bg))",
-              border: "1px solid color-mix(in srgb, var(--admin-accent) 25%, transparent)",
-            }}
-          >
+              background:
+                "color-mix(in srgb, var(--admin-accent) 12%, var(--admin-card-bg))",
+              border:
+                "1px solid color-mix(in srgb, var(--admin-accent) 25%, transparent)",
+            }}>
             <PanelTop size={18} style={{ color: "var(--admin-accent)" }} />
           </div>
           <div className="min-w-0">
-            <h1 className="text-lg font-bold" style={{ color: "var(--admin-text)" }}>
-              <span style={{ color: "var(--admin-text-muted)" }}>Contenuti</span>
+            <h1
+              className="text-lg font-bold"
+              style={{ color: "var(--admin-text)" }}>
+              <span style={{ color: "var(--admin-text-muted)" }}>Content</span>
               <span style={{ color: "var(--admin-text-faint)" }}> / </span>
               <span>Template</span>
             </h1>
-            <p className="text-sm mt-0.5" style={{ color: "var(--admin-text-faint)" }}>
+            <p
+              className="text-sm mt-0.5"
+              style={{ color: "var(--admin-text-faint)" }}>
               Definisci i layout grafici riutilizzabili per le pagine del sito
             </p>
           </div>
@@ -39,8 +44,7 @@ export default async function TemplatePage() {
         <Link
           href="/admin/template/nuovo"
           className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-sm font-medium text-white shrink-0"
-          style={{ background: "var(--admin-accent)" }}
-        >
+          style={{ background: "var(--admin-accent)" }}>
           <Plus size={16} />
           <span className="hidden sm:inline">Nuovo template</span>
           <span className="sm:hidden">Nuovo</span>
@@ -50,18 +54,27 @@ export default async function TemplatePage() {
       {templates.length === 0 ? (
         <div
           className="flex flex-col items-center justify-center py-20 rounded-xl"
-          style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-border)" }}
-        >
-          <PanelTop size={40} style={{ color: "var(--admin-text-faint)" }} className="mb-4" />
-          <p className="font-semibold" style={{ color: "var(--admin-text)" }}>Nessun template</p>
-          <p className="text-sm mt-1" style={{ color: "var(--admin-text-muted)" }}>
+          style={{
+            background: "var(--admin-card-bg)",
+            border: "1px solid var(--admin-border)",
+          }}>
+          <PanelTop
+            size={40}
+            style={{ color: "var(--admin-text-faint)" }}
+            className="mb-4"
+          />
+          <p className="font-semibold" style={{ color: "var(--admin-text)" }}>
+            Nessun template
+          </p>
+          <p
+            className="text-sm mt-1"
+            style={{ color: "var(--admin-text-muted)" }}>
             Crea il tuo primo template grafico per le pagine del sito
           </p>
           <Link
             href="/admin/template/nuovo"
             className="mt-6 px-4 py-2 rounded-lg text-sm font-medium text-white"
-            style={{ background: "var(--admin-accent)" }}
-          >
+            style={{ background: "var(--admin-accent)" }}>
             Crea template
           </Link>
         </div>
@@ -74,12 +87,13 @@ export default async function TemplatePage() {
               style={{
                 background: "var(--admin-card-bg)",
                 border: "1px solid var(--admin-border)",
-              }}
-            >
+              }}>
               <div className="p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="font-semibold text-sm truncate" style={{ color: "var(--admin-text)" }}>
+                    <p
+                      className="font-semibold text-sm truncate"
+                      style={{ color: "var(--admin-text)" }}>
                       {tpl.name}
                       {tpl.isSystem && (
                         <span
@@ -87,21 +101,32 @@ export default async function TemplatePage() {
                           style={{
                             background: "var(--admin-accent-light)",
                             color: "var(--admin-accent)",
-                          }}
-                        >
+                          }}>
                           sistema
                         </span>
                       )}
                     </p>
                     <div className="flex items-center gap-2 mt-0.5">
-                      <p className="text-xs" style={{ color: "var(--admin-text-muted)" }}>
-                        {tpl.fields.length} {tpl.fields.length === 1 ? "campo" : "campi"}
+                      <p
+                        className="text-xs"
+                        style={{ color: "var(--admin-text-muted)" }}>
+                        {tpl.fields.length}{" "}
+                        {tpl.fields.length === 1 ? "campo" : "campi"}
                       </p>
                       {tpl.pageCount > 0 && (
                         <>
-                          <span style={{ color: "var(--admin-text-faint)", fontSize: "10px" }}>·</span>
-                          <p className="text-xs" style={{ color: "var(--admin-text-muted)" }}>
-                            {tpl.pageCount} {tpl.pageCount === 1 ? "pagina" : "pagine"}
+                          <span
+                            style={{
+                              color: "var(--admin-text-faint)",
+                              fontSize: "10px",
+                            }}>
+                            ·
+                          </span>
+                          <p
+                            className="text-xs"
+                            style={{ color: "var(--admin-text-muted)" }}>
+                            {tpl.pageCount}{" "}
+                            {tpl.pageCount === 1 ? "pagina" : "pagine"}
                           </p>
                         </>
                       )}
@@ -110,7 +135,9 @@ export default async function TemplatePage() {
                 </div>
 
                 {tpl.description && (
-                  <p className="text-xs mt-2 line-clamp-2" style={{ color: "var(--admin-text-muted)" }}>
+                  <p
+                    className="text-xs mt-2 line-clamp-2"
+                    style={{ color: "var(--admin-text-muted)" }}>
                     {tpl.description}
                   </p>
                 )}
@@ -123,8 +150,7 @@ export default async function TemplatePage() {
                       background: "var(--admin-input-bg)",
                       color: "var(--admin-text)",
                       border: "1px solid var(--admin-border)",
-                    }}
-                  >
+                    }}>
                     Modifica
                   </Link>
 
@@ -134,8 +160,10 @@ export default async function TemplatePage() {
                       type="submit"
                       title="Duplica template"
                       className="p-1.5 rounded-lg transition-colors"
-                      style={{ color: "var(--admin-text-muted)", border: "1px solid var(--admin-border)" }}
-                    >
+                      style={{
+                        color: "var(--admin-text-muted)",
+                        border: "1px solid var(--admin-border)",
+                      }}>
                       <Copy size={14} />
                     </button>
                   </form>

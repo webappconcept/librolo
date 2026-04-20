@@ -1,8 +1,6 @@
 // app/(admin)/admin/logs/_components/logs-client.tsx
 "use client";
 
-import { useState } from "react";
-import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { ActivityType } from "@/lib/db/schema";
 import type { PaginatedLogs } from "@/lib/db/types";
 import {
@@ -26,6 +24,8 @@ import {
   Trash2,
   UserCog,
 } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
 
 // LogEntry e PaginatedLogs sono ora in @/lib/db/types — non ridefinire qui.
 
@@ -34,7 +34,7 @@ type Props = { data: PaginatedLogs };
 const TABS = [
   { id: "rbac", label: "RBAC", icon: KeyRound },
   { id: "auth", label: "Autenticazione", icon: LogIn },
-  { id: "contenuti", label: "Contenuti", icon: FileText },
+  { id: "pages", label: "Contenuti", icon: FileText },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
@@ -73,26 +73,46 @@ function getDetail(action: string): string {
 function ActionIcon({ type }: { type: ActivityType | null }) {
   if (!type) return <Activity size={13} />;
   // RBAC
-  if (type === ActivityType.PERMISSION_GRANTED || type === ActivityType.ROLE_PERMISSION_ADDED)
+  if (
+    type === ActivityType.PERMISSION_GRANTED ||
+    type === ActivityType.ROLE_PERMISSION_ADDED
+  )
     return <ShieldCheck size={13} style={{ color: "#16a34a" }} />;
-  if (type === ActivityType.PERMISSION_REVOKED || type === ActivityType.ROLE_PERMISSION_REMOVED)
+  if (
+    type === ActivityType.PERMISSION_REVOKED ||
+    type === ActivityType.ROLE_PERMISSION_REMOVED
+  )
     return <ShieldOff size={13} style={{ color: "#dc2626" }} />;
-  if (type === ActivityType.ADMIN_CHANGE_ROLE) return <UserCog size={13} style={{ color: "#7c3aed" }} />;
-  if (type === ActivityType.ADMIN_BAN_USER || type === ActivityType.ADMIN_DELETE_USER)
+  if (type === ActivityType.ADMIN_CHANGE_ROLE)
+    return <UserCog size={13} style={{ color: "#7c3aed" }} />;
+  if (
+    type === ActivityType.ADMIN_BAN_USER ||
+    type === ActivityType.ADMIN_DELETE_USER
+  )
     return <Trash2 size={13} style={{ color: "#dc2626" }} />;
-  if (type === ActivityType.ADMIN_UNBAN_USER) return <Shield size={13} style={{ color: "#16a34a" }} />;
+  if (type === ActivityType.ADMIN_UNBAN_USER)
+    return <Shield size={13} style={{ color: "#16a34a" }} />;
   // Auth
-  if (AUTH_TYPES.has(type)) return <LogIn size={13} style={{ color: "#0284c7" }} />;
+  if (AUTH_TYPES.has(type))
+    return <LogIn size={13} style={{ color: "#0284c7" }} />;
   // Contenuti — pagine
-  if (type === ActivityType.PAGE_CREATED) return <FilePlus2 size={13} style={{ color: "#16a34a" }} />;
-  if (type === ActivityType.PAGE_UPDATED) return <FileEdit size={13} style={{ color: "#0284c7" }} />;
-  if (type === ActivityType.PAGE_DELETED) return <FileX2 size={13} style={{ color: "#dc2626" }} />;
-  if (type === ActivityType.PAGE_PUBLISHED) return <Eye size={13} style={{ color: "#16a34a" }} />;
-  if (type === ActivityType.PAGE_UNPUBLISHED) return <EyeOff size={13} style={{ color: "#d97706" }} />;
+  if (type === ActivityType.PAGE_CREATED)
+    return <FilePlus2 size={13} style={{ color: "#16a34a" }} />;
+  if (type === ActivityType.PAGE_UPDATED)
+    return <FileEdit size={13} style={{ color: "#0284c7" }} />;
+  if (type === ActivityType.PAGE_DELETED)
+    return <FileX2 size={13} style={{ color: "#dc2626" }} />;
+  if (type === ActivityType.PAGE_PUBLISHED)
+    return <Eye size={13} style={{ color: "#16a34a" }} />;
+  if (type === ActivityType.PAGE_UNPUBLISHED)
+    return <EyeOff size={13} style={{ color: "#d97706" }} />;
   // Contenuti — template
-  if (type === ActivityType.TEMPLATE_CREATED) return <LayoutTemplate size={13} style={{ color: "#16a34a" }} />;
-  if (type === ActivityType.TEMPLATE_UPDATED) return <LayoutTemplate size={13} style={{ color: "#0284c7" }} />;
-  if (type === ActivityType.TEMPLATE_DELETED) return <LayoutTemplate size={13} style={{ color: "#dc2626" }} />;
+  if (type === ActivityType.TEMPLATE_CREATED)
+    return <LayoutTemplate size={13} style={{ color: "#16a34a" }} />;
+  if (type === ActivityType.TEMPLATE_UPDATED)
+    return <LayoutTemplate size={13} style={{ color: "#0284c7" }} />;
+  if (type === ActivityType.TEMPLATE_DELETED)
+    return <LayoutTemplate size={13} style={{ color: "#dc2626" }} />;
   return <Activity size={13} />;
 }
 
@@ -103,30 +123,59 @@ function TypeBadge({ type }: { type: ActivityType | null }) {
   let color = "var(--admin-text-muted)";
 
   // RBAC
-  if (type === ActivityType.PERMISSION_GRANTED || type === ActivityType.ROLE_PERMISSION_ADDED) {
-    bg = "#dcfce7"; color = "#15803d";
-  } else if (type === ActivityType.PERMISSION_REVOKED || type === ActivityType.ROLE_PERMISSION_REMOVED) {
-    bg = "#fef2f2"; color = "#dc2626";
+  if (
+    type === ActivityType.PERMISSION_GRANTED ||
+    type === ActivityType.ROLE_PERMISSION_ADDED
+  ) {
+    bg = "#dcfce7";
+    color = "#15803d";
+  } else if (
+    type === ActivityType.PERMISSION_REVOKED ||
+    type === ActivityType.ROLE_PERMISSION_REMOVED
+  ) {
+    bg = "#fef2f2";
+    color = "#dc2626";
   } else if (type === ActivityType.ADMIN_CHANGE_ROLE) {
-    bg = "#f3e8ff"; color = "#7c3aed";
-  } else if (type === ActivityType.ADMIN_BAN_USER || type === ActivityType.ADMIN_DELETE_USER) {
-    bg = "#fef2f2"; color = "#b91c1c";
+    bg = "#f3e8ff";
+    color = "#7c3aed";
+  } else if (
+    type === ActivityType.ADMIN_BAN_USER ||
+    type === ActivityType.ADMIN_DELETE_USER
+  ) {
+    bg = "#fef2f2";
+    color = "#b91c1c";
   } else if (type === ActivityType.ADMIN_UNBAN_USER) {
-    bg = "#dcfce7"; color = "#166534";
-  // Auth
+    bg = "#dcfce7";
+    color = "#166534";
+    // Auth
   } else if (AUTH_TYPES.has(type)) {
-    bg = "#e0f2fe"; color = "#0369a1";
-  // Contenuti
-  } else if (type === ActivityType.PAGE_CREATED || type === ActivityType.TEMPLATE_CREATED) {
-    bg = "#dcfce7"; color = "#15803d";
-  } else if (type === ActivityType.PAGE_UPDATED || type === ActivityType.TEMPLATE_UPDATED) {
-    bg = "#eff6ff"; color = "#1d4ed8";
-  } else if (type === ActivityType.PAGE_DELETED || type === ActivityType.TEMPLATE_DELETED) {
-    bg = "#fef2f2"; color = "#b91c1c";
+    bg = "#e0f2fe";
+    color = "#0369a1";
+    // Contenuti
+  } else if (
+    type === ActivityType.PAGE_CREATED ||
+    type === ActivityType.TEMPLATE_CREATED
+  ) {
+    bg = "#dcfce7";
+    color = "#15803d";
+  } else if (
+    type === ActivityType.PAGE_UPDATED ||
+    type === ActivityType.TEMPLATE_UPDATED
+  ) {
+    bg = "#eff6ff";
+    color = "#1d4ed8";
+  } else if (
+    type === ActivityType.PAGE_DELETED ||
+    type === ActivityType.TEMPLATE_DELETED
+  ) {
+    bg = "#fef2f2";
+    color = "#b91c1c";
   } else if (type === ActivityType.PAGE_PUBLISHED) {
-    bg = "#dcfce7"; color = "#15803d";
+    bg = "#dcfce7";
+    color = "#15803d";
   } else if (type === ActivityType.PAGE_UNPUBLISHED) {
-    bg = "#fffbeb"; color = "#92400e";
+    bg = "#fffbeb";
+    color = "#92400e";
   }
 
   return (
@@ -184,7 +233,9 @@ export function LogsClient({ data }: Props) {
                 style={{
                   background: isActive ? "var(--admin-accent)" : "transparent",
                   color: isActive ? "#fff" : "var(--admin-text-muted)",
-                  boxShadow: isActive ? "0 1px 3px oklch(0 0 0 / 0.15)" : "none",
+                  boxShadow: isActive
+                    ? "0 1px 3px oklch(0 0 0 / 0.15)"
+                    : "none",
                 }}>
                 <Icon size={13} />
                 {tab.label}
@@ -219,8 +270,11 @@ export function LogsClient({ data }: Props) {
       {search && (
         <div className="flex items-center gap-2">
           <Filter size={12} style={{ color: "var(--admin-text-faint)" }} />
-          <span className="text-xs" style={{ color: "var(--admin-text-faint)" }}>
-            {filtered.length} risultati in questa pagina per &ldquo;{search}&rdquo;
+          <span
+            className="text-xs"
+            style={{ color: "var(--admin-text-faint)" }}>
+            {filtered.length} risultati in questa pagina per &ldquo;{search}
+            &rdquo;
           </span>
           <button
             onClick={() => setSearch("")}
@@ -239,7 +293,10 @@ export function LogsClient({ data }: Props) {
           <div
             className="flex flex-col items-center justify-center py-16 gap-2"
             style={{ background: "var(--admin-card-bg)" }}>
-            <Activity size={28} style={{ opacity: 0.2, color: "var(--admin-text)" }} />
+            <Activity
+              size={28}
+              style={{ opacity: 0.2, color: "var(--admin-text)" }}
+            />
             <p className="text-sm" style={{ color: "var(--admin-text-faint)" }}>
               Nessun log trovato
             </p>
@@ -255,7 +312,9 @@ export function LogsClient({ data }: Props) {
                   key={log.id}
                   className="flex items-start gap-3 px-4 py-3"
                   style={{
-                    borderBottom: isLast ? "none" : "1px solid var(--admin-card-border)",
+                    borderBottom: isLast
+                      ? "none"
+                      : "1px solid var(--admin-card-border)",
                   }}>
                   <div
                     className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
@@ -276,12 +335,16 @@ export function LogsClient({ data }: Props) {
                     </div>
                     <div className="flex items-center gap-3 mt-1 flex-wrap">
                       {log.userEmail && (
-                        <span className="text-[11px]" style={{ color: "var(--admin-text-faint)" }}>
+                        <span
+                          className="text-[11px]"
+                          style={{ color: "var(--admin-text-faint)" }}>
                           {log.userEmail}
                         </span>
                       )}
                       {log.ipAddress && (
-                        <span className="text-[11px] font-mono" style={{ color: "var(--admin-text-faint)" }}>
+                        <span
+                          className="text-[11px] font-mono"
+                          style={{ color: "var(--admin-text-faint)" }}>
                           {log.ipAddress}
                         </span>
                       )}
@@ -308,7 +371,9 @@ export function LogsClient({ data }: Props) {
       {/* Paginazione */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between gap-4">
-          <span className="text-xs tabular-nums" style={{ color: "var(--admin-text-faint)" }}>
+          <span
+            className="text-xs tabular-nums"
+            style={{ color: "var(--admin-text-faint)" }}>
             {start}–{end} di {total} eventi
           </span>
           <div className="flex items-center gap-1">
@@ -316,23 +381,39 @@ export function LogsClient({ data }: Props) {
               onClick={() => navigate(page - 1)}
               disabled={page <= 1}
               className="flex items-center justify-center w-8 h-8 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              style={{ border: "1px solid var(--admin-card-border)", color: "var(--admin-text-muted)" }}
-              onMouseEnter={(e) => { if (page > 1) (e.currentTarget as HTMLButtonElement).style.background = "var(--admin-hover-bg)"; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
+              style={{
+                border: "1px solid var(--admin-card-border)",
+                color: "var(--admin-text-muted)",
+              }}
+              onMouseEnter={(e) => {
+                if (page > 1)
+                  (e.currentTarget as HTMLButtonElement).style.background =
+                    "var(--admin-hover-bg)";
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.background =
+                  "transparent";
+              }}
               aria-label="Pagina precedente">
               <ChevronLeft size={15} />
             </button>
 
             {Array.from({ length: totalPages }, (_, i) => i + 1)
-              .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+              .filter(
+                (p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1,
+              )
               .reduce<(number | "...")[]>((acc, p, idx, arr) => {
-                if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push("...");
+                if (idx > 0 && p - (arr[idx - 1] as number) > 1)
+                  acc.push("...");
                 acc.push(p);
                 return acc;
               }, [])
               .map((p, idx) =>
                 p === "..." ? (
-                  <span key={`dots-${idx}`} className="w-8 text-center text-xs" style={{ color: "var(--admin-text-faint)" }}>
+                  <span
+                    key={`dots-${idx}`}
+                    className="w-8 text-center text-xs"
+                    style={{ color: "var(--admin-text-faint)" }}>
                     &hellip;
                   </span>
                 ) : (
@@ -341,12 +422,26 @@ export function LogsClient({ data }: Props) {
                     onClick={() => navigate(p as number)}
                     className="w-8 h-8 rounded-lg text-xs font-medium transition-colors"
                     style={{
-                      background: p === page ? "var(--admin-accent)" : "transparent",
+                      background:
+                        p === page ? "var(--admin-accent)" : "transparent",
                       color: p === page ? "#fff" : "var(--admin-text-muted)",
-                      border: p === page ? "none" : "1px solid var(--admin-card-border)",
+                      border:
+                        p === page
+                          ? "none"
+                          : "1px solid var(--admin-card-border)",
                     }}
-                    onMouseEnter={(e) => { if (p !== page) (e.currentTarget as HTMLButtonElement).style.background = "var(--admin-hover-bg)"; }}
-                    onMouseLeave={(e) => { if (p !== page) (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}>
+                    onMouseEnter={(e) => {
+                      if (p !== page)
+                        (
+                          e.currentTarget as HTMLButtonElement
+                        ).style.background = "var(--admin-hover-bg)";
+                    }}
+                    onMouseLeave={(e) => {
+                      if (p !== page)
+                        (
+                          e.currentTarget as HTMLButtonElement
+                        ).style.background = "transparent";
+                    }}>
                     {p}
                   </button>
                 ),
@@ -356,9 +451,19 @@ export function LogsClient({ data }: Props) {
               onClick={() => navigate(page + 1)}
               disabled={page >= totalPages}
               className="flex items-center justify-center w-8 h-8 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              style={{ border: "1px solid var(--admin-card-border)", color: "var(--admin-text-muted)" }}
-              onMouseEnter={(e) => { if (page < totalPages) (e.currentTarget as HTMLButtonElement).style.background = "var(--admin-hover-bg)"; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
+              style={{
+                border: "1px solid var(--admin-card-border)",
+                color: "var(--admin-text-muted)",
+              }}
+              onMouseEnter={(e) => {
+                if (page < totalPages)
+                  (e.currentTarget as HTMLButtonElement).style.background =
+                    "var(--admin-hover-bg)";
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.background =
+                  "transparent";
+              }}
               aria-label="Pagina successiva">
               <ChevronRight size={15} />
             </button>
@@ -367,7 +472,9 @@ export function LogsClient({ data }: Props) {
       )}
 
       {totalPages <= 1 && (
-        <p className="text-xs text-right" style={{ color: "var(--admin-text-faint)" }}>
+        <p
+          className="text-xs text-right"
+          style={{ color: "var(--admin-text-faint)" }}>
           {total} eventi totali • ordinati dal più recente
         </p>
       )}

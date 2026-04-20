@@ -1,24 +1,35 @@
 "use client";
 
-import { useRef, useState, useEffect } from "react";
-import { GripVertical, Plus, Trash2, Settings, ShieldCheck, Code2, Copy, Check, FileCode2, Info } from "lucide-react";
-import { isRedirectError } from "next/dist/client/components/redirect-error";
 import type { TemplateField } from "@/lib/db/schema";
-import { EditorPageHeader } from "../../_components/editor-page-header";
 import { slugify, slugToPascalCase } from "@/lib/utils/slugify";
+import {
+  Check,
+  Code2,
+  Copy,
+  FileCode2,
+  GripVertical,
+  Info,
+  Plus,
+  Settings,
+  ShieldCheck,
+  Trash2,
+} from "lucide-react";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
+import { useEffect, useRef, useState } from "react";
+import { EditorPageHeader } from "../../_components/editor-page-header";
 
 const FORM_ID = "template-editor-form";
 
 const FIELD_TYPES = [
-  { value: "text",     label: "Testo breve" },
+  { value: "text", label: "Testo breve" },
   { value: "textarea", label: "Testo lungo" },
   { value: "richtext", label: "Rich text" },
-  { value: "image",    label: "Immagine (URL)" },
-  { value: "url",      label: "URL" },
-  { value: "date",     label: "Data" },
-  { value: "select",   label: "Selezione" },
-  { value: "toggle",   label: "Toggle" },
-  { value: "number",   label: "Numero" },
+  { value: "image", label: "Immagine (URL)" },
+  { value: "url", label: "URL" },
+  { value: "date", label: "Data" },
+  { value: "select", label: "Selezione" },
+  { value: "toggle", label: "Toggle" },
+  { value: "number", label: "Numero" },
 ];
 
 interface FieldDraft {
@@ -66,13 +77,21 @@ const tabStyle = (active: boolean): React.CSSProperties => ({
   cursor: "pointer",
   background: "none",
   border: "none",
-  borderBottom: active ? "2px solid var(--admin-accent)" : "2px solid transparent",
+  borderBottom: active
+    ? "2px solid var(--admin-accent)"
+    : "2px solid transparent",
   color: active ? "var(--admin-accent)" : "var(--admin-text-muted)",
   transition: "color 150ms, border-color 150ms",
 });
 
 // ─── Componente guida implementazione ────────────────────────────────────────
-function ImplementationGuide({ slug, fields }: { slug: string; fields: FieldDraft[] }) {
+function ImplementationGuide({
+  slug,
+  fields,
+}: {
+  slug: string;
+  fields: FieldDraft[];
+}) {
   const [copiedBlock, setCopiedBlock] = useState<string | null>(null);
 
   const componentName = slug
@@ -82,31 +101,37 @@ function ImplementationGuide({ slug, fields }: { slug: string; fields: FieldDraf
   const slugLabel = slug || "nome-template";
   const filePath = `app/(frontend)/_templates/${componentName}.tsx`;
 
-  const fieldsTypeLines = fields.length > 0
-    ? fields.map((f) => {
-        const tsType = ["number"].includes(f.fieldType)
-          ? "number"
-          : ["toggle"].includes(f.fieldType)
-          ? "boolean"
-          : "string";
-        const optional = !f.required ? "?" : "";
-        return `  ${f.fieldKey}${optional}: ${tsType}; // ${FIELD_TYPES.find(t => t.value === f.fieldType)?.label ?? f.fieldType}`;
-      }).join("\n")
-    : "  // nessun campo custom definito";
+  const fieldsTypeLines =
+    fields.length > 0
+      ? fields
+          .map((f) => {
+            const tsType = ["number"].includes(f.fieldType)
+              ? "number"
+              : ["toggle"].includes(f.fieldType)
+                ? "boolean"
+                : "string";
+            const optional = !f.required ? "?" : "";
+            return `  ${f.fieldKey}${optional}: ${tsType}; // ${FIELD_TYPES.find((t) => t.value === f.fieldType)?.label ?? f.fieldType}`;
+          })
+          .join("\n")
+      : "  // nessun campo custom definito";
 
-  const fieldsUsageLines = fields.length > 0
-    ? fields.map((f) => {
-        if (f.fieldType === "image") {
-          return `        {fields.${f.fieldKey} && (\n          <img src={fields.${f.fieldKey}} alt="${f.label}" />\n        )}`;
-        } else if (f.fieldType === "toggle") {
-          return `        {fields.${f.fieldKey} && <span>${f.label}</span>}`;
-        } else if (f.fieldType === "richtext") {
-          return `        {fields.${f.fieldKey} && (\n          <div dangerouslySetInnerHTML={{ __html: fields.${f.fieldKey} }} />\n        )}`;
-        } else {
-          return `        {fields.${f.fieldKey} && <p>{fields.${f.fieldKey}}</p>}`;
-        }
-      }).join("\n")
-    : "        {/* nessun campo custom — usa solo page.title e page.content */}";
+  const fieldsUsageLines =
+    fields.length > 0
+      ? fields
+          .map((f) => {
+            if (f.fieldType === "image") {
+              return `        {fields.${f.fieldKey} && (\n          <img src={fields.${f.fieldKey}} alt="${f.label}" />\n        )}`;
+            } else if (f.fieldType === "toggle") {
+              return `        {fields.${f.fieldKey} && <span>${f.label}</span>}`;
+            } else if (f.fieldType === "richtext") {
+              return `        {fields.${f.fieldKey} && (\n          <div dangerouslySetInnerHTML={{ __html: fields.${f.fieldKey} }} />\n        )}`;
+            } else {
+              return `        {fields.${f.fieldKey} && <p>{fields.${f.fieldKey}}</p>}`;
+            }
+          })
+          .join("\n")
+      : "        {/* nessun campo custom — usa solo page.title e page.content */}";
 
   const componentCode = `import type { TemplateProps } from "./types";
 
@@ -181,8 +206,10 @@ ${fieldsUsageLines}
     gap: "0.4rem",
     padding: "0.3rem 0.75rem",
     borderRadius: "0.375rem",
-    background: "color-mix(in srgb, var(--admin-accent) 8%, var(--admin-card-bg))",
-    border: "1px solid color-mix(in srgb, var(--admin-accent) 22%, transparent)",
+    background:
+      "color-mix(in srgb, var(--admin-accent) 8%, var(--admin-card-bg))",
+    border:
+      "1px solid color-mix(in srgb, var(--admin-accent) 22%, transparent)",
     color: "var(--admin-accent)",
     fontFamily: "monospace",
     fontSize: "0.78rem",
@@ -197,8 +224,10 @@ ${fieldsUsageLines}
     gap: "0.5rem",
     padding: "0.75rem 1rem",
     borderRadius: "0.5rem",
-    background: "color-mix(in srgb, var(--admin-accent) 6%, var(--admin-card-bg))",
-    border: "1px solid color-mix(in srgb, var(--admin-accent) 18%, transparent)",
+    background:
+      "color-mix(in srgb, var(--admin-accent) 6%, var(--admin-card-bg))",
+    border:
+      "1px solid color-mix(in srgb, var(--admin-accent) 18%, transparent)",
     marginBottom: "1.5rem",
     fontSize: "0.8rem",
     lineHeight: 1.6,
@@ -206,19 +235,39 @@ ${fieldsUsageLines}
   };
 
   return (
-    <section className="rounded-xl p-5 mb-6" style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-border)" }}>
-      <h2 className="text-sm font-semibold mb-1" style={{ color: "var(--admin-text)" }}>
+    <section
+      className="rounded-xl p-5 mb-6"
+      style={{
+        background: "var(--admin-card-bg)",
+        border: "1px solid var(--admin-border)",
+      }}>
+      <h2
+        className="text-sm font-semibold mb-1"
+        style={{ color: "var(--admin-text)" }}>
         Guida all&apos;implementazione
       </h2>
       <p className="text-xs mb-5" style={{ color: "var(--admin-text-muted)" }}>
-        Segui questi passaggi per collegare questo template al codice React dell&apos;app.
-        Il codice si aggiorna in tempo reale in base ai campi custom configurati nel tab Generale.
+        Segui questi passaggi per collegare questo template al codice React
+        dell&apos;app. Il codice si aggiorna in tempo reale in base ai campi
+        custom configurati nel tab Generale.
       </p>
 
       {!slug && (
         <div style={noticeStyle}>
-          <Info size={14} style={{ color: "var(--admin-accent)", marginTop: "1px", flexShrink: 0 }} />
-          <span>Inserisci un <strong style={{ color: "var(--admin-text)" }}>Nome</strong> nel tab Generale per generare automaticamente lo slug e vedere il percorso del componente.</span>
+          <Info
+            size={14}
+            style={{
+              color: "var(--admin-accent)",
+              marginTop: "1px",
+              flexShrink: 0,
+            }}
+          />
+          <span>
+            Inserisci un{" "}
+            <strong style={{ color: "var(--admin-text)" }}>Nome</strong> nel tab
+            Generale per generare automaticamente lo slug e vedere il percorso
+            del componente.
+          </span>
         </div>
       )}
 
@@ -246,60 +295,101 @@ ${fieldsUsageLines}
               borderRadius: "0.375rem",
               background: "var(--admin-card-bg)",
               border: "1px solid var(--admin-border)",
-              color: copiedBlock === "component" ? "#22c55e" : "var(--admin-text-faint)",
+              color:
+                copiedBlock === "component"
+                  ? "#22c55e"
+                  : "var(--admin-text-faint)",
               cursor: "pointer",
               transition: "color 150ms",
-            }}
-          >
-            {copiedBlock === "component" ? <Check size={13} /> : <Copy size={13} />}
+            }}>
+            {copiedBlock === "component" ? (
+              <Check size={13} />
+            ) : (
+              <Copy size={13} />
+            )}
           </button>
         </div>
       </div>
 
       {/* Nota: nessun registry da aggiornare */}
-      <div className="rounded-lg px-4 py-3 flex items-start gap-2 mb-4"
+      <div
+        className="rounded-lg px-4 py-3 flex items-start gap-2 mb-4"
         style={{
           background: "color-mix(in srgb, #22c55e 6%, var(--admin-card-bg))",
           border: "1px solid color-mix(in srgb, #22c55e 22%, transparent)",
         }}>
-        <Check size={14} className="mt-0.5 shrink-0" style={{ color: "#22c55e" }} />
-        <p className="text-xs leading-relaxed" style={{ color: "var(--admin-text-muted)" }}>
-          <strong style={{ color: "var(--admin-text)" }}>Nessun registry da aggiornare.</strong>{" "}
-          Il sistema carica automaticamente <code style={{ fontFamily: "monospace", fontSize: "0.75rem" }}>{componentName}.tsx</code> in base allo slug <code style={{ fontFamily: "monospace", fontSize: "0.75rem" }}>&#34;{slugLabel}&#34;</code>.
-          Basta creare il file con il nome corretto.
+        <Check
+          size={14}
+          className="mt-0.5 shrink-0"
+          style={{ color: "#22c55e" }}
+        />
+        <p
+          className="text-xs leading-relaxed"
+          style={{ color: "var(--admin-text-muted)" }}>
+          <strong style={{ color: "var(--admin-text)" }}>
+            Nessun registry da aggiornare.
+          </strong>{" "}
+          Il sistema carica automaticamente{" "}
+          <code style={{ fontFamily: "monospace", fontSize: "0.75rem" }}>
+            {componentName}.tsx
+          </code>{" "}
+          in base allo slug{" "}
+          <code style={{ fontFamily: "monospace", fontSize: "0.75rem" }}>
+            &#34;{slugLabel}&#34;
+          </code>
+          . Basta creare il file con il nome corretto.
         </p>
       </div>
 
       {/* Nota campi */}
       {fields.length > 0 && (
-        <div className="rounded-lg px-4 py-3" style={{
-          background: "color-mix(in srgb, var(--admin-accent) 5%, var(--admin-card-bg))",
-          border: "1px solid color-mix(in srgb, var(--admin-accent) 18%, transparent)",
-        }}>
-          <p className="text-xs font-semibold mb-2" style={{ color: "var(--admin-text)" }}>Campi custom in questo template</p>
+        <div
+          className="rounded-lg px-4 py-3"
+          style={{
+            background:
+              "color-mix(in srgb, var(--admin-accent) 5%, var(--admin-card-bg))",
+            border:
+              "1px solid color-mix(in srgb, var(--admin-accent) 18%, transparent)",
+          }}>
+          <p
+            className="text-xs font-semibold mb-2"
+            style={{ color: "var(--admin-text)" }}>
+            Campi custom in questo template
+          </p>
           <div className="space-y-1">
             {fields.map((f) => (
               <div key={f._id} className="flex items-center gap-2">
-                <code className="text-xs px-1.5 py-0.5 rounded" style={{
-                  background: "var(--admin-input-bg)",
-                  border: "1px solid var(--admin-border)",
-                  color: "var(--admin-accent)",
-                  fontFamily: "monospace",
-                }}>
+                <code
+                  className="text-xs px-1.5 py-0.5 rounded"
+                  style={{
+                    background: "var(--admin-input-bg)",
+                    border: "1px solid var(--admin-border)",
+                    color: "var(--admin-accent)",
+                    fontFamily: "monospace",
+                  }}>
                   fields.{f.fieldKey || ""}
                 </code>
-                <span className="text-xs" style={{ color: "var(--admin-text-muted)" }}>
+                <span
+                  className="text-xs"
+                  style={{ color: "var(--admin-text-muted)" }}>
                   {f.label || "—"}
                 </span>
-                <span className="text-xs px-1.5 py-0.5 rounded-full" style={{
-                  background: "var(--admin-input-bg)",
-                  color: "var(--admin-text-faint)",
-                  border: "1px solid var(--admin-border)",
-                }}>
-                  {FIELD_TYPES.find(t => t.value === f.fieldType)?.label ?? f.fieldType}
+                <span
+                  className="text-xs px-1.5 py-0.5 rounded-full"
+                  style={{
+                    background: "var(--admin-input-bg)",
+                    color: "var(--admin-text-faint)",
+                    border: "1px solid var(--admin-border)",
+                  }}>
+                  {FIELD_TYPES.find((t) => t.value === f.fieldType)?.label ??
+                    f.fieldType}
                 </span>
                 {f.required && (
-                  <span className="text-xs px-1 py-0.5 rounded" style={{ color: "#f59e0b", fontSize: "0.65rem" }}>obbligatorio</span>
+                  <span
+                    className="text-xs px-1 py-0.5 rounded"
+                    style={{ color: "#f59e0b", fontSize: "0.65rem" }}>
+                    obbligatorio
+                  </span>
                 )}
               </div>
             ))}
@@ -317,7 +407,9 @@ export default function TemplateFormClient({
   saveAction,
 }: TemplateFormClientProps) {
   const isEdit = !!template;
-  const [activeTab, setActiveTab] = useState<"generale" | "regole" | "implementazione">("generale");
+  const [activeTab, setActiveTab] = useState<
+    "generale" | "regole" | "implementazione"
+  >("generale");
   const [name, setName] = useState(template?.name ?? "");
   // In creazione lo slug è sempre derivato dal nome; in modifica è bloccato.
   const [slug, setSlug] = useState(template?.slug ?? "");
@@ -339,7 +431,7 @@ export default function TemplateFormClient({
       required: f.required,
       defaultValue: f.defaultValue ?? "",
       options: f.options ?? "{}",
-    }))
+    })),
   );
 
   const [saving, setSaving] = useState(false);
@@ -363,7 +455,16 @@ export default function TemplateFormClient({
   function addField() {
     setFields((prev) => [
       ...prev,
-      { _id: uid(), fieldKey: "", fieldType: "text", label: "", placeholder: "", required: false, defaultValue: "", options: "{}" },
+      {
+        _id: uid(),
+        fieldKey: "",
+        fieldType: "text",
+        label: "",
+        placeholder: "",
+        required: false,
+        defaultValue: "",
+        options: "{}",
+      },
     ]);
   }
 
@@ -371,13 +472,19 @@ export default function TemplateFormClient({
     setFields((prev) => prev.filter((f) => f._id !== id));
   }
 
-  function updateField<K extends keyof FieldDraft>(id: string, key: K, value: FieldDraft[K]) {
-    setFields((prev) => prev.map((f) => (f._id === id ? { ...f, [key]: value } : f)));
+  function updateField<K extends keyof FieldDraft>(
+    id: string,
+    key: K,
+    value: FieldDraft[K],
+  ) {
+    setFields((prev) =>
+      prev.map((f) => (f._id === id ? { ...f, [key]: value } : f)),
+    );
   }
 
   function toggleAllowedChild(id: number) {
     setAllowedChildIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
     );
   }
 
@@ -395,28 +502,47 @@ export default function TemplateFormClient({
       fd.set("description", description);
 
       const formEl = formRef.current;
-      for (const key of ["fontBody", "fontDisplay", "colorPrimary", "colorBg", "colorText", "spacing", "borderRadius"]) {
-        const el = formEl?.elements.namedItem(key) as HTMLInputElement | HTMLSelectElement | null;
+      for (const key of [
+        "fontBody",
+        "fontDisplay",
+        "colorPrimary",
+        "colorBg",
+        "colorText",
+        "spacing",
+        "borderRadius",
+      ]) {
+        const el = formEl?.elements.namedItem(key) as
+          | HTMLInputElement
+          | HTMLSelectElement
+          | null;
         if (el) fd.set(key, el.value);
       }
 
-      fd.set("fieldsJson", JSON.stringify(
-        fields.map((f, i) => ({
-          fieldKey: f.fieldKey,
-          fieldType: f.fieldType,
-          label: f.label,
-          placeholder: f.placeholder || null,
-          required: f.required,
-          defaultValue: f.defaultValue || null,
-          options: f.options,
-          sortOrder: i,
-        }))
-      ));
+      fd.set(
+        "fieldsJson",
+        JSON.stringify(
+          fields.map((f, i) => ({
+            fieldKey: f.fieldKey,
+            fieldType: f.fieldType,
+            label: f.label,
+            placeholder: f.placeholder || null,
+            required: f.required,
+            defaultValue: f.defaultValue || null,
+            options: f.options,
+            sortOrder: i,
+          })),
+        ),
+      );
 
       fd.set("allowedChildTemplateIdsJson", JSON.stringify(allowedChildIds));
 
       await saveAction(fd);
-      setSavedAt(new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" }));
+      setSavedAt(
+        new Date().toLocaleTimeString("it-IT", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      );
     } catch (err) {
       if (isRedirectError(err)) throw err;
       console.error(err);
@@ -426,7 +552,8 @@ export default function TemplateFormClient({
     }
   }
 
-  const inputCls = "w-full px-3 py-2 rounded-lg text-sm outline-none transition-colors";
+  const inputCls =
+    "w-full px-3 py-2 rounded-lg text-sm outline-none transition-colors";
   const inputStyle: React.CSSProperties = {
     background: "var(--admin-input-bg)",
     border: "1px solid var(--admin-border)",
@@ -450,8 +577,10 @@ export default function TemplateFormClient({
   const availableTemplates = allTemplates.filter((t) => t.id !== template?.id);
 
   const currentLabel = isEdit
-    ? (name || template?.name || "Modifica template")
-    : (name ? name : "Nuovo template");
+    ? name || template?.name || "Edit template"
+    : name
+      ? name
+      : "New template";
 
   const componentName = slug ? "Template" + slugToPascalCase(slug) : null;
 
@@ -461,7 +590,7 @@ export default function TemplateFormClient({
 
       <EditorPageHeader
         breadcrumbs={[
-          { label: "Contenuti", href: "/admin/contenuti" },
+          { label: "Pages", href: "/admin/pages" },
           { label: "Template", href: "/admin/template" },
         ]}
         currentLabel={currentLabel}
@@ -474,20 +603,37 @@ export default function TemplateFormClient({
       />
 
       {/* Tab bar */}
-      <div className="flex mb-5 rounded-xl overflow-hidden"
-        style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-border)" }}>
-        <div className="flex" style={{ borderBottom: "1px solid var(--admin-border)", width: "100%" }}>
-          <button type="button" style={tabStyle(activeTab === "generale")} onClick={() => setActiveTab("generale")}>
+      <div
+        className="flex mb-5 rounded-xl overflow-hidden"
+        style={{
+          background: "var(--admin-card-bg)",
+          border: "1px solid var(--admin-border)",
+        }}>
+        <div
+          className="flex"
+          style={{
+            borderBottom: "1px solid var(--admin-border)",
+            width: "100%",
+          }}>
+          <button
+            type="button"
+            style={tabStyle(activeTab === "generale")}
+            onClick={() => setActiveTab("generale")}>
             <Settings size={14} />
             Generale
           </button>
-          <button type="button" style={tabStyle(activeTab === "regole")} onClick={() => setActiveTab("regole")}>
+          <button
+            type="button"
+            style={tabStyle(activeTab === "regole")}
+            onClick={() => setActiveTab("regole")}>
             <ShieldCheck size={14} />
             Regole
             {allowedChildIds.length > 0 && (
-              <span className="ml-1 px-1.5 py-0.5 rounded-full text-xs font-semibold"
+              <span
+                className="ml-1 px-1.5 py-0.5 rounded-full text-xs font-semibold"
                 style={{
-                  background: "color-mix(in srgb, var(--admin-accent) 15%, var(--admin-card-bg))",
+                  background:
+                    "color-mix(in srgb, var(--admin-accent) 15%, var(--admin-card-bg))",
                   color: "var(--admin-accent)",
                   fontSize: "0.65rem",
                   lineHeight: 1,
@@ -496,13 +642,18 @@ export default function TemplateFormClient({
               </span>
             )}
           </button>
-          <button type="button" style={tabStyle(activeTab === "implementazione")} onClick={() => setActiveTab("implementazione")}>
+          <button
+            type="button"
+            style={tabStyle(activeTab === "implementazione")}
+            onClick={() => setActiveTab("implementazione")}>
             <Code2 size={14} />
             Implementazione
             {isEdit && (
-              <span className="ml-1 px-1.5 py-0.5 rounded-full"
+              <span
+                className="ml-1 px-1.5 py-0.5 rounded-full"
                 style={{
-                  background: "color-mix(in srgb, var(--admin-accent) 15%, var(--admin-card-bg))",
+                  background:
+                    "color-mix(in srgb, var(--admin-accent) 15%, var(--admin-card-bg))",
                   color: "var(--admin-accent)",
                   fontSize: "0.6rem",
                   fontWeight: 700,
@@ -519,11 +670,24 @@ export default function TemplateFormClient({
       {activeTab === "generale" && (
         <>
           {/* Informazioni base */}
-          <section className="rounded-xl p-5 mb-5" style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-border)" }}>
-            <h2 className="text-sm font-semibold mb-4" style={{ color: "var(--admin-text)" }}>Informazioni base</h2>
+          <section
+            className="rounded-xl p-5 mb-5"
+            style={{
+              background: "var(--admin-card-bg)",
+              border: "1px solid var(--admin-border)",
+            }}>
+            <h2
+              className="text-sm font-semibold mb-4"
+              style={{ color: "var(--admin-text)" }}>
+              Informazioni base
+            </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className={labelCls} style={{ color: "var(--admin-text-muted)" }}>Nome *</label>
+                <label
+                  className={labelCls}
+                  style={{ color: "var(--admin-text-muted)" }}>
+                  Nome *
+                </label>
                 <input
                   name="name"
                   required
@@ -535,15 +699,21 @@ export default function TemplateFormClient({
                 />
               </div>
               <div>
-                <label className={labelCls} style={{ color: "var(--admin-text-muted)" }}>
+                <label
+                  className={labelCls}
+                  style={{ color: "var(--admin-text-muted)" }}>
                   Slug
                   {!isEdit && (
-                    <span className="ml-1.5 text-xs font-normal" style={{ color: "var(--admin-text-faint)" }}>
+                    <span
+                      className="ml-1.5 text-xs font-normal"
+                      style={{ color: "var(--admin-text-faint)" }}>
                       — generato automaticamente dal nome
                     </span>
                   )}
                   {isEdit && (
-                    <span className="ml-1.5 text-xs font-normal" style={{ color: "var(--admin-text-faint)" }}>
+                    <span
+                      className="ml-1.5 text-xs font-normal"
+                      style={{ color: "var(--admin-text-faint)" }}>
                       — non modificabile dopo la creazione
                     </span>
                   )}
@@ -557,7 +727,9 @@ export default function TemplateFormClient({
                   placeholder="generato dal nome…"
                 />
                 {componentName && (
-                  <p className="mt-1 text-xs" style={{ color: "var(--admin-text-faint)" }}>
+                  <p
+                    className="mt-1 text-xs"
+                    style={{ color: "var(--admin-text-faint)" }}>
                     File:{" "}
                     <code style={{ fontFamily: "monospace" }}>
                       {componentName}.tsx
@@ -566,7 +738,11 @@ export default function TemplateFormClient({
                 )}
               </div>
               <div className="col-span-2">
-                <label className={labelCls} style={{ color: "var(--admin-text-muted)" }}>Descrizione</label>
+                <label
+                  className={labelCls}
+                  style={{ color: "var(--admin-text-muted)" }}>
+                  Descrizione
+                </label>
                 <textarea
                   name="description"
                   value={description}
@@ -581,12 +757,21 @@ export default function TemplateFormClient({
           </section>
 
           {/* Campi custom */}
-          <section className="rounded-xl p-5 mb-6" style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-border)" }}>
+          <section
+            className="rounded-xl p-5 mb-6"
+            style={{
+              background: "var(--admin-card-bg)",
+              border: "1px solid var(--admin-border)",
+            }}>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-semibold" style={{ color: "var(--admin-text)" }}>
+              <h2
+                className="text-sm font-semibold"
+                style={{ color: "var(--admin-text)" }}>
                 Campi custom ({fields.length})
               </h2>
-              <button type="button" onClick={addField}
+              <button
+                type="button"
+                onClick={addField}
                 className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg"
                 style={{ background: "var(--admin-accent)", color: "#fff" }}>
                 <Plus size={13} /> Aggiungi campo
@@ -594,64 +779,142 @@ export default function TemplateFormClient({
             </div>
 
             {fields.length === 0 && (
-              <p className="text-sm text-center py-6" style={{ color: "var(--admin-text-muted)" }}>
+              <p
+                className="text-sm text-center py-6"
+                style={{ color: "var(--admin-text-muted)" }}>
                 Nessun campo — il template usa solo il contenuto principale
               </p>
             )}
 
             <div className="space-y-3">
               {fields.map((field) => (
-                <div key={field._id} className="rounded-lg p-3"
-                  style={{ background: "var(--admin-input-bg)", border: "1px solid var(--admin-border)" }}>
+                <div
+                  key={field._id}
+                  className="rounded-lg p-3"
+                  style={{
+                    background: "var(--admin-input-bg)",
+                    border: "1px solid var(--admin-border)",
+                  }}>
                   <div className="flex items-center gap-2 mb-3">
-                    <GripVertical size={14} style={{ color: "var(--admin-text-faint)" }} />
-                    <span className="text-xs font-semibold" style={{ color: "var(--admin-text)" }}>Campo</span>
-                    <button type="button" onClick={() => removeField(field._id)}
-                      className="ml-auto p-1 rounded" style={{ color: "var(--admin-error, #dc2626)" }}>
+                    <GripVertical
+                      size={14}
+                      style={{ color: "var(--admin-text-faint)" }}
+                    />
+                    <span
+                      className="text-xs font-semibold"
+                      style={{ color: "var(--admin-text)" }}>
+                      Campo
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removeField(field._id)}
+                      className="ml-auto p-1 rounded"
+                      style={{ color: "var(--admin-error, #dc2626)" }}>
                       <Trash2 size={13} />
                     </button>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     <div>
-                      <label className={labelCls} style={{ color: "var(--admin-text-muted)" }}>Chiave (key) *</label>
-                      <input value={field.fieldKey}
-                        onChange={(e) => updateField(field._id, "fieldKey", e.target.value)}
-                        placeholder="es. coverImage" className={inputCls} style={fieldInputStyle} required />
+                      <label
+                        className={labelCls}
+                        style={{ color: "var(--admin-text-muted)" }}>
+                        Chiave (key) *
+                      </label>
+                      <input
+                        value={field.fieldKey}
+                        onChange={(e) =>
+                          updateField(field._id, "fieldKey", e.target.value)
+                        }
+                        placeholder="es. coverImage"
+                        className={inputCls}
+                        style={fieldInputStyle}
+                        required
+                      />
                     </div>
                     <div>
-                      <label className={labelCls} style={{ color: "var(--admin-text-muted)" }}>Etichetta *</label>
-                      <input value={field.label}
-                        onChange={(e) => updateField(field._id, "label", e.target.value)}
-                        placeholder="es. Immagine copertina" className={inputCls} style={fieldInputStyle} required />
+                      <label
+                        className={labelCls}
+                        style={{ color: "var(--admin-text-muted)" }}>
+                        Etichetta *
+                      </label>
+                      <input
+                        value={field.label}
+                        onChange={(e) =>
+                          updateField(field._id, "label", e.target.value)
+                        }
+                        placeholder="es. Immagine copertina"
+                        className={inputCls}
+                        style={fieldInputStyle}
+                        required
+                      />
                     </div>
                     <div>
-                      <label className={labelCls} style={{ color: "var(--admin-text-muted)" }}>Tipo</label>
-                      <select value={field.fieldType}
-                        onChange={(e) => updateField(field._id, "fieldType", e.target.value)}
-                        className={inputCls} style={fieldInputStyle}>
+                      <label
+                        className={labelCls}
+                        style={{ color: "var(--admin-text-muted)" }}>
+                        Tipo
+                      </label>
+                      <select
+                        value={field.fieldType}
+                        onChange={(e) =>
+                          updateField(field._id, "fieldType", e.target.value)
+                        }
+                        className={inputCls}
+                        style={fieldInputStyle}>
                         {FIELD_TYPES.map((ft) => (
-                          <option key={ft.value} value={ft.value}>{ft.label}</option>
+                          <option key={ft.value} value={ft.value}>
+                            {ft.label}
+                          </option>
                         ))}
                       </select>
                     </div>
                     <div>
-                      <label className={labelCls} style={{ color: "var(--admin-text-muted)" }}>Placeholder</label>
-                      <input value={field.placeholder}
-                        onChange={(e) => updateField(field._id, "placeholder", e.target.value)}
-                        placeholder="Testo suggerimento" className={inputCls} style={fieldInputStyle} />
+                      <label
+                        className={labelCls}
+                        style={{ color: "var(--admin-text-muted)" }}>
+                        Placeholder
+                      </label>
+                      <input
+                        value={field.placeholder}
+                        onChange={(e) =>
+                          updateField(field._id, "placeholder", e.target.value)
+                        }
+                        placeholder="Testo suggerimento"
+                        className={inputCls}
+                        style={fieldInputStyle}
+                      />
                     </div>
                     <div>
-                      <label className={labelCls} style={{ color: "var(--admin-text-muted)" }}>Valore default</label>
-                      <input value={field.defaultValue}
-                        onChange={(e) => updateField(field._id, "defaultValue", e.target.value)}
-                        placeholder="Lascia vuoto se nessuno" className={inputCls} style={fieldInputStyle} />
+                      <label
+                        className={labelCls}
+                        style={{ color: "var(--admin-text-muted)" }}>
+                        Valore default
+                      </label>
+                      <input
+                        value={field.defaultValue}
+                        onChange={(e) =>
+                          updateField(field._id, "defaultValue", e.target.value)
+                        }
+                        placeholder="Lascia vuoto se nessuno"
+                        className={inputCls}
+                        style={fieldInputStyle}
+                      />
                     </div>
                     <div className="flex items-end">
                       <label className="flex items-center gap-2 cursor-pointer pb-2">
-                        <input type="checkbox" checked={field.required}
-                          onChange={(e) => updateField(field._id, "required", e.target.checked)}
-                          className="w-4 h-4 rounded" />
-                        <span className="text-xs font-medium" style={{ color: "var(--admin-text-muted)" }}>Obbligatorio</span>
+                        <input
+                          type="checkbox"
+                          checked={field.required}
+                          onChange={(e) =>
+                            updateField(field._id, "required", e.target.checked)
+                          }
+                          className="w-4 h-4 rounded"
+                        />
+                        <span
+                          className="text-xs font-medium"
+                          style={{ color: "var(--admin-text-muted)" }}>
+                          Obbligatorio
+                        </span>
                       </label>
                     </div>
                   </div>
@@ -663,23 +926,39 @@ export default function TemplateFormClient({
       )}
 
       {activeTab === "regole" && (
-        <section className="rounded-xl p-5 mb-6" style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-border)" }}>
+        <section
+          className="rounded-xl p-5 mb-6"
+          style={{
+            background: "var(--admin-card-bg)",
+            border: "1px solid var(--admin-border)",
+          }}>
           <div className="mb-5">
-            <h2 className="text-sm font-semibold mb-1" style={{ color: "var(--admin-text)" }}>
+            <h2
+              className="text-sm font-semibold mb-1"
+              style={{ color: "var(--admin-text)" }}>
               Template figli consentiti
             </h2>
-            <p className="text-xs leading-relaxed" style={{ color: "var(--admin-text-muted)" }}>
-              Seleziona quali template possono essere usati dalle pagine figlie di una pagina con questo template.
-              Se selezioni un solo template, verrà assegnato automaticamente alla nuova pagina figlia senza richiedere
-              alcuna scelta. Se ne selezioni più di uno, verrà mostrato un selettore prima di creare la pagina.
-              Se non selezioni nulla, qualsiasi template può essere usato.
+            <p
+              className="text-xs leading-relaxed"
+              style={{ color: "var(--admin-text-muted)" }}>
+              Seleziona quali template possono essere usati dalle pagine figlie
+              di una pagina con questo template. Se selezioni un solo template,
+              verrà assegnato automaticamente alla nuova pagina figlia senza
+              richiedere alcuna scelta. Se ne selezioni più di uno, verrà
+              mostrato un selettore prima di creare la pagina. Se non selezioni
+              nulla, qualsiasi template può essere usato.
             </p>
           </div>
 
           {availableTemplates.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-10 text-center gap-2">
-              <ShieldCheck size={28} style={{ color: "var(--admin-text-faint)" }} />
-              <p className="text-sm" style={{ color: "var(--admin-text-muted)" }}>
+              <ShieldCheck
+                size={28}
+                style={{ color: "var(--admin-text-faint)" }}
+              />
+              <p
+                className="text-sm"
+                style={{ color: "var(--admin-text-muted)" }}>
                 {isEdit
                   ? "Non ci sono altri template nel sistema."
                   : "Salva prima il template, poi potrai configurare le regole."}
@@ -700,8 +979,7 @@ export default function TemplateFormClient({
                       border: checked
                         ? "1px solid color-mix(in srgb, var(--admin-accent) 35%, transparent)"
                         : "1px solid var(--admin-border)",
-                    }}
-                  >
+                    }}>
                     <input
                       type="checkbox"
                       checked={checked}
@@ -710,13 +988,23 @@ export default function TemplateFormClient({
                       style={{ accentColor: "var(--admin-accent)" }}
                     />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium" style={{ color: "var(--admin-text)" }}>{t.name}</p>
-                      <p className="text-xs font-mono" style={{ color: "var(--admin-text-faint)" }}>{t.slug}</p>
+                      <p
+                        className="text-sm font-medium"
+                        style={{ color: "var(--admin-text)" }}>
+                        {t.name}
+                      </p>
+                      <p
+                        className="text-xs font-mono"
+                        style={{ color: "var(--admin-text-faint)" }}>
+                        {t.slug}
+                      </p>
                     </div>
                     {checked && (
-                      <span className="text-xs px-2 py-0.5 rounded-full font-medium shrink-0"
+                      <span
+                        className="text-xs px-2 py-0.5 rounded-full font-medium shrink-0"
                         style={{
-                          background: "color-mix(in srgb, var(--admin-accent) 15%, var(--admin-card-bg))",
+                          background:
+                            "color-mix(in srgb, var(--admin-accent) 15%, var(--admin-card-bg))",
                           color: "var(--admin-accent)",
                         }}>
                         Consentito
@@ -729,17 +1017,45 @@ export default function TemplateFormClient({
           )}
 
           {allowedChildIds.length > 0 && (
-            <div className="mt-4 rounded-lg px-4 py-3 flex items-start gap-2"
+            <div
+              className="mt-4 rounded-lg px-4 py-3 flex items-start gap-2"
               style={{
-                background: "color-mix(in srgb, var(--admin-accent) 6%, var(--admin-card-bg))",
-                border: "1px solid color-mix(in srgb, var(--admin-accent) 20%, transparent)",
+                background:
+                  "color-mix(in srgb, var(--admin-accent) 6%, var(--admin-card-bg))",
+                border:
+                  "1px solid color-mix(in srgb, var(--admin-accent) 20%, transparent)",
               }}>
-              <ShieldCheck size={14} className="mt-0.5 shrink-0" style={{ color: "var(--admin-accent)" }} />
-              <p className="text-xs leading-relaxed" style={{ color: "var(--admin-text-muted)" }}>
-                {allowedChildIds.length === 1
-                  ? <>Il template <strong style={{ color: "var(--admin-text)" }}>{availableTemplates.find(t => t.id === allowedChildIds[0])?.name}</strong> verrà assegnato <strong>automaticamente</strong> alla nuova pagina figlia — nessuna scelta richiesta.</>
-                  : <>Alla creazione di una pagina figlia verrà mostrato un selettore con <strong style={{ color: "var(--admin-text)" }}>{allowedChildIds.length} template</strong> tra cui scegliere.</>
-                }
+              <ShieldCheck
+                size={14}
+                className="mt-0.5 shrink-0"
+                style={{ color: "var(--admin-accent)" }}
+              />
+              <p
+                className="text-xs leading-relaxed"
+                style={{ color: "var(--admin-text-muted)" }}>
+                {allowedChildIds.length === 1 ? (
+                  <>
+                    Il template{" "}
+                    <strong style={{ color: "var(--admin-text)" }}>
+                      {
+                        availableTemplates.find(
+                          (t) => t.id === allowedChildIds[0],
+                        )?.name
+                      }
+                    </strong>{" "}
+                    verrà assegnato <strong>automaticamente</strong> alla nuova
+                    pagina figlia — nessuna scelta richiesta.
+                  </>
+                ) : (
+                  <>
+                    Alla creazione di una pagina figlia verrà mostrato un
+                    selettore con{" "}
+                    <strong style={{ color: "var(--admin-text)" }}>
+                      {allowedChildIds.length} template
+                    </strong>{" "}
+                    tra cui scegliere.
+                  </>
+                )}
               </p>
             </div>
           )}

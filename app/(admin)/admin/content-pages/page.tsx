@@ -1,16 +1,16 @@
-// app/(admin)/admin/contenuti/page.tsx
-import type { Metadata } from "next";
-import { getAppSettings } from "@/lib/db/settings-queries";
+// app/(admin)/admin/content/page.tsx
 import { getAllPages } from "@/lib/db/pages-queries";
+import { getAppSettings } from "@/lib/db/settings-queries";
 import { getAllTemplates } from "@/lib/db/template-queries";
 import { FileText } from "lucide-react";
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import PageManager from "./_components/page-manager";
 
-export const metadata: Metadata = { title: "Contenuti / Pagine" };
+export const metadata: Metadata = { title: "Content / Pages" };
 export const dynamic = "force-dynamic";
 
-async function ContenutiContent() {
+async function ContentContent() {
   const [pages, templates, settings] = await Promise.all([
     getAllPages(),
     getAllTemplates(),
@@ -32,15 +32,17 @@ async function ContenutiContent() {
   );
 }
 
-export default function ContenutiPage() {
+export default function ContentPage() {
   return (
     <div className="space-y-5">
       <div className="flex items-start gap-3">
         <div
           className="w-9 h-9 shrink-0 rounded-xl flex items-center justify-center"
           style={{
-            background: "color-mix(in srgb, var(--admin-accent) 12%, var(--admin-card-bg))",
-            border: "1px solid color-mix(in srgb, var(--admin-accent) 25%, transparent)",
+            background:
+              "color-mix(in srgb, var(--admin-accent) 12%, var(--admin-card-bg))",
+            border:
+              "1px solid color-mix(in srgb, var(--admin-accent) 25%, transparent)",
           }}>
           <FileText size={18} style={{ color: "var(--admin-accent)" }} />
         </div>
@@ -48,14 +50,14 @@ export default function ContenutiPage() {
           <h2
             className="text-lg font-bold"
             style={{ color: "var(--admin-text)" }}>
-            <span style={{ color: "var(--admin-text-muted)" }}>Contenuti</span>
+            <span style={{ color: "var(--admin-text-muted)" }}>Content</span>
             <span style={{ color: "var(--admin-text-faint)" }}> / </span>
-            <span>Pagine</span>
+            <span>Pages</span>
           </h2>
           <p
             className="text-sm mt-0.5"
             style={{ color: "var(--admin-text-faint)" }}>
-            Gestisci i contenuti statici del sito.
+            Manage the static content of the App
           </p>
         </div>
       </div>
@@ -78,7 +80,7 @@ export default function ContenutiPage() {
               />
             </div>
           }>
-          <ContenutiContent />
+          <ContentContent />
         </Suspense>
       </div>
     </div>

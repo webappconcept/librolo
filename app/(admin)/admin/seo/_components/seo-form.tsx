@@ -11,9 +11,21 @@ export type { JsonLdType };
 type RobotsValue = "" | "noindex,nofollow" | "noindex,follow";
 
 const ROBOTS_OPTIONS: { value: RobotsValue; label: string; hint: string }[] = [
-  { value: "", label: "Default (index, follow)", hint: "La pagina viene indicizzata normalmente" },
-  { value: "noindex,nofollow", label: "noindex, nofollow", hint: "Non indicizzare, non seguire i link" },
-  { value: "noindex,follow", label: "noindex, follow", hint: "Non indicizzare, ma segui i link" },
+  {
+    value: "",
+    label: "Default (index, follow)",
+    hint: "La pagina viene indicizzata normalmente",
+  },
+  {
+    value: "noindex,nofollow",
+    label: "noindex, nofollow",
+    hint: "Non indicizzare, non seguire i link",
+  },
+  {
+    value: "noindex,follow",
+    label: "noindex, follow",
+    hint: "Non indicizzare, ma segui i link",
+  },
 ];
 
 const JSON_LD_TOGGLE_HINT =
@@ -21,13 +33,17 @@ const JSON_LD_TOGGLE_HINT =
 
 const JSON_LD_TYPE_HINTS: Record<JsonLdType, string> = {
   WebPage: "Pagina web generica — ideale per homepage e pagine istituzionali",
-  Article: "Articolo o notizia — migliora l'aspetto nei risultati di Google News",
-  BlogPosting: "Post di blog — simile ad Article, ottimizzato per contenuti blog",
+  Article:
+    "Articolo o notizia — migliora l'aspetto nei risultati di Google News",
+  BlogPosting:
+    "Post di blog — simile ad Article, ottimizzato per contenuti blog",
   Product: "Scheda prodotto — mostra prezzo e disponibilità nei risultati",
   FAQPage: "Pagina FAQ — abilita i rich result con domande e risposte espansi",
-  BreadcrumbList: "Breadcrumb — mostra il percorso di navigazione nei risultati",
+  BreadcrumbList:
+    "Breadcrumb — mostra il percorso di navigazione nei risultati",
   Organization: "Organizzazione — dati aziendali (nome, logo, contatti)",
-  LocalBusiness: "Attività locale — indirizzo, orari e valutazioni su Google Maps",
+  LocalBusiness:
+    "Attività locale — indirizzo, orari e valutazioni su Google Maps",
   Person: "Persona — profilo autore o collaboratore",
   Event: "Evento — data, luogo e biglietti nei risultati di ricerca",
   VideoObject: "Video — miniatura e durata nei rich result di YouTube/Google",
@@ -81,31 +97,52 @@ export function Serp({
   return (
     <div
       className="rounded-lg p-4 text-sm"
-      style={{ background: "var(--admin-surface)", border: "1px solid var(--admin-card-border)" }}
-    >
+      style={{
+        background: "var(--admin-surface)",
+        border: "1px solid var(--admin-card-border)",
+      }}>
       <div className="flex items-center justify-between mb-1">
-        <p style={{ ...hintStyle, textTransform: "uppercase", letterSpacing: "0.06em" }}>Anteprima Google</p>
+        <p
+          style={{
+            ...hintStyle,
+            textTransform: "uppercase",
+            letterSpacing: "0.06em",
+          }}>
+          Anteprima Google
+        </p>
         {isNoIndex && (
           <span
             className="text-xs px-2 py-0.5 rounded-full font-medium"
             style={{
-              background: "color-mix(in srgb, var(--admin-accent) 12%, var(--admin-card-bg))",
+              background:
+                "color-mix(in srgb, var(--admin-accent) 12%, var(--admin-card-bg))",
               color: "var(--admin-accent)",
-              border: "1px solid color-mix(in srgb, var(--admin-accent) 25%, transparent)",
-            }}
-          >
+              border:
+                "1px solid color-mix(in srgb, var(--admin-accent) 25%, transparent)",
+            }}>
             noindex &mdash; non verrà indicizzata
           </span>
         )}
       </div>
-      <p className="text-base font-medium truncate" style={{ color: "#1a0dab" }}>
-        {title || <span style={hintStyle}><em>Titolo non impostato</em></span>}
+      <p
+        className="text-base font-medium truncate"
+        style={{ color: "#1a0dab" }}>
+        {title || (
+          <span style={hintStyle}>
+            <em>Titolo non impostato</em>
+          </span>
+        )}
       </p>
       <p className="text-xs" style={{ color: "#006621" }}>
-        {displayDomain}{pathname}
+        {displayDomain}
+        {pathname}
       </p>
       <p className="text-sm mt-0.5 line-clamp-2" style={{ color: "#545454" }}>
-        {description || <span style={hintStyle}><em>Descrizione non impostata</em></span>}
+        {description || (
+          <span style={hintStyle}>
+            <em>Descrizione non impostata</em>
+          </span>
+        )}
       </p>
     </div>
   );
@@ -118,8 +155,10 @@ function AppNameHint({ appName }: { appName: string }) {
       Usa{" "}
       <code
         className="px-1 py-0.5 rounded font-mono"
-        style={{ background: "var(--admin-hover-bg)", color: "var(--admin-text-muted)" }}
-      >
+        style={{
+          background: "var(--admin-hover-bg)",
+          color: "var(--admin-text-muted)",
+        }}>
         {"{"}appName{"}"}
       </code>{" "}
       per inserire automaticamente il nome dell&apos;app:{" "}
@@ -146,7 +185,9 @@ function Toggle({
       <div className="flex items-center justify-between gap-4">
         <div>
           <p style={labelStyle}>{label}</p>
-          {hint && <p style={{ ...hintStyle, marginTop: "0.125rem" }}>{hint}</p>}
+          {hint && (
+            <p style={{ ...hintStyle, marginTop: "0.125rem" }}>{hint}</p>
+          )}
         </div>
         <input type="hidden" name={name} value={checked ? "true" : "false"} />
         <button
@@ -155,12 +196,18 @@ function Toggle({
           aria-checked={checked}
           onClick={() => onChange(!checked)}
           className="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out"
-          style={{ background: checked ? "var(--admin-accent)" : "var(--admin-input-border)" }}
-        >
+          style={{
+            background: checked
+              ? "var(--admin-accent)"
+              : "var(--admin-input-border)",
+          }}>
           <span
             aria-hidden="true"
             className="pointer-events-none inline-block h-5 w-5 transform rounded-full shadow ring-0 transition duration-200 ease-in-out"
-            style={{ background: "white", transform: checked ? "translateX(20px)" : "translateX(0)" }}
+            style={{
+              background: "white",
+              transform: checked ? "translateX(20px)" : "translateX(0)",
+            }}
           />
         </button>
       </div>
@@ -170,7 +217,6 @@ function Toggle({
 
 // ─── Shared SeoForm ───────────────────────────────────────────────────────────
 /**
- * Riutilizzato sia da SeoManager (/admin/seo) che da PageEditor (/admin/contenuti).
  *
  * Props aggiuntive rispetto all'originale:
  * - `lockedPathname`: quando passato il campo pathname è bloccato (usato dal contenuto).
@@ -232,17 +278,17 @@ export function SeoForm({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.5)" }}
-    >
+      style={{ background: "rgba(0,0,0,0.5)" }}>
       <div
         className="rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
-        style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-card-border)" }}
-      >
+        style={{
+          background: "var(--admin-card-bg)",
+          border: "1px solid var(--admin-card-border)",
+        }}>
         {/* Header */}
         <div
           className="flex items-center justify-between px-6 pt-5 pb-4"
-          style={{ borderBottom: "1px solid var(--admin-divider)" }}
-        >
+          style={{ borderBottom: "1px solid var(--admin-divider)" }}>
           <h2 className="font-semibold" style={{ color: "var(--admin-text)" }}>
             {isEdit ? "Modifica meta SEO" : "Configura meta SEO"}
           </h2>
@@ -257,15 +303,18 @@ export function SeoForm({
             onMouseLeave={(e) => {
               e.currentTarget.style.background = "transparent";
               e.currentTarget.style.color = "var(--admin-text-faint)";
-            }}
-          >
+            }}>
             <X size={18} />
           </button>
         </div>
 
         <form action={action} className="px-6 py-5 space-y-5">
           {isEdit && (
-            <input type="hidden" name="originalPathname" value={page!.pathname} />
+            <input
+              type="hidden"
+              name="originalPathname"
+              value={page!.pathname}
+            />
           )}
 
           {/* Pathname — nascosto se locked */}
@@ -281,8 +330,7 @@ export function SeoForm({
                       background: "var(--admin-hover-bg)",
                       border: "1px solid var(--admin-input-border)",
                       color: "var(--admin-text-muted)",
-                    }}
-                  >
+                    }}>
                     {lockedPathname}
                   </div>
                 </div>
@@ -298,11 +346,12 @@ export function SeoForm({
                   background: "var(--admin-hover-bg)",
                   border: "1px solid var(--admin-input-border)",
                   color: "var(--admin-text-muted)",
-                }}
-              >
+                }}>
                 {page!.pathname}
               </div>
-              <p style={hintStyle}>Il percorso URL non può essere modificato.</p>
+              <p style={hintStyle}>
+                Il percorso URL non può essere modificato.
+              </p>
             </div>
           ) : unconfiguredRoutes.length > 0 ? (
             <div className="space-y-1.5">
@@ -311,8 +360,7 @@ export function SeoForm({
                 name="pathname"
                 value={pathname}
                 onChange={(e) => setPathname(e.target.value)}
-                style={inputStyle}
-              >
+                style={inputStyle}>
                 <option value="">Seleziona una pagina...</option>
                 {unconfiguredRoutes.map((r) => (
                   <option key={r} value={r}>
@@ -327,18 +375,22 @@ export function SeoForm({
                     "color-mix(in srgb, var(--admin-accent) 8%, var(--admin-card-bg))",
                   border:
                     "1px solid color-mix(in srgb, var(--admin-accent) 20%, transparent)",
-                }}
-              >
-                <Info size={13} className="mt-0.5 shrink-0" style={{ color: "var(--admin-accent)" }} />
-                <p className="text-xs leading-relaxed" style={{ color: "var(--admin-text-muted)" }}>
+                }}>
+                <Info
+                  size={13}
+                  className="mt-0.5 shrink-0"
+                  style={{ color: "var(--admin-accent)" }}
+                />
+                <p
+                  className="text-xs leading-relaxed"
+                  style={{ color: "var(--admin-text-muted)" }}>
                   La lista dei percorsi è definita in{" "}
                   <code
                     className="font-mono px-1 py-0.5 rounded"
                     style={{
                       background: "var(--admin-hover-bg)",
                       color: "var(--admin-accent)",
-                    }}
-                  >
+                    }}>
                     lib/routes.ts
                   </code>
                   . Se una pagina non compare, aggiungila prima a quel file.
@@ -349,12 +401,15 @@ export function SeoForm({
             <div
               className="flex items-center gap-2 px-3 py-2 rounded-lg"
               style={{
-                background: "color-mix(in srgb, #22c55e 8%, var(--admin-card-bg))",
-                border: "1px solid color-mix(in srgb, #22c55e 25%, transparent)",
-              }}
-            >
+                background:
+                  "color-mix(in srgb, #22c55e 8%, var(--admin-card-bg))",
+                border:
+                  "1px solid color-mix(in srgb, #22c55e 25%, transparent)",
+              }}>
               <span style={{ color: "#22c55e" }}>✓</span>
-              <p className="text-xs font-medium" style={{ color: "var(--admin-text-muted)" }}>
+              <p
+                className="text-xs font-medium"
+                style={{ color: "var(--admin-text-muted)" }}>
                 Tutte le pagine dell&apos;app sono già configurate.
               </p>
             </div>
@@ -395,12 +450,11 @@ export function SeoForm({
                     title.length === 0
                       ? "var(--admin-text-faint)"
                       : title.length > 60
-                      ? "var(--admin-error, #ef4444)"
-                      : title.length > 54
-                      ? "var(--admin-warning, #d97706)"
-                      : "var(--admin-success, #22c55e)",
-                }}
-              >
+                        ? "var(--admin-error, #ef4444)"
+                        : title.length > 54
+                          ? "var(--admin-warning, #d97706)"
+                          : "var(--admin-success, #22c55e)",
+                }}>
                 {title.length}/60
               </span>
             </div>
@@ -426,12 +480,11 @@ export function SeoForm({
                     description.length === 0
                       ? "var(--admin-text-faint)"
                       : description.length > 155
-                      ? "var(--admin-error, #ef4444)"
-                      : description.length > 139
-                      ? "var(--admin-warning, #d97706)"
-                      : "var(--admin-success, #22c55e)",
-                }}
-              >
+                        ? "var(--admin-error, #ef4444)"
+                        : description.length > 139
+                          ? "var(--admin-warning, #d97706)"
+                          : "var(--admin-success, #22c55e)",
+                }}>
                 {description.length}/155
               </span>
             </div>
@@ -454,8 +507,7 @@ export function SeoForm({
               name="robots"
               value={robots}
               onChange={(e) => setRobots(e.target.value as RobotsValue)}
-              style={inputStyle}
-            >
+              style={inputStyle}>
               {ROBOTS_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {opt.label}
@@ -473,8 +525,7 @@ export function SeoForm({
             style={{
               background: "var(--admin-hover-bg)",
               border: "1px solid var(--admin-card-border)",
-            }}
-          >
+            }}>
             <Toggle
               name="jsonLdEnabled"
               label="JSON-LD Structured Data"
@@ -487,8 +538,7 @@ export function SeoForm({
               style={{
                 maxHeight: jsonLdEnabled ? "140px" : "0px",
                 opacity: jsonLdEnabled ? 1 : 0,
-              }}
-            >
+              }}>
               <div className="pt-1 space-y-1.5">
                 <label style={labelStyle}>Tipo di schema</label>
                 {jsonLdEnabled && (
@@ -497,8 +547,7 @@ export function SeoForm({
                 <select
                   value={jsonLdType}
                   onChange={(e) => setJsonLdType(e.target.value as JsonLdType)}
-                  style={inputStyle}
-                >
+                  style={inputStyle}>
                   <option value="" disabled>
                     Seleziona un tipo...
                   </option>
@@ -523,8 +572,7 @@ export function SeoForm({
               }
               onMouseLeave={(e) =>
                 (e.currentTarget.style.color = "var(--admin-text-faint)")
-              }
-            >
+              }>
               Open Graph (opzionale)
             </summary>
             <div className="mt-3 space-y-3">
@@ -568,18 +616,18 @@ export function SeoForm({
               className="text-sm rounded-lg px-3 py-2"
               style={{
                 color: "var(--admin-error, #ef4444)",
-                background: "color-mix(in srgb, #ef4444 10%, var(--admin-card-bg))",
-                border: "1px solid color-mix(in srgb, #ef4444 20%, transparent)",
-              }}
-            >
+                background:
+                  "color-mix(in srgb, #ef4444 10%, var(--admin-card-bg))",
+                border:
+                  "1px solid color-mix(in srgb, #ef4444 20%, transparent)",
+              }}>
               {state.error}
             </p>
           )}
 
           <div
             className="flex items-center justify-end gap-3 pt-2"
-            style={{ borderTop: "1px solid var(--admin-divider)" }}
-          >
+            style={{ borderTop: "1px solid var(--admin-divider)" }}>
             <button
               type="button"
               onClick={onClose}
@@ -595,20 +643,21 @@ export function SeoForm({
               }
               onMouseLeave={(e) =>
                 (e.currentTarget.style.background = "transparent")
-              }
-            >
+              }>
               Annulla
             </button>
             <button
               type="submit"
-              disabled={isPending || (!isEdit && !lockedPathname && unconfiguredRoutes.length === 0)}
+              disabled={
+                isPending ||
+                (!isEdit && !lockedPathname && unconfiguredRoutes.length === 0)
+              }
               className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg text-white font-medium transition-colors disabled:opacity-60"
               style={{ background: "var(--admin-accent)" }}
               onMouseEnter={(e) =>
                 (e.currentTarget.style.filter = "brightness(0.9)")
               }
-              onMouseLeave={(e) => (e.currentTarget.style.filter = "none")}
-            >
+              onMouseLeave={(e) => (e.currentTarget.style.filter = "none")}>
               {isPending && (
                 <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
               )}
