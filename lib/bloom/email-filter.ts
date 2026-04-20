@@ -1,5 +1,4 @@
 import 'server-only'
-import { Redis } from '@upstash/redis'
 import { db } from '@/lib/db/drizzle'
 import { users } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
@@ -9,10 +8,37 @@ const BLOOM_KEY = 'bloom:emails'
 const BLOOM_ERROR_RATE = 0.01
 const BLOOM_INITIAL_CAPACITY = 10_000
 
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL!,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-})
+function getRedisConfig() {
+  const url = process.env.UPSTASH_REDIS_REST_URL
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN
+  if (!url || !token) {
+    throw new Error(
+      'Missing UPSTASH_REDIS_REST_URL or UPSTASH_REDIS_REST_TOKEN env variables'
+    )
+  }
+  return { url, token }
+}
+
+async function redisCommand<T = unknown>(command: (string | number)[]): Promise<T> {
+  const { url, token } = getRedisConfig()
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(command),
+  })
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(`Upstash REST error ${res.status}: ${text}`)
+  }
+  const json = (await res.json()) as { result: T; error?: string }
+  if (json.error) {
+    throw new Error(json.error)
+  }
+  return json.result
+}
 
 function normalizeEmail(email: string): string {
   return email.trim().toLowerCase()
@@ -24,17 +50,16 @@ function normalizeEmail(email: string): string {
  */
 export async function ensureBloomFilter(): Promise<void> {
   try {
-    await redis.sendCommand([
+    await redisCommand([
       'BF.RESERVE',
       BLOOM_KEY,
-      String(BLOOM_ERROR_RATE),
-      String(BLOOM_INITIAL_CAPACITY),
+      BLOOM_ERROR_RATE,
+      BLOOM_INITIAL_CAPACITY,
       'EXPANSION',
-      '2',
+      2,
       'NONSCALING',
     ])
   } catch (err: unknown) {
-    // ERR item exists = filter already created, safe to ignore
     if (
       err instanceof Error &&
       err.message.includes('item exists')
@@ -51,7 +76,7 @@ export async function ensureBloomFilter(): Promise<void> {
  */
 export async function addEmailToBloom(email: string): Promise<void> {
   const normalized = normalizeEmail(email)
-  await redis.sendCommand(['BF.ADD', BLOOM_KEY, normalized])
+  await redisCommand(['BF.ADD', BLOOM_KEY, normalized])
 }
 
 /**
@@ -60,14 +85,14 @@ export async function addEmailToBloom(email: string): Promise<void> {
 export async function addEmailsBulkToBloom(emails: string[]): Promise<void> {
   if (emails.length === 0) return
   const normalized = emails.map(normalizeEmail)
-  await redis.sendCommand(['BF.MADD', BLOOM_KEY, ...normalized])
+  await redisCommand(['BF.MADD', BLOOM_KEY, ...normalized])
 }
 
 /**
  * Checks if an email is already registered.
  *
  * Flow:
- * 1. BF.EXISTS on Upstash (O(1), sub-millisecond)
+ * 1. BF.EXISTS on Upstash REST API (O(1), sub-millisecond)
  * 2. If possibly present (1) → confirm with DB query (eliminates false positives)
  * 3. If certainly absent (0) → skip DB entirely
  *
@@ -78,18 +103,16 @@ export async function checkEmailAvailability(
 ): Promise<BloomEmailCheckResult> {
   const normalized = normalizeEmail(email)
 
-  const bloomResult = await redis.sendCommand<number>([
+  const bloomResult = await redisCommand<number>([
     'BF.EXISTS',
     BLOOM_KEY,
     normalized,
   ])
 
-  // Bloom says "certainly not present" → no DB query needed
   if (bloomResult === 0) {
     return { available: true, checkedViaDb: false }
   }
 
-  // Bloom says "possibly present" → confirm via DB to rule out false positives
   const existing = await db
     .select({ id: users.id })
     .from(users)
