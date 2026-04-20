@@ -9,7 +9,7 @@ import { asc } from "drizzle-orm";
 import { BlockedDomainsClient } from "./_components/blocked-domains-client";
 
 export const metadata: Metadata = {
-  title: "Domini Bloccati",
+  title: "Sicurezza / Domini Bloccati",
 };
 
 async function BlockedDomainsContent() {
@@ -37,7 +37,9 @@ export default async function AdminBlockedDomainsPage() {
         </div>
         <div>
           <h2 className="text-lg font-bold" style={{ color: "var(--admin-text)" }}>
-            Domini Bloccati
+            <span style={{ color: "var(--admin-text-muted)" }}>Sicurezza</span>
+            <span style={{ color: "var(--admin-text-faint)" }}> / </span>
+            <span>Domini Bloccati</span>
           </h2>
           <p className="text-sm mt-0.5" style={{ color: "var(--admin-text-faint)" }}>
             Gestisci i domini email usa-e-getta bloccati dalla registrazione.

@@ -5,7 +5,7 @@ import { ListFilter } from "lucide-react";
 import { Suspense } from "react";
 import { IpRulesClient } from "./_components/ip-rules-client";
 
-export const metadata: Metadata = { title: "Regole IP" };
+export const metadata: Metadata = { title: "Sicurezza / Regole IP" };
 
 export default async function AdminIpRulesPage() {
   await requireAdminPage();
@@ -24,7 +24,9 @@ export default async function AdminIpRulesPage() {
         </div>
         <div>
           <h2 className="text-lg font-bold" style={{ color: "var(--admin-text)" }}>
-            Regole IP
+            <span style={{ color: "var(--admin-text-muted)" }}>Sicurezza</span>
+            <span style={{ color: "var(--admin-text-faint)" }}> / </span>
+            <span>Regole IP</span>
           </h2>
           <p className="text-sm mt-0.5" style={{ color: "var(--admin-text-faint)" }}>
             Gestisci whitelist e blacklist degli indirizzi IP
