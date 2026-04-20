@@ -139,12 +139,18 @@ export default function AdminSidebar({
           sub ? "px-3 py-2 ml-3" : "px-3 py-2.5"
         }`}
         style={{
-          background: active ? "var(--admin-sidebar-item-active-bg)" : "transparent",
+          background: active
+            ? "var(--admin-sidebar-item-active-bg)"
+            : sub
+            ? "transparent"
+            : "transparent",
           color: active ? "var(--admin-sidebar-text-active)" : "var(--admin-sidebar-text)",
         }}
         onMouseEnter={(e) => {
           if (!active) {
-            e.currentTarget.style.background = "var(--admin-sidebar-item-hover-bg)";
+            e.currentTarget.style.background = sub
+              ? "color-mix(in srgb, var(--admin-sidebar-bg) 60%, #000 40%)"
+              : "var(--admin-sidebar-item-hover-bg)";
             e.currentTarget.style.color = "var(--admin-sidebar-text-active)";
           }
         }}
@@ -224,6 +230,8 @@ export default function AdminSidebar({
             }}
           />
         </button>
+
+        {/* Sottomenu con sfondo leggermente più scuro */}
         <div
           className="overflow-hidden transition-all duration-200"
           style={{
@@ -231,7 +239,12 @@ export default function AdminSidebar({
             opacity: isOpen ? 1 : 0,
           }}
         >
-          <div className="mt-0.5 space-y-0.5 pb-0.5">
+          <div
+            className="mt-0.5 mb-0.5 mx-1 rounded-lg py-1 space-y-0.5"
+            style={{
+              background: "color-mix(in srgb, var(--admin-sidebar-bg) 70%, #000 30%)",
+            }}
+          >
             {visibleChildren.map((child: NavChild) => (
               <NavLink
                 key={child.href}
