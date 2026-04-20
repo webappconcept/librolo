@@ -7,17 +7,11 @@ import type { SiteSnippet } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
-// ---------------------------------------------------------------------------
-// ActionState
-// ---------------------------------------------------------------------------
 export type ActionState =
   | {}
   | { success: string; timestamp: number }
   | { error: string; timestamp: number };
 
-// ---------------------------------------------------------------------------
-// Generale
-// ---------------------------------------------------------------------------
 export async function saveAppSettings(
   _prev: ActionState,
   formData: FormData,
@@ -37,9 +31,6 @@ export async function saveAppSettings(
   }
 }
 
-// ---------------------------------------------------------------------------
-// Comportamento
-// ---------------------------------------------------------------------------
 export async function saveBehaviourSettings(
   _prev: ActionState,
   formData: FormData,
@@ -54,9 +45,6 @@ export async function saveBehaviourSettings(
   }
 }
 
-// ---------------------------------------------------------------------------
-// Sender
-// ---------------------------------------------------------------------------
 export async function saveSenderSettings(
   _prev: ActionState,
   formData: FormData,
@@ -66,17 +54,41 @@ export async function saveSenderSettings(
     await updateAppSetting("email_from_name", formData.get("email_from_name") as string);
     await updateAppSetting("email_from_address", formData.get("email_from_address") as string);
     revalidatePath("/admin/settings");
-    return { success: "Impostazioni mittente salvate.", timestamp: Date.now() };
+    return { success: "Impostazioni Resend salvate.", timestamp: Date.now() };
   } catch {
     return { error: "Errore durante il salvataggio.", timestamp: Date.now() };
   }
 }
 
+export async function testResendConnection(
+  formData: FormData,
+): Promise<ActionState> {
+  try {
+    const apiKey = ((formData.get("resend_api_key") as string | null) ?? "").trim();
+    if (!apiKey) {
+      return { error: "Inserisci una API key Resend prima di testare.", timestamp: Date.now() };
+    }
+
+    const response = await fetch("https://api.resend.com/domains", {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+      },
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      return { error: `Connessione Resend fallita (${response.status}).`, timestamp: Date.now() };
+    }
+
+    return { success: "Connessione Resend riuscita.", timestamp: Date.now() };
+  } catch {
+    return { error: "Impossibile contattare Resend.", timestamp: Date.now() };
+  }
+}
+
 export const saveEmailSettings = saveSenderSettings;
 
-// ---------------------------------------------------------------------------
-// Email Templates
-// ---------------------------------------------------------------------------
 export async function saveEmailTemplateSettings(
   _prev: ActionState,
   formData: FormData,
@@ -99,9 +111,6 @@ export async function saveEmailTemplateSettings(
   }
 }
 
-// ---------------------------------------------------------------------------
-// Utenti / SignIn
-// ---------------------------------------------------------------------------
 export async function saveUsersSettings(
   _prev: ActionState,
   formData: FormData,
@@ -115,28 +124,53 @@ export async function saveUsersSettings(
   }
 }
 
-// ---------------------------------------------------------------------------
-// Redis / Upstash
-// ---------------------------------------------------------------------------
 export async function saveRedisSettings(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
   try {
-    const url = (formData.get('upstash_redis_rest_url') as string ?? '').trim()
-    const token = (formData.get('upstash_redis_rest_token') as string ?? '').trim()
-    await updateAppSetting('upstash_redis_rest_url', url || null)
-    await updateAppSetting('upstash_redis_rest_token', token || null)
-    revalidatePath('/admin/settings')
-    return { success: 'Credenziali Redis salvate.', timestamp: Date.now() }
+    const url = (formData.get("upstash_redis_rest_url") as string ?? "").trim();
+    const token = (formData.get("upstash_redis_rest_token") as string ?? "").trim();
+    await updateAppSetting("upstash_redis_rest_url", url || null);
+    await updateAppSetting("upstash_redis_rest_token", token || null);
+    revalidatePath("/admin/settings");
+    return { success: "Credenziali Redis salvate.", timestamp: Date.now() };
   } catch {
-    return { error: 'Errore durante il salvataggio.', timestamp: Date.now() }
+    return { error: "Errore durante il salvataggio.", timestamp: Date.now() };
   }
 }
 
-// ---------------------------------------------------------------------------
-// Domini bloccati (disposable_domains)
-// ---------------------------------------------------------------------------
+export async function testRedisConnection(
+  formData: FormData,
+): Promise<ActionState> {
+  try {
+    const url = ((formData.get("upstash_redis_rest_url") as string | null) ?? "").trim();
+    const token = ((formData.get("upstash_redis_rest_token") as string | null) ?? "").trim();
+
+    if (!url || !token) {
+      return { error: "Inserisci URL e token Redis prima di testare.", timestamp: Date.now() };
+    }
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(["PING"]),
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      return { error: `Connessione Redis fallita (${response.status}).`, timestamp: Date.now() };
+    }
+
+    return { success: "Connessione Redis riuscita.", timestamp: Date.now() };
+  } catch {
+    return { error: "Impossibile contattare Redis / Upstash.", timestamp: Date.now() };
+  }
+}
+
 export async function addDisposableDomainAction(
   domain: string,
 ): Promise<ActionState> {
@@ -192,17 +226,11 @@ export async function bulkImportDisposableDomainsAction(
   }
 }
 
-// ---------------------------------------------------------------------------
-// Alias retrocompatibilità
-// ---------------------------------------------------------------------------
 export const saveGeneralSettingsAction = saveAppSettings;
 export const saveBehaviourSettingsAction = saveBehaviourSettings;
 export const saveEmailSettingsAction = saveSenderSettings;
 export const saveUsersSettingsAction = saveUsersSettings;
 
-// ---------------------------------------------------------------------------
-// Snippets CRUD
-// ---------------------------------------------------------------------------
 function invalidateSnippets() {
   revalidatePath("/", "layout");
 }
