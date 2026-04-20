@@ -1,10 +1,10 @@
-import { getAppSettings } from "@/lib/db/settings-queries";
+import { getAllSnippets } from "@/lib/db/snippets-queries";
 import type { Metadata } from "next";
-import { ContenutiTab } from "../tabs/contenuti-tab";
+import { SnippetsTab } from "../tabs/snippets-tab";
 
 export const metadata: Metadata = { title: "Impostazioni / Contenuti" };
 
 export default async function SettingsContenutiPage() {
-  const settings = await getAppSettings();
-  return <ContenutiTab settings={settings} />;
+  const snippets = await getAllSnippets();
+  return <SnippetsTab initialSnippets={snippets} />;
 }
