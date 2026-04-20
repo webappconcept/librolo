@@ -7,17 +7,21 @@ import {
   upsertRouteAction,
 } from "./actions";
 import RouteRegistryClient from "./_components/route-registry-client";
+import { SeoHeader } from "@/app/(admin)/admin/seo/_components/seo-header";
 
-export const metadata: Metadata = { title: "Route Registry" };
+export const metadata: Metadata = { title: "SEO / Route Registry" };
 
 export default async function RouteRegistryPage() {
   const rows = await getAllRoutes();
   return (
-    <RouteRegistryClient
-      rows={rows}
-      upsertAction={upsertRouteAction}
-      deleteAction={deleteRouteAction}
-      toggleActiveAction={toggleRouteActiveAction}
-    />
+    <div className="space-y-5">
+      <SeoHeader />
+      <RouteRegistryClient
+        rows={rows}
+        upsertAction={upsertRouteAction}
+        deleteAction={deleteRouteAction}
+        toggleActiveAction={toggleRouteActiveAction}
+      />
+    </div>
   );
 }
