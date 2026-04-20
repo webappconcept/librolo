@@ -11,7 +11,7 @@ import { Suspense } from "react";
 import { PermissionsManager } from "./_components/permissions-manager";
 import { PermissionsInfoCard } from "./_components/permissions-info-card";
 
-export const metadata: Metadata = { title: "Permessi" };
+export const metadata: Metadata = { title: "Utenti / Permessi" };
 
 async function PermissionsContent() {
   const [allPermissions, roles, matrix] = await Promise.all([
@@ -53,7 +53,9 @@ export default async function AdminPermissionsPage() {
         </div>
         <div>
           <h2 className="text-lg font-bold" style={{ color: "var(--admin-text)" }}>
-            Permessi
+            <span style={{ color: "var(--admin-text-muted)" }}>Utenti</span>
+            <span style={{ color: "var(--admin-text-faint)" }}> / </span>
+            <span>Permessi</span>
           </h2>
           <p className="text-sm mt-0.5" style={{ color: "var(--admin-text-faint)" }}>
             Gestisci il catalogo dei permessi e la matrice ruoli → permessi.

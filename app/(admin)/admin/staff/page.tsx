@@ -6,7 +6,7 @@ import { Search, UserCog } from "lucide-react";
 import { Suspense } from "react";
 import StaffTable from "./_components/staff-table";
 
-export const metadata: Metadata = { title: "Staff" };
+export const metadata: Metadata = { title: "Utenti / Gestione Staff" };
 
 async function StaffContent({
   search,
@@ -126,8 +126,12 @@ export default async function AdminStaffPage({
           <UserCog size={18} style={{ color: "var(--admin-accent)" }} />
         </div>
         <div>
-          <h2 className="text-xl font-bold" style={{ color: "var(--admin-text)" }}>Staff</h2>
-          <p className="text-sm mt-0.5" style={{ color: "var(--admin-text-muted)" }}>
+          <h2 className="text-lg font-bold" style={{ color: "var(--admin-text)" }}>
+            <span style={{ color: "var(--admin-text-muted)" }}>Utenti</span>
+            <span style={{ color: "var(--admin-text-faint)" }}> / </span>
+            <span>Gestione Staff</span>
+          </h2>
+          <p className="text-sm mt-0.5" style={{ color: "var(--admin-text-faint)" }}>
             Gestione amministratori
           </p>
         </div>
