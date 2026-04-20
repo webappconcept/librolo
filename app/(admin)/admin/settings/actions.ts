@@ -116,6 +116,25 @@ export async function saveUsersSettings(
 }
 
 // ---------------------------------------------------------------------------
+// Redis / Upstash
+// ---------------------------------------------------------------------------
+export async function saveRedisSettings(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  try {
+    const url = (formData.get('upstash_redis_rest_url') as string ?? '').trim()
+    const token = (formData.get('upstash_redis_rest_token') as string ?? '').trim()
+    await updateAppSetting('upstash_redis_rest_url', url || null)
+    await updateAppSetting('upstash_redis_rest_token', token || null)
+    revalidatePath('/admin/settings')
+    return { success: 'Credenziali Redis salvate.', timestamp: Date.now() }
+  } catch {
+    return { error: 'Errore durante il salvataggio.', timestamp: Date.now() }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Domini bloccati (disposable_domains)
 // ---------------------------------------------------------------------------
 export async function addDisposableDomainAction(
