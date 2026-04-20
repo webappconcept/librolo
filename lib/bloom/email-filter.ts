@@ -1,6 +1,6 @@
 import 'server-only'
 import { Redis } from '@upstash/redis'
-import { db } from '@/lib/db'
+import { db } from '@/lib/db/drizzle'
 import { users } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import type { BloomEmailCheckResult } from './types'

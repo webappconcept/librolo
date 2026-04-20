@@ -1,10 +1,10 @@
 /**
  * Seed script: loads all registered emails from Supabase into the Upstash Bloom filter.
  * Run once after setup or to rebuild the filter:
- *   pnpm tsx scripts/seed-bloom-emails.ts
+ *   pnpm bloom:seed
  */
 import 'dotenv/config'
-import { db } from '@/lib/db'
+import { db } from '@/lib/db/drizzle'
 import { users } from '@/lib/db/schema'
 import { ensureBloomFilter, addEmailsBulkToBloom } from '@/lib/bloom'
 
