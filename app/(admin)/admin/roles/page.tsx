@@ -6,7 +6,7 @@ import { ShieldCheck } from "lucide-react";
 import { Suspense } from "react";
 import { RolesManager } from "./_components/roles-manager";
 
-export const metadata: Metadata = { title: "Ruoli" };
+export const metadata: Metadata = { title: "Utenti / Gestione Ruoli" };
 
 async function RolesContent() {
   const roles = await getAdminRoles();
@@ -30,7 +30,9 @@ export default async function AdminRolesPage() {
         </div>
         <div>
           <h2 className="text-lg font-bold" style={{ color: "var(--admin-text)" }}>
-            Gestione Ruoli
+            <span style={{ color: "var(--admin-text-muted)" }}>Utenti</span>
+            <span style={{ color: "var(--admin-text-faint)" }}> / </span>
+            <span>Gestione Ruoli</span>
           </h2>
           <p className="text-sm mt-0.5" style={{ color: "var(--admin-text-faint)" }}>
             Crea e gestisci i ruoli dell&apos;applicazione. I ruoli di sistema non possono essere eliminati.
