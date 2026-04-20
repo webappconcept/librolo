@@ -61,6 +61,7 @@ export async function saveSenderSettings(
 }
 
 export async function testResendConnection(
+  _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
   try {
@@ -68,19 +69,14 @@ export async function testResendConnection(
     if (!apiKey) {
       return { error: "Inserisci una API key Resend prima di testare.", timestamp: Date.now() };
     }
-
     const response = await fetch("https://api.resend.com/domains", {
       method: "GET",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-      },
+      headers: { Authorization: `Bearer ${apiKey}` },
       cache: "no-store",
     });
-
     if (!response.ok) {
       return { error: `Connessione Resend fallita (${response.status}).`, timestamp: Date.now() };
     }
-
     return { success: "Connessione Resend riuscita.", timestamp: Date.now() };
   } catch {
     return { error: "Impossibile contattare Resend.", timestamp: Date.now() };
@@ -141,16 +137,15 @@ export async function saveRedisSettings(
 }
 
 export async function testRedisConnection(
+  _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
   try {
     const url = ((formData.get("upstash_redis_rest_url") as string | null) ?? "").trim();
     const token = ((formData.get("upstash_redis_rest_token") as string | null) ?? "").trim();
-
     if (!url || !token) {
       return { error: "Inserisci URL e token Redis prima di testare.", timestamp: Date.now() };
     }
-
     const response = await fetch(url, {
       method: "POST",
       headers: {
@@ -160,11 +155,9 @@ export async function testRedisConnection(
       body: JSON.stringify(["PING"]),
       cache: "no-store",
     });
-
     if (!response.ok) {
       return { error: `Connessione Redis fallita (${response.status}).`, timestamp: Date.now() };
     }
-
     return { success: "Connessione Redis riuscita.", timestamp: Date.now() };
   } catch {
     return { error: "Impossibile contattare Redis / Upstash.", timestamp: Date.now() };
