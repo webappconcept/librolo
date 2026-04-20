@@ -17,8 +17,12 @@ export function SenderTab({ settings }: { settings: AppSettings }) {
 }
 
 function SenderTabInner({ settings }: { settings: AppSettings }) {
-  const [state, formAction, isPending] = useActionState<ActionState, FormData>(
+  const [saveState, saveAction, isSaving] = useActionState<ActionState, FormData>(
     saveSenderSettings,
+    {},
+  );
+  const [testState, testAction, isTesting] = useActionState<ActionState, FormData>(
+    testResendConnection,
     {},
   );
   const [toast, setToast] = useState<{
@@ -34,14 +38,19 @@ function SenderTabInner({ settings }: { settings: AppSettings }) {
   const lastTestTs = useRef<number>(0);
 
   useEffect(() => {
-    if (!("timestamp" in state)) return;
-    if (state.timestamp === lastTs.current) return;
-    lastTs.current = state.timestamp;
-    if ("success" in state && state.success)
-      setToast({ message: state.success, type: "success" });
-    if ("error" in state && state.error)
-      setToast({ message: state.error, type: "error" });
-  }, [state]);
+    if (!("timestamp" in testState)) return;
+    if (testState.timestamp === lastTestTs.current) return;
+    lastTestTs.current = testState.timestamp;
+    if ("success" in testState) setToast({ message: testState.success, type: "success" });
+    if ("error" in testState) setToast({ message: testState.error, type: "error" });
+  }, [testState]);
+
+  // Testa usando il valore live dell'input (non ancora salvato)
+  function handleTest() {
+    const fd = new FormData();
+    fd.append("resend_api_key", apiKeyRef.current?.value ?? "");
+    testAction(fd);
+  }
 
   useEffect(() => {
     if (!("timestamp" in testState)) return;
