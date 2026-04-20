@@ -8,7 +8,7 @@ import { Check, Loader2, X } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useActionState, useState } from "react";
-import { signIn, signUp } from "./actions";
+import { checkEmailAction, signIn, signUp } from "./actions";
 
 const passwordRules = [
   {
@@ -52,6 +52,8 @@ export function Login({
 
   const [email, setEmail] = useState("");
   const [emailError, setEmailError] = useState("");
+  const [emailAvailable, setEmailAvailable] = useState(false);
+  const [checkingEmail, setCheckingEmail] = useState(false);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [confirmError, setConfirmError] = useState("");
@@ -60,16 +62,38 @@ export function Login({
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [acceptPrivacy, setAcceptPrivacy] = useState(false);
 
-  const validateEmail = (value: string) => {
+  const validateEmail = async (value: string) => {
     if (!value) {
       setEmailError("");
+      setEmailAvailable(false);
       return;
     }
-    setEmailError(
-      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
-        ? ""
-        : "Inserisci un indirizzo email valido",
-    );
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+      setEmailError("Inserisci un indirizzo email valido");
+      setEmailAvailable(false);
+      return;
+    }
+
+    if (mode !== "signup") {
+      setEmailError("");
+      setEmailAvailable(false);
+      return;
+    }
+
+    setCheckingEmail(true);
+    setEmailAvailable(false);
+
+    try {
+      const result = await checkEmailAction(value);
+      setEmailError(result.error ?? "");
+      setEmailAvailable(Boolean(result.available));
+    } catch {
+      setEmailError("Impossibile verificare l'email in questo momento");
+      setEmailAvailable(false);
+    } finally {
+      setCheckingEmail(false);
+    }
   };
 
   const validateConfirm = (value: string) => {
@@ -100,7 +124,6 @@ export function Login({
     <div className="min-h-dvh flex items-center justify-center px-4 py-12 bg-brand-bg">
       <div className="w-full max-w-md">
         <div className="rounded-2xl p-8 shadow-sm border border-brand-border bg-brand-surface">
-          {/* Header */}
           <div className="mb-6">
             <h1 className="text-2xl font-semibold mb-1 text-brand-text">
               {mode === "signin" ? "Bentornato" : "Crea un account"}
@@ -112,7 +135,6 @@ export function Login({
             </p>
           </div>
 
-          {/* Banner manutenzione — solo sign-in, tra header e form */}
           {mode === "signin" && isMaintenance && (
             <div className="mb-6 rounded-xl px-4 py-3 flex items-start gap-3 bg-amber-50 border border-amber-200">
               <span className="text-lg leading-none mt-0.5">🔧</span>
@@ -141,7 +163,6 @@ export function Login({
               <input type="hidden" name="redirect" value={redirect || ""} />
               <input type="hidden" name="priceId" value={priceId || ""} />
 
-              {/* NOME + COGNOME */}
               {mode === "signup" && (
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
@@ -179,7 +200,6 @@ export function Login({
                 </div>
               )}
 
-              {/* USERNAME — solo signup */}
               {mode === "signup" && (
                 <div className="space-y-1.5">
                   <Label
@@ -229,7 +249,6 @@ export function Login({
                 </div>
               )}
 
-              {/* EMAIL */}
               <div className="space-y-1.5">
                 <Label
                   htmlFor="email"
@@ -244,21 +263,37 @@ export function Login({
                   value={email}
                   onChange={(e) => {
                     setEmail(e.target.value);
-                    validateEmail(e.target.value);
+                    setEmailAvailable(false);
+                    setCheckingEmail(false);
+                    if (emailError) {
+                      setEmailError("");
+                    }
+                  }}
+                  onBlur={(e) => {
+                    void validateEmail(e.target.value);
                   }}
                   required
                   maxLength={50}
                   placeholder="nome@esempio.com"
                   aria-invalid={!!emailError}
                 />
+                {checkingEmail && (
+                  <p className="text-xs flex items-center gap-1 text-brand-text-muted">
+                    <Loader2 className="h-3 w-3 animate-spin" /> Verifica email in corso...
+                  </p>
+                )}
                 {emailError && (
                   <p className="text-xs flex items-center gap-1 text-brand-destructive">
                     <X className="h-3 w-3" /> {emailError}
                   </p>
                 )}
+                {mode === "signup" && email && !emailError && emailAvailable && !checkingEmail && (
+                  <p className="text-xs flex items-center gap-1 text-brand-accent-hover">
+                    <Check className="h-3 w-3" /> Email disponibile
+                  </p>
+                )}
               </div>
 
-              {/* PASSWORD */}
               <div className="space-y-1.5">
                 <Label
                   htmlFor="password"
@@ -318,7 +353,6 @@ export function Login({
                 )}
               </div>
 
-              {/* CONFERMA PASSWORD */}
               {mode === "signup" && (
                 <div className="space-y-1.5">
                   <Label
@@ -370,7 +404,6 @@ export function Login({
                 </div>
               )}
 
-              {/* CHECKBOX TERMINI E PRIVACY — solo signup */}
               {mode === "signup" && (
                 <div className="space-y-3 pt-1">
                   <label className="flex items-start gap-3 cursor-pointer group">
@@ -427,6 +460,8 @@ export function Login({
                 type="submit"
                 disabled={
                   pending ||
+                  checkingEmail ||
+                  !!emailError ||
                   (mode === "signup" && (!acceptTerms || !acceptPrivacy))
                 }
                 className="w-full">
@@ -443,7 +478,6 @@ export function Login({
             </form>
           )}
 
-          {/* FOOTER */}
           <div className="mt-6 text-center">
             <span className="text-sm text-brand-text-muted">
               {mode === "signin"

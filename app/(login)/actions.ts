@@ -1,6 +1,7 @@
 "use server";
 
 import { isDomainBlacklisted, isIpBlacklisted } from "@/lib/auth/blacklist";
+import { addEmailToBloom, checkEmailAvailability, ensureBloomFilter } from "@/lib/bloom/email-filter";
 import {
   validatedAction,
   validatedActionWithUser,
@@ -164,13 +165,9 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
     return { error: "Questo dominio email non è accettato.", email, password };
   }
 
-  const existingUser = await db
-    .select()
-    .from(users)
-    .where(eq(users.email, email))
-    .limit(1);
-
-  if (existingUser.length > 0) {
+  await ensureBloomFilter();
+  const emailAvailability = await checkEmailAvailability(email);
+  if (!emailAvailability.available) {
     return { error: "Questa email è già stata registrata", email, password };
   }
 
@@ -216,6 +213,8 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
     username,
   });
 
+  await addEmailToBloom(createdUser.email);
+
   const code = await createVerificationCode(createdUser.id);
   await sendSignupVerificationEmail(createdUser.email, code, firstName);
   await logActivity(createdUser.id, ActivityType.SIGN_UP);
@@ -230,6 +229,27 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
 
   redirect("/verify-email");
 });
+
+export async function checkEmailAction(email: string) {
+  const normalizedEmail = email.trim().toLowerCase();
+
+  if (!normalizedEmail) {
+    return { available: false, error: "Inserisci un indirizzo email" };
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+    return { available: false, error: "Inserisci un indirizzo email valido" };
+  }
+
+  await ensureBloomFilter();
+  const result = await checkEmailAvailability(normalizedEmail);
+
+  return {
+    available: result.available,
+    checkedViaDb: result.checkedViaDb,
+    error: result.available ? "" : "Questa email è già stata registrata",
+  };
+}
 
 export async function signOut() {
   const user = await getUser();
