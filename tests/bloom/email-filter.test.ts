@@ -4,20 +4,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const mockFetch = vi.fn()
 vi.stubGlobal('fetch', mockFetch)
 
-/**
- * Mock a single redisCommand response (used by nothing now — kept for safety)
- */
-function mockRedisResponse(result: unknown) {
-  mockFetch.mockResolvedValueOnce({
-    ok: true,
-    json: async () => ({ result }),
-  })
-}
-
-/**
- * Mock a pipeline response: returns an array of { result } objects.
- * k = number of SETBIT/GETBIT commands (default: 7, matching BLOOM_K)
- */
 function mockPipelineResponse(results: number[]) {
   mockFetch.mockResolvedValueOnce({
     ok: true,
@@ -25,14 +11,12 @@ function mockPipelineResponse(results: number[]) {
   })
 }
 
-/**
- * Mock a pipeline that returns an HTTP-level error.
- */
 function mockPipelineHttpError(status: number, body: string) {
   mockFetch.mockResolvedValueOnce({
     ok: false,
     status,
     text: async () => body,
+    json: async () => { throw new Error('should not call json on error') },
   })
 }
 
@@ -67,9 +51,8 @@ import {
   ensureBloomFilter,
 } from '@/lib/bloom/email-filter'
 
-// BLOOM_K = 7, so pipeline responses need 7 values
-const ALL_ZEROS = Array(7).fill(0)   // email certainly absent
-const ALL_ONES  = Array(7).fill(1)   // email possibly present
+const ALL_ZEROS = Array(7).fill(0)
+const ALL_ONES  = Array(7).fill(1)
 
 // ─── Tests ─────────────────────────────────────────────────────────────
 describe('Bloom Filter — Email', () => {
@@ -124,14 +107,11 @@ describe('Bloom Filter — Email', () => {
     it('normalizes email to lowercase before hashing', async () => {
       mockPipelineResponse(ALL_ZEROS)
 
-      // We call with uppercase — the pipeline URL must be the /pipeline endpoint
       await checkEmailAvailability('  UTENTE@Example.COM  ')
 
-      // Verify the pipeline endpoint was called (not the single-command endpoint)
       const callUrl = mockFetch.mock.calls[0][0] as string
       expect(callUrl).toMatch(/\/pipeline$/)
 
-      // All 7 GETBIT commands must use the normalized email bits
       const body = JSON.parse(mockFetch.mock.calls[0][1].body) as [string, string, number][]
       expect(body).toHaveLength(7)
       body.forEach((cmd) => {
@@ -150,7 +130,7 @@ describe('Bloom Filter — Email', () => {
       expect(callUrl).toMatch(/\/pipeline$/)
 
       const body = JSON.parse(mockFetch.mock.calls[0][1].body) as unknown[]
-      expect(body).toHaveLength(7) // BLOOM_K = 7
+      expect(body).toHaveLength(7)
     })
   })
 
@@ -174,33 +154,24 @@ describe('Bloom Filter — Email', () => {
       })
     })
 
-    it('normalizes email before setting bits', async () => {
+    it('normalizes email before setting bits (uppercase == lowercase same positions)', async () => {
       mockPipelineResponse(Array(7).fill(0))
-      const spy = vi.spyOn(mockFetch, 'mock' as never)
-
       await addEmailToBloom('UPPER@CASE.COM')
-      await addEmailToBloom('upper@case.com')
-
-      // Both calls should produce the same bit positions
       const body1 = JSON.parse(mockFetch.mock.calls[0][1].body) as [string, string, number, number][]
-      // Second call needs its own mock
-      mockPipelineResponse(Array(7).fill(0))
       const positions1 = body1.map((c) => c[2])
 
-      // Re-call with lowercase to compare
+      mockPipelineResponse(Array(7).fill(0))
       await addEmailToBloom('upper@case.com')
-      const body2 = JSON.parse(mockFetch.mock.calls[2][1].body) as [string, string, number, number][]
+      const body2 = JSON.parse(mockFetch.mock.calls[1][1].body) as [string, string, number, number][]
       const positions2 = body2.map((c) => c[2])
 
       expect(positions1).toEqual(positions2)
-      void spy
     })
   })
 
   // ─── addEmailsBulkToBloom ─────────────────────────────────────────────
   describe('addEmailsBulkToBloom', () => {
     it('sends k*n SETBIT commands for n emails', async () => {
-      // 3 emails × 7 bits = 21 SETBIT commands in one pipeline
       mockPipelineResponse(Array(21).fill(0))
 
       await addEmailsBulkToBloom(['a@b.com', 'c@d.com', 'e@f.com'])
@@ -230,7 +201,6 @@ describe('Bloom Filter — Email', () => {
   // ─── ensureBloomFilter ─────────────────────────────────────────────────
   describe('ensureBloomFilter', () => {
     it('is a no-op (SETBIT auto-creates the key)', async () => {
-      // ensureBloomFilter does nothing — key is created on first SETBIT
       await expect(ensureBloomFilter()).resolves.toBeUndefined()
       expect(mockFetch).not.toHaveBeenCalled()
     })
