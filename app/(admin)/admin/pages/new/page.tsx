@@ -1,0 +1,39 @@
+// app/(admin)/admin/pages/new/page.tsx
+import { getAllPages } from "@/lib/db/pages-queries";
+import { getAllTemplates } from "@/lib/db/template-queries";
+import { getAppSettings } from "@/lib/db/settings-queries";
+import PageEditor from "../_components/page-editor";
+
+export const dynamic = "force-dynamic";
+export const metadata = { title: "New Page" };
+
+export default async function NewPagePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ parentId?: string; templateId?: string; templateLocked?: string }>;
+}) {
+  const [pages, templates, settings, params] = await Promise.all([
+    getAllPages(),
+    getAllTemplates(),
+    getAppSettings(),
+    searchParams,
+  ]);
+
+  const initialParentId = params.parentId ? Number(params.parentId) : null;
+  const initialTemplateId = params.templateId ? Number(params.templateId) : null;
+  const templateLocked = params.templateLocked === "1";
+
+  return (
+    <div className="p-6 max-w-4xl">
+      <PageEditor
+        pages={pages}
+        templates={templates}
+        domain={settings?.app_domain ?? ""}
+        appName={settings?.app_name ?? ""}
+        initialParentId={initialParentId}
+        initialTemplateId={initialTemplateId}
+        templateLocked={templateLocked}
+      />
+    </div>
+  );
+}
