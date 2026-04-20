@@ -117,10 +117,10 @@ export const ADMIN_NAV: NavItem[] = [
     permission: "admin:settings",
     childrenMaxHeight: "320px",
     children: [
-      { href: "/admin/settings/generale",       label: "Generale",      icon: "Settings",         permission: "admin:settings" },
+      { href: "/admin/settings/generale",       label: "Generale",      icon: "Settings",          permission: "admin:settings" },
       { href: "/admin/settings/comportamento",  label: "Comportamento", icon: "SlidersHorizontal", permission: "admin:settings" },
       { href: "/admin/settings/signin",         label: "SignIn",        icon: "LogIn",             permission: "admin:settings" },
-      { href: "/admin/settings/sender",         label: "Sender",        icon: "Send",              permission: "admin:settings" },
+      { href: "/admin/settings/sender",         label: "Resend",        icon: "Send",              permission: "admin:settings" },
       { href: "/admin/settings/email",          label: "Email",         icon: "MailOpen",          permission: "admin:settings" },
       { href: "/admin/settings/contenuti",      label: "Contenuti",     icon: "Code2",             permission: "admin:settings" },
       { href: "/admin/settings/redis",          label: "Redis",         icon: "Database",          permission: "admin:settings" },
