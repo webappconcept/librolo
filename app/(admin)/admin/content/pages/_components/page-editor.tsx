@@ -1,6 +1,7 @@
 "use client";
 
 import { SeoForm } from "@/app/(admin)/admin/seo/_components/seo-form";
+import { getAdminPath } from "@/lib/admin-nav";
 import type {
   Page,
   PageTemplate,
@@ -41,7 +42,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { EditorPageHeader } from "../../_components/editor-page-header";
+import { EditorPageHeader } from "../../../_components/editor-page-header";
 import { upsertPageAction } from "../actions";
 import PlaceholderHint from "./placeholder-hint";
 
@@ -616,7 +617,7 @@ function StrutturaTab({
             }}>
             Nessun template creato.{" "}
             <a
-              href="/admin/template"
+              href={getAdminPath("content-templates")}
               className="underline"
               style={{ color: "var(--admin-accent)" }}>
               Crea un template
@@ -749,7 +750,7 @@ export default function PageEditor({
   useEffect(() => {
     if (!state?.savedAt) return;
     if (!isEdit && state.createdId) {
-      router.replace(`/admin/content-pages/${state.createdId}/edit`);
+      router.replace(`/admin/content/pages/${state.createdId}/edit`);
       return;
     }
     setSavedAt(
@@ -774,6 +775,7 @@ export default function PageEditor({
       TextAlign.configure({ types: ["heading", "paragraph"] }),
     ],
     content: page?.content ?? "",
+    immediatelyRender: false,
     editorProps: { attributes: { class: "tiptap-editor" } },
     onUpdate({ editor }) {
       if (contentRef.current) contentRef.current.value = editor.getHTML();
@@ -868,11 +870,11 @@ export default function PageEditor({
 
         <EditorPageHeader
           breadcrumbs={[
-            { label: "Contenuti", href: "/admin/content-pages" },
+            { label: "Contenuti", href: getAdminPath("content-pages") },
             { label: "Pagine" },
           ]}
           currentLabel={currentLabel}
-          backHref="/admin/content-pages"
+          backHref={getAdminPath("content-pages")}
           saveLabel={isEdit ? "Save" : "Create page"}
           formId={FORM_ID}
           isPending={isPending}

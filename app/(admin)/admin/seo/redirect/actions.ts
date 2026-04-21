@@ -1,5 +1,6 @@
 "use server";
 
+import { getAdminPath } from "@/lib/admin-nav";
 import { deleteRedirect, upsertRedirect } from "@/lib/db/redirects-queries";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -43,7 +44,7 @@ export async function upsertRedirectAction(
       statusCode: Number(statusCode) as 301 | 302 | 307 | 308,
       isActive: isActive === "true",
     });
-    revalidatePath("/admin/seo/redirect");
+    revalidatePath(getAdminPath("seo-redirects"));
   } catch (err) {
     console.error("[upsertRedirectAction]", err);
     return { error: "Errore nel salvataggio." };
@@ -56,7 +57,7 @@ export async function deleteRedirectAction(
 ): Promise<{ error?: string; success?: boolean }> {
   try {
     await deleteRedirect(id);
-    revalidatePath("/admin/seo/redirect");
+    revalidatePath(getAdminPath("seo-redirects"));
   } catch (err) {
     console.error("[deleteRedirectAction]", err);
     return { error: "Errore nell'eliminazione." };

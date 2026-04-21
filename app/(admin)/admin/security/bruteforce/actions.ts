@@ -1,21 +1,17 @@
 "use server";
 
-import { requireAdminPage } from "@/lib/rbac/guards";
+import { getAdminPath } from "@/lib/admin-nav";
 import {
-  getTopOffenders,
-  unblockIp,
   blacklistIp,
-  removeFromBlacklist,
   getBlacklist,
+  getTopOffenders,
+  removeFromBlacklist,
+  unblockIp,
 } from "@/lib/auth/rate-limit";
-import {
-  getAppSettings,
-  updateAppSetting,
-} from "@/lib/db/settings-queries";
+import { getAppSettings, updateAppSetting } from "@/lib/db/settings-queries";
+import { requireAdminPage } from "@/lib/rbac/guards";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-
-const PATH = "/admin/security/bruteforce";
 
 // Validazione IP compatibile con Zod v3
 const ipSchema = z
@@ -48,7 +44,7 @@ export async function actionUnblockIp(formData: FormData) {
   await requireAdminPage();
   const ip = ipSchema.parse(formData.get("ip"));
   await unblockIp(ip);
-  revalidatePath(PATH);
+  revalidatePath(getAdminPath("security-bruteforce"));
   return { ok: true };
 }
 
@@ -57,7 +53,7 @@ export async function actionBlacklistIp(formData: FormData) {
   const ip = ipSchema.parse(formData.get("ip"));
   const reason = (formData.get("reason") as string | null) ?? undefined;
   await blacklistIp(ip, reason);
-  revalidatePath(PATH);
+  revalidatePath(getAdminPath("security-bruteforce"));
   return { ok: true };
 }
 
@@ -65,7 +61,7 @@ export async function actionRemoveFromBlacklist(formData: FormData) {
   await requireAdminPage();
   const ip = ipSchema.parse(formData.get("ip"));
   await removeFromBlacklist(ip);
-  revalidatePath(PATH);
+  revalidatePath(getAdminPath("security-bruteforce"));
   return { ok: true };
 }
 
@@ -89,10 +85,19 @@ export async function actionUpdateBruteforceConfig(formData: FormData) {
   }
   await Promise.all([
     updateAppSetting("bf_max_attempts", String(parsed.data.bf_max_attempts)),
-    updateAppSetting("bf_window_minutes", String(parsed.data.bf_window_minutes)),
-    updateAppSetting("bf_lockout_minutes", String(parsed.data.bf_lockout_minutes)),
-    updateAppSetting("bf_alert_threshold", String(parsed.data.bf_alert_threshold)),
+    updateAppSetting(
+      "bf_window_minutes",
+      String(parsed.data.bf_window_minutes),
+    ),
+    updateAppSetting(
+      "bf_lockout_minutes",
+      String(parsed.data.bf_lockout_minutes),
+    ),
+    updateAppSetting(
+      "bf_alert_threshold",
+      String(parsed.data.bf_alert_threshold),
+    ),
   ]);
-  revalidatePath(PATH);
+  revalidatePath(getAdminPath("security-bruteforce"));
   return { ok: true };
 }

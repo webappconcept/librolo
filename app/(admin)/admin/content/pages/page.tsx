@@ -1,4 +1,3 @@
-// app/(admin)/admin/content/page.tsx
 import { getAllPages } from "@/lib/db/pages-queries";
 import { getAppSettings } from "@/lib/db/settings-queries";
 import { getAllTemplates } from "@/lib/db/template-queries";

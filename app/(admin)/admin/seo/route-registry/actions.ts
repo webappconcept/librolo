@@ -1,5 +1,6 @@
 "use server";
 
+import { getAdminPath } from "@/lib/admin-nav";
 import {
   createRoute,
   deleteRoute,
@@ -11,8 +12,6 @@ import type { RouteVisibility } from "@/lib/db/schema";
 import { requireAdmin } from "@/lib/rbac/guards";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-
-const REVALIDATE = "/admin/seo/route-registry";
 
 const schema = z.object({
   id: z.uuid({ message: "ID not valid" }).optional(),
@@ -50,7 +49,7 @@ export async function upsertRouteAction(
   try {
     if (id) await updateRoute(id, data);
     else await createRoute(data);
-    revalidatePath(REVALIDATE);
+    revalidatePath(getAdminPath("seo-registry"));
   } catch (err) {
     const msg = err instanceof Error ? err.message : "";
     if (msg.includes("unique") || msg.includes("duplicate"))
@@ -72,7 +71,7 @@ export async function deleteRouteAction(id: string): Promise<ActionResult> {
     }
 
     await deleteRoute(id);
-    revalidatePath(REVALIDATE);
+    revalidatePath(getAdminPath("seo-registry"));
   } catch (err) {
     console.error("[deleteRouteAction]", err);
     return { error: "Error while deleting." };
@@ -87,7 +86,7 @@ export async function toggleRouteActiveAction(
   await requireAdmin();
   try {
     await toggleRouteActive(id, isActive);
-    revalidatePath(REVALIDATE);
+    revalidatePath(getAdminPath("seo-registry"));
   } catch (err) {
     console.error("[toggleRouteActiveAction]", err);
     return { error: "Error while updating." };

@@ -3,6 +3,7 @@
  */
 
 export interface NavChild {
+  key: string; // Aggiunta key obbligatoria per i figli
   href: string;
   label: string;
   icon: string;
@@ -32,54 +33,60 @@ export const ADMIN_NAV: NavItem[] = [
     exact: true,
   },
   {
-    key: "users",
-    label: "Utenti",
+    key: "users-group",
+    label: "Access",
     icon: "Users",
     permission: "admin:users",
     childrenMaxHeight: "260px",
     children: [
       {
+        key: "users-list",
         href: "/admin/users",
-        label: "Gestione Utenti",
+        label: "Users",
         icon: "Users",
         permission: "admin:users",
       },
       {
+        key: "users-staff",
         href: "/admin/staff",
-        label: "Gestione Staff",
+        label: "Staff",
         icon: "UserCog",
         permission: "admin:staff",
       },
       {
+        key: "users-roles",
         href: "/admin/roles",
-        label: "Gestione Ruoli",
+        label: "Roles",
         icon: "ShieldCheck",
         permission: "admin:roles",
       },
       {
+        key: "users-permissions",
         href: "/admin/permissions",
-        label: "Permessi",
+        label: "Permissions",
         icon: "KeyRound",
         permission: "admin:roles",
       },
     ],
   },
   {
-    key: "content",
+    key: "content-group",
     label: "Content",
     icon: "Layers",
     permission: "admin:content",
     childrenMaxHeight: "120px",
     children: [
       {
-        href: "/admin/content-pages",
+        key: "content-pages",
+        href: "/admin/content/pages",
         label: "Pages",
         icon: "FileText",
         permission: "admin:content",
       },
       {
-        href: "/admin/template",
-        label: "Template",
+        key: "content-templates",
+        href: "/admin/content/templates",
+        label: "Templates",
         icon: "PanelTop",
         permission: "admin:content",
       },
@@ -95,30 +102,33 @@ export const ADMIN_NAV: NavItem[] = [
   {
     key: "moderation",
     href: "/admin/moderation",
-    label: "Moderazione",
+    label: "Moderation",
     icon: "ShieldAlert",
     permission: "admin:moderation",
   },
   {
-    key: "security",
-    label: "Sicurezza",
+    key: "security-group",
+    label: "Security",
     icon: "Lock",
     permission: "admin:security",
     childrenMaxHeight: "180px",
     children: [
       {
+        key: "security-bruteforce",
         href: "/admin/security/bruteforce",
         label: "Bruteforce",
         icon: "ShieldBan",
         permission: "admin:security",
       },
       {
+        key: "security-ip-rules",
         href: "/admin/security/ip-rules",
         label: "Regole IP",
         icon: "ListFilter",
         permission: "admin:security",
       },
       {
+        key: "security-blocked-domains",
         href: "/admin/security/blocked-domains",
         label: "Domini Bloccati",
         icon: "Globe",
@@ -127,44 +137,49 @@ export const ADMIN_NAV: NavItem[] = [
     ],
   },
   {
-    key: "billing",
-    label: "Billing & Pagamenti",
+    key: "billing-group",
+    label: "Billing & Payment",
     icon: "CreditCard",
     permission: "admin:billing",
     comingSoon: true,
     childrenMaxHeight: "220px",
     children: [
       {
+        key: "billing-overview",
         href: "/admin/billing",
-        label: "Panoramica",
+        label: "General",
         icon: "LayoutDashboard",
         permission: "admin:billing",
         comingSoon: true,
       },
       {
+        key: "billing-plans",
         href: "/admin/billing/plans",
-        label: "Piani",
+        label: "Plans",
         icon: "PackageCheck",
         permission: "billing:manage_plans",
         comingSoon: true,
       },
       {
+        key: "billing-transactions",
         href: "/admin/billing/transactions",
-        label: "Transazioni",
+        label: "Transactions",
         icon: "ArrowLeftRight",
         permission: "billing:view_transactions",
         comingSoon: true,
       },
       {
+        key: "billing-subscriptions",
         href: "/admin/billing/subscriptions",
-        label: "Abbonamenti",
+        label: "Membership",
         icon: "RefreshCcw",
         permission: "subscriptions:manage",
         comingSoon: true,
       },
       {
+        key: "billing-gateways",
         href: "/admin/billing/gateways",
-        label: "Gateway (Stripe…)",
+        label: "Gateway",
         icon: "Plug",
         permission: "billing:manage_gateways",
         comingSoon: true,
@@ -172,37 +187,42 @@ export const ADMIN_NAV: NavItem[] = [
     ],
   },
   {
-    key: "seo",
+    key: "seo-group",
     label: "SEO",
     icon: "Search",
     permission: "admin:seo",
     childrenMaxHeight: "240px",
     children: [
       {
+        key: "seo-meta",
         href: "/admin/seo/meta-tags",
         label: "Meta Tags",
         icon: "FileText",
         permission: "admin:seo",
       },
       {
+        key: "seo-robots",
         href: "/admin/seo/robots",
         label: "Robots",
         icon: "Globe",
         permission: "admin:seo",
       },
       {
+        key: "seo-sitemap",
         href: "/admin/seo/sitemap",
         label: "Sitemap",
         icon: "Map",
         permission: "admin:seo",
       },
       {
+        key: "seo-redirects",
         href: "/admin/seo/redirect",
         label: "Redirect",
         icon: "GitMerge",
         permission: "admin:seo",
       },
       {
+        key: "seo-registry",
         href: "/admin/seo/route-registry",
         label: "Route Registry",
         icon: "Map",
@@ -211,49 +231,56 @@ export const ADMIN_NAV: NavItem[] = [
     ],
   },
   {
-    key: "settings",
-    label: "Impostazioni",
+    key: "settings-group",
+    label: "Settings",
     icon: "Settings",
     permission: "admin:settings",
     childrenMaxHeight: "320px",
     children: [
       {
+        key: "settings-general",
         href: "/admin/settings/generale",
-        label: "Generale",
+        label: "General",
         icon: "Settings",
         permission: "admin:settings",
       },
       {
+        key: "settings-behavior",
         href: "/admin/settings/comportamento",
         label: "Comportamento",
         icon: "SlidersHorizontal",
         permission: "admin:settings",
       },
       {
+        key: "settings-signin",
         href: "/admin/settings/signin",
         label: "SignIn",
         icon: "LogIn",
         permission: "admin:settings",
       },
       {
+        key: "settings-sender",
         href: "/admin/settings/sender",
         label: "Resend",
         icon: "Send",
         permission: "admin:settings",
       },
       {
+        key: "settings-email",
         href: "/admin/settings/email",
         label: "Email",
         icon: "MailOpen",
         permission: "admin:settings",
       },
       {
+        key: "settings-content",
         href: "/admin/settings/contenuti",
-        label: "Contenuti",
+        label: "Content",
         icon: "Code2",
         permission: "admin:settings",
       },
       {
+        key: "settings-redis",
         href: "/admin/settings/redis",
         label: "Redis",
         icon: "Database",
@@ -271,8 +298,32 @@ export const ADMIN_NAV: NavItem[] = [
   {
     key: "logs",
     href: "/admin/logs",
-    label: "Log attività",
+    label: "Activity Logs",
     icon: "ClipboardList",
     permission: "admin:logs",
   },
 ];
+
+/**
+ * Trova l'HREF nel registro di navigazione in base alla sua chiave univoca.
+ * Scansiona ricorsivamente i link principali e i figli.
+ */
+export function getAdminPath(key: string): string {
+  for (const item of ADMIN_NAV) {
+    // Caso 1: È un link principale (es. dashboard, analytics)
+    if (item.key === key && item.href) {
+      return item.href;
+    }
+
+    // Caso 2: È un gruppo con figli (es. seo, settings)
+    if (item.children) {
+      const child = item.children.find((c) => c.key === key);
+      if (child) return child.href;
+    }
+  }
+
+  // Fallback se la chiave non esiste: restituisce la dashboard
+  // Utile per evitare crash se si sbaglia a scrivere una key in sviluppo
+  console.warn(`[getAdminPath] Key "${key}" not found in ADMIN_NAV registry.`);
+  return "/admin";
+}

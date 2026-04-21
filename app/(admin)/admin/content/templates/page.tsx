@@ -1,4 +1,4 @@
-// app/(admin)/admin/template/page.tsx
+import { getAdminPath } from "@/lib/admin-nav";
 import { getAllTemplatesWithPageCount } from "@/lib/db/template-queries";
 import { Copy, PanelTop, Plus } from "lucide-react";
 import type { Metadata } from "next";
@@ -6,14 +6,14 @@ import Link from "next/link";
 import DeleteTemplateButton from "./_components/delete-template-button";
 import { duplicateTemplateAction } from "./actions";
 
-export const metadata: Metadata = { title: "Content / Template" };
+export const metadata: Metadata = { title: "Content / Templates" };
 export const dynamic = "force-dynamic";
 
 export default async function TemplatePage() {
   const templates = await getAllTemplatesWithPageCount();
 
   return (
-    <div className="p-4 sm:p-6 max-w-5xl">
+    <div className="">
       <div className="flex items-start justify-between gap-3 mb-6">
         <div className="flex items-start gap-3 min-w-0">
           <div
@@ -32,22 +32,22 @@ export default async function TemplatePage() {
               style={{ color: "var(--admin-text)" }}>
               <span style={{ color: "var(--admin-text-muted)" }}>Content</span>
               <span style={{ color: "var(--admin-text-faint)" }}> / </span>
-              <span>Template</span>
+              <span>Templates</span>
             </h1>
             <p
               className="text-sm mt-0.5"
               style={{ color: "var(--admin-text-faint)" }}>
-              Definisci i layout grafici riutilizzabili per le pagine del sito
+              Define layout and custom fields for each Page
             </p>
           </div>
         </div>
         <Link
-          href="/admin/template/nuovo"
+          href={getAdminPath("content-templates")}
           className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-sm font-medium text-white shrink-0"
           style={{ background: "var(--admin-accent)" }}>
           <Plus size={16} />
-          <span className="hidden sm:inline">Nuovo template</span>
-          <span className="sm:hidden">Nuovo</span>
+          <span className="hidden sm:inline">New template</span>
+          <span className="sm:hidden">New</span>
         </Link>
       </div>
 
@@ -64,18 +64,18 @@ export default async function TemplatePage() {
             className="mb-4"
           />
           <p className="font-semibold" style={{ color: "var(--admin-text)" }}>
-            Nessun template
+            no templates
           </p>
           <p
             className="text-sm mt-1"
             style={{ color: "var(--admin-text-muted)" }}>
-            Crea il tuo primo template grafico per le pagine del sito
+            Create your first Template for your Pages
           </p>
           <Link
-            href="/admin/template/nuovo"
+            href={`${getAdminPath("content-templates")}/nuovo`}
             className="mt-6 px-4 py-2 rounded-lg text-sm font-medium text-white"
             style={{ background: "var(--admin-accent)" }}>
-            Crea template
+            Create Template
           </Link>
         </div>
       ) : (
@@ -126,7 +126,7 @@ export default async function TemplatePage() {
                             className="text-xs"
                             style={{ color: "var(--admin-text-muted)" }}>
                             {tpl.pageCount}{" "}
-                            {tpl.pageCount === 1 ? "pagina" : "pagine"}
+                            {tpl.pageCount === 1 ? "page" : "pages"}
                           </p>
                         </>
                       )}
@@ -144,21 +144,21 @@ export default async function TemplatePage() {
 
                 <div className="flex items-center gap-2 mt-4">
                   <Link
-                    href={`/admin/template/${tpl.id}`}
+                    href={`${getAdminPath("content-templates")}/${tpl.id}`}
                     className="flex-1 text-center text-xs font-medium py-1.5 rounded-lg transition-colors"
                     style={{
                       background: "var(--admin-input-bg)",
                       color: "var(--admin-text)",
-                      border: "1px solid var(--admin-border)",
+                      border: "1px solid var(--admin-input-border)",
                     }}>
-                    Modifica
+                    Edit
                   </Link>
 
                   <form action={duplicateTemplateAction}>
                     <input type="hidden" name="id" value={tpl.id} />
                     <button
                       type="submit"
-                      title="Duplica template"
+                      title="Duplicate Template"
                       className="p-1.5 rounded-lg transition-colors"
                       style={{
                         color: "var(--admin-text-muted)",

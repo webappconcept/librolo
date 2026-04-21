@@ -1,5 +1,6 @@
 "use server";
 
+import { getAdminPath } from "@/lib/admin-nav";
 import { logContentActivity } from "@/lib/db/content-activity";
 import {
   deletePageCascade,
@@ -132,12 +133,12 @@ export async function upsertPageAction(
       });
     }
 
-    revalidatePath("/admin/pages");
+    revalidatePath(getAdminPath("content-pages"));
     revalidatePath(`/${data.slug}`);
     if (slugChanged) {
       revalidatePath(`/${originalSlug}`);
-      revalidatePath("/admin/seo/meta-tags");
-      revalidatePath("/admin/redirect");
+      revalidatePath(getAdminPath("seo-meta"));
+      revalidatePath(getAdminPath("seo-redirects"));
     }
 
     // ── Activity log ──────────────────────────────────────────────────────────
@@ -175,9 +176,9 @@ export async function deletePageAction(
     const deleted = await deletePageCascade(slug);
     await deleteSeoPage(`/${slug}`);
 
-    revalidatePath("/admin/pages");
+    revalidatePath(getAdminPath("content-pages"));
     revalidatePath(`/${slug}`);
-    revalidatePath("/admin/seo/meta-tags");
+    revalidatePath(getAdminPath("seo-meta"));
 
     const user = await getUser();
     await logContentActivity(
@@ -203,7 +204,7 @@ export async function togglePageStatusAction(
 ): Promise<{ error?: string; success?: boolean }> {
   try {
     await togglePageStatus(id, currentStatus);
-    revalidatePath("/admin/pages");
+    revalidatePath(getAdminPath("content-pages"));
 
     const user = await getUser();
     const nextStatus = currentStatus === "published" ? "draft" : "published";

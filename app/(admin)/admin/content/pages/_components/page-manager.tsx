@@ -2,6 +2,7 @@
 
 import ConfirmModal from "@/app/(admin)/admin/_components/confirm-modal";
 import Tooltip from "@/app/(admin)/admin/_components/tooltip";
+import { getAdminPath } from "@/lib/admin-nav";
 import type { Page, PageTemplate } from "@/lib/db/schema";
 import {
   ChevronLeft,
@@ -833,7 +834,7 @@ export default function PageManager({
   function handleNewChild(parentId: number) {
     const parent = initialPages.find((p) => p.id === parentId);
     if (!parent) {
-      router.push(`/admin/content-pages/new?parentId=${parentId}`);
+      router.push(`${getAdminPath("content-pages")}/new?parentId=${parentId}`);
       return;
     }
 
@@ -843,12 +844,12 @@ export default function PageManager({
     const allowedIds = getAllowedChildIds(parentTemplate);
 
     if (allowedIds.length === 0) {
-      router.push(`/admin/content-pages/new?parentId=${parentId}`);
+      router.push(`${getAdminPath("content-pages")}/new?parentId=${parentId}`);
       return;
     }
     if (allowedIds.length === 1) {
       router.push(
-        `/admin/content-pages/new?parentId=${parentId}&templateId=${allowedIds[0]}&templateLocked=1`,
+        `${getAdminPath("content-pages")}/new?parentId=${parentId}&templateId=${allowedIds[0]}&templateLocked=1`,
       );
       return;
     }
@@ -861,7 +862,7 @@ export default function PageManager({
     if (!pickerParent) return;
     setPickerParent(null);
     router.push(
-      `/admin/content-pages/new?parentId=${pickerParent.id}&templateId=${templateId}&templateLocked=1`,
+      `${getAdminPath("content-pages")}/new?parentId=${pickerParent.id}&templateId=${templateId}&templateLocked=1`,
     );
   }
 
@@ -944,7 +945,7 @@ export default function PageManager({
           </button>
         )}
         <button
-          onClick={() => router.push("/admin/content-pages/new")}
+          onClick={() => router.push(`${getAdminPath("content-pages")}/new`)}
           className="flex items-center gap-2 px-4 py-2 text-sm text-white rounded-lg font-medium transition-colors"
           style={{ background: "var(--admin-accent)" }}
           onMouseEnter={(e) =>
@@ -985,7 +986,9 @@ export default function PageManager({
               depth={0}
               expandedIds={expandedIds}
               toggleExpand={toggleExpand}
-              onEdit={(id) => router.push(`/admin/content-pages/${id}/edit`)}
+              onEdit={(id) =>
+                router.push(`${getAdminPath("content-pages")}/${id}/edit`)
+              }
               onDeleteRequest={setDeleteTarget}
               onNewChild={handleNewChild}
               onToggleStatus={handleToggleStatus}
