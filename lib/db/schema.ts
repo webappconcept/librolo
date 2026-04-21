@@ -21,7 +21,9 @@ export const users = pgTable("users", {
   bannedReason: varchar("banned_reason", { length: 255 }),
   emailVerified: boolean("email_verified").notNull().default(false),
   acceptedTermsAt: timestamp("accepted_terms_at"),
+  acceptedTermsVersion: text("accepted_terms_version"),
   acceptedPrivacyAt: timestamp("accepted_privacy_at"),
+  acceptedPrivacyVersion: text("accepted_privacy_version"),
   acceptedMarketingAt: timestamp("accepted_marketing_at"),
   acceptedMarketingVersion: text("accepted_marketing_version"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -313,10 +315,6 @@ export const seoPages = pgTable("seo_pages", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// ---------------------------------------------------------------------------
-// Route Registry — fonte di verità per tutte le route pubbliche/private del sito.
-// Usata da: proxy.ts (middleware auth), SEO meta-tags (select pagine).
-// ---------------------------------------------------------------------------
 export const routeVisibility = [
   "public",
   "private",
@@ -338,9 +336,6 @@ export const routeRegistry = pgTable("route_registry", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-// ---------------------------------------------------------------------------
-// Disposable domains — domini email usa e getta bloccati alla registrazione
-// ---------------------------------------------------------------------------
 export const disposableDomains = pgTable("disposable_domains", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   domain: varchar("domain", { length: 255 }).notNull().unique(),
@@ -349,9 +344,6 @@ export const disposableDomains = pgTable("disposable_domains", {
 
 export type DisposableDomain = typeof disposableDomains.$inferSelect;
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type UserProfile = typeof userProfiles.$inferSelect;
@@ -359,7 +351,6 @@ export type NewUserProfile = typeof userProfiles.$inferInsert;
 export type UserSubscription = typeof userSubscriptions.$inferSelect;
 export type NewUserSubscription = typeof userSubscriptions.$inferInsert;
 
-/** Tipo "idratato" usato ovunque si ha bisogno di user + profilo + subscription */
 export type UserWithProfile = User & {
   firstName: string | null;
   lastName: string | null;

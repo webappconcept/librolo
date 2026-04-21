@@ -25,6 +25,8 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+const TERMS_CONSENT_VERSION = "2026-04";
+const PRIVACY_CONSENT_VERSION = "2026-04";
 const MARKETING_CONSENT_VERSION = "2026-04";
 
 async function logActivity(
@@ -174,7 +176,6 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
     return { error: "Questa email è già stata registrata", email, password };
   }
 
-  // Verifica unicità username
   const existingUsername = await db
     .select({ id: userProfiles.id })
     .from(userProfiles)
@@ -196,11 +197,11 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
       passwordHash,
       role: defaultRole,
       acceptedTermsAt: now,
+      acceptedTermsVersion: TERMS_CONSENT_VERSION,
       acceptedPrivacyAt: now,
-      acceptedMarketingAt:
-        data.acceptMarketing === "on" ? now : null,
-      acceptedMarketingVersion:
-        data.acceptMarketing === "on" ? MARKETING_CONSENT_VERSION : null,
+      acceptedPrivacyVersion: PRIVACY_CONSENT_VERSION,
+      acceptedMarketingAt: data.acceptMarketing === "on" ? now : null,
+      acceptedMarketingVersion: data.acceptMarketing === "on" ? MARKETING_CONSENT_VERSION : null,
     })
     .returning();
 
@@ -212,7 +213,6 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
     };
   }
 
-  // Crea profilo con username
   await db.insert(userProfiles).values({
     userId: createdUser.id,
     firstName,
