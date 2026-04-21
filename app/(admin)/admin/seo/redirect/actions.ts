@@ -31,7 +31,8 @@ export async function upsertRedirectAction(
   };
 
   const parsed = schema.safeParse(raw);
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Dati non validi" };
+  if (!parsed.success)
+    return { error: parsed.error.issues[0]?.message ?? "Dati non validi" };
 
   const { id, statusCode, isActive, ...rest } = parsed.data;
 
@@ -42,7 +43,7 @@ export async function upsertRedirectAction(
       statusCode: Number(statusCode) as 301 | 302 | 307 | 308,
       isActive: isActive === "true",
     });
-    revalidatePath("/admin/redirect");
+    revalidatePath("/admin/seo/redirect");
   } catch (err) {
     console.error("[upsertRedirectAction]", err);
     return { error: "Errore nel salvataggio." };
