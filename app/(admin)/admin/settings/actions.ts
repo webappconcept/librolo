@@ -1,9 +1,9 @@
 "use server";
 
-import { updateAppSetting } from "@/lib/db/settings-queries";
 import { db } from "@/lib/db/drizzle";
-import { siteSnippets, disposableDomains } from "@/lib/db/schema";
 import type { SiteSnippet } from "@/lib/db/schema";
+import { disposableDomains, siteSnippets } from "@/lib/db/schema";
+import { updateAppSetting } from "@/lib/db/settings-queries";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -17,12 +17,15 @@ export async function saveAppSettings(
   formData: FormData,
 ): Promise<ActionState> {
   try {
-    const domain = (formData.get("app_domain") as string ?? "")
+    const domain = ((formData.get("app_domain") as string) ?? "")
       .trim()
       .replace(/^https?:\/\//i, "")
       .replace(/\/$/, "");
     await updateAppSetting("app_name", formData.get("app_name") as string);
-    await updateAppSetting("app_description", formData.get("app_description") as string);
+    await updateAppSetting(
+      "app_description",
+      formData.get("app_description") as string,
+    );
     await updateAppSetting("app_domain", domain ? `https://${domain}` : "");
     revalidatePath("/admin/settings");
     return { success: "Impostazioni salvate.", timestamp: Date.now() };
@@ -31,15 +34,24 @@ export async function saveAppSettings(
   }
 }
 
-export async function saveBehaviourSettings(
+export async function saveModeSettings(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
   try {
-    await updateAppSetting("registrations_enabled", formData.get("registrations_enabled") as string);
-    await updateAppSetting("maintenance_mode", formData.get("maintenance_mode") as string);
+    await updateAppSetting(
+      "registrations_enabled",
+      formData.get("registrations_enabled") as string,
+    );
+    await updateAppSetting(
+      "maintenance_mode",
+      formData.get("maintenance_mode") as string,
+    );
     revalidatePath("/admin/settings");
-    return { success: "Impostazioni comportamento salvate.", timestamp: Date.now() };
+    return {
+      success: "Impostazioni comportamento salvate.",
+      timestamp: Date.now(),
+    };
   } catch {
     return { error: "Errore durante il salvataggio.", timestamp: Date.now() };
   }
@@ -50,9 +62,18 @@ export async function saveSenderSettings(
   formData: FormData,
 ): Promise<ActionState> {
   try {
-    await updateAppSetting("resend_api_key", formData.get("resend_api_key") as string);
-    await updateAppSetting("email_from_name", formData.get("email_from_name") as string);
-    await updateAppSetting("email_from_address", formData.get("email_from_address") as string);
+    await updateAppSetting(
+      "resend_api_key",
+      formData.get("resend_api_key") as string,
+    );
+    await updateAppSetting(
+      "email_from_name",
+      formData.get("email_from_name") as string,
+    );
+    await updateAppSetting(
+      "email_from_address",
+      formData.get("email_from_address") as string,
+    );
     revalidatePath("/admin/settings");
     return { success: "Impostazioni Resend salvate.", timestamp: Date.now() };
   } catch {
@@ -65,9 +86,14 @@ export async function testResendConnection(
   formData: FormData,
 ): Promise<ActionState> {
   try {
-    const apiKey = ((formData.get("resend_api_key") as string | null) ?? "").trim();
+    const apiKey = (
+      (formData.get("resend_api_key") as string | null) ?? ""
+    ).trim();
     if (!apiKey) {
-      return { error: "Inserisci una API key Resend prima di testare.", timestamp: Date.now() };
+      return {
+        error: "Inserisci una API key Resend prima di testare.",
+        timestamp: Date.now(),
+      };
     }
     const response = await fetch("https://api.resend.com/domains", {
       method: "GET",
@@ -75,7 +101,10 @@ export async function testResendConnection(
       cache: "no-store",
     });
     if (!response.ok) {
-      return { error: `Connessione Resend fallita (${response.status}).`, timestamp: Date.now() };
+      return {
+        error: `Connessione Resend fallita (${response.status}).`,
+        timestamp: Date.now(),
+      };
     }
     return { success: "Connessione Resend riuscita.", timestamp: Date.now() };
   } catch {
@@ -91,10 +120,22 @@ export async function saveEmailTemplateSettings(
 ): Promise<ActionState> {
   try {
     const keys = [
-      "email_welcome_subject", "email_welcome_bcc", "email_welcome_body", "email_welcome_footer",
-      "email_signup_subject",  "email_signup_bcc",  "email_signup_body",  "email_signup_footer",
-      "email_reset_subject",   "email_reset_bcc",   "email_reset_body",   "email_reset_footer",
-      "email_deleted_subject", "email_deleted_bcc", "email_deleted_body", "email_deleted_footer",
+      "email_welcome_subject",
+      "email_welcome_bcc",
+      "email_welcome_body",
+      "email_welcome_footer",
+      "email_signup_subject",
+      "email_signup_bcc",
+      "email_signup_body",
+      "email_signup_footer",
+      "email_reset_subject",
+      "email_reset_bcc",
+      "email_reset_body",
+      "email_reset_footer",
+      "email_deleted_subject",
+      "email_deleted_bcc",
+      "email_deleted_body",
+      "email_deleted_footer",
     ] as const;
     for (const key of keys) {
       const val = (formData.get(key) as string | null) ?? "";
@@ -112,7 +153,10 @@ export async function saveUsersSettings(
   formData: FormData,
 ): Promise<ActionState> {
   try {
-    await updateAppSetting("default_role", formData.get("default_role") as string);
+    await updateAppSetting(
+      "default_role",
+      formData.get("default_role") as string,
+    );
     revalidatePath("/admin/settings");
     return { success: "Impostazioni utenti salvate.", timestamp: Date.now() };
   } catch {
@@ -125,8 +169,12 @@ export async function saveRedisSettings(
   formData: FormData,
 ): Promise<ActionState> {
   try {
-    const url = (formData.get("upstash_redis_rest_url") as string ?? "").trim();
-    const token = (formData.get("upstash_redis_rest_token") as string ?? "").trim();
+    const url = (
+      (formData.get("upstash_redis_rest_url") as string) ?? ""
+    ).trim();
+    const token = (
+      (formData.get("upstash_redis_rest_token") as string) ?? ""
+    ).trim();
     await updateAppSetting("upstash_redis_rest_url", url || null);
     await updateAppSetting("upstash_redis_rest_token", token || null);
     revalidatePath("/admin/settings");
@@ -141,10 +189,17 @@ export async function testRedisConnection(
   formData: FormData,
 ): Promise<ActionState> {
   try {
-    const url = ((formData.get("upstash_redis_rest_url") as string | null) ?? "").trim();
-    const token = ((formData.get("upstash_redis_rest_token") as string | null) ?? "").trim();
+    const url = (
+      (formData.get("upstash_redis_rest_url") as string | null) ?? ""
+    ).trim();
+    const token = (
+      (formData.get("upstash_redis_rest_token") as string | null) ?? ""
+    ).trim();
     if (!url || !token) {
-      return { error: "Inserisci URL e token Redis prima di testare.", timestamp: Date.now() };
+      return {
+        error: "Inserisci URL e token Redis prima di testare.",
+        timestamp: Date.now(),
+      };
     }
     const response = await fetch(url, {
       method: "POST",
@@ -156,11 +211,17 @@ export async function testRedisConnection(
       cache: "no-store",
     });
     if (!response.ok) {
-      return { error: `Connessione Redis fallita (${response.status}).`, timestamp: Date.now() };
+      return {
+        error: `Connessione Redis fallita (${response.status}).`,
+        timestamp: Date.now(),
+      };
     }
     return { success: "Connessione Redis riuscita.", timestamp: Date.now() };
   } catch {
-    return { error: "Impossibile contattare Redis / Upstash.", timestamp: Date.now() };
+    return {
+      error: "Impossibile contattare Redis / Upstash.",
+      timestamp: Date.now(),
+    };
   }
 }
 
@@ -205,22 +266,22 @@ export async function bulkImportDisposableDomainsAction(
       .map((d) => d.trim().toLowerCase())
       .filter(Boolean)
       .map((domain) => ({ domain }));
-    await db
-      .insert(disposableDomains)
-      .values(values)
-      .onConflictDoNothing();
+    await db.insert(disposableDomains).values(values).onConflictDoNothing();
     revalidatePath("/admin/settings");
     return {
       success: `${values.length} domini importati con successo.`,
       timestamp: Date.now(),
     };
   } catch {
-    return { error: "Errore durante l'importazione bulk.", timestamp: Date.now() };
+    return {
+      error: "Errore durante l'importazione bulk.",
+      timestamp: Date.now(),
+    };
   }
 }
 
 export const saveGeneralSettingsAction = saveAppSettings;
-export const saveBehaviourSettingsAction = saveBehaviourSettings;
+export const saveModeSettingsAction = saveModeSettings;
 export const saveEmailSettingsAction = saveSenderSettings;
 export const saveUsersSettingsAction = saveUsersSettings;
 

@@ -245,9 +245,9 @@ export const ADMIN_NAV: NavItem[] = [
         permission: "admin:settings",
       },
       {
-        key: "settings-behavior",
-        href: "/admin/settings/comportamento",
-        label: "Comportamento",
+        key: "settings-mode",
+        href: "/admin/settings/mode",
+        label: "Operation Mode",
         icon: "SlidersHorizontal",
         permission: "admin:settings",
       },

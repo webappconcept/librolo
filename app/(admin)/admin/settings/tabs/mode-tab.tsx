@@ -1,4 +1,3 @@
-// app/(admin)/admin/settings/tabs/behaviour-tab.tsx
 "use client";
 
 import { AdminToast } from "@/app/(admin)/admin/_components/toast";
@@ -6,17 +5,17 @@ import type { AppSettings } from "@/lib/db/settings-queries";
 import { Loader2, Save } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useActionState, useEffect, useRef, useState } from "react";
-import { saveBehaviourSettings, type ActionState } from "../actions";
+import { saveModeSettings, type ActionState } from "../actions";
 import { SettingToggle } from "../toggles";
 
-export function BehaviourTab({ settings }: { settings: AppSettings }) {
+export function ModeTab({ settings }: { settings: AppSettings }) {
   const pathname = usePathname();
-  return <BehaviourTabInner key={pathname} settings={settings} />;
+  return <ModeTabInner key={pathname} settings={settings} />;
 }
 
-function BehaviourTabInner({ settings }: { settings: AppSettings }) {
+function ModeTabInner({ settings }: { settings: AppSettings }) {
   const [state, formAction, isPending] = useActionState<ActionState, FormData>(
-    saveBehaviourSettings,
+    saveModeSettings,
     {},
   );
   const [toast, setToast] = useState<{
@@ -47,7 +46,7 @@ function BehaviourTabInner({ settings }: { settings: AppSettings }) {
           <h3
             className="text-sm font-semibold mb-4"
             style={{ color: "var(--admin-text)" }}>
-            Comportamento
+            Operation Mode
           </h3>
 
           <div
