@@ -25,7 +25,7 @@ const SECTIONS: Record<string, SectionMeta> = {
     description: "Name, logo, and main information of the application.",
     icon: Globe,
   },
-  mode: {
+  "operation-mode": {
     label: "Operation Mode",
     description: "Manage the platform's behavior settings.",
     icon: SlidersHorizontal,
