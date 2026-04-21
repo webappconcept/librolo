@@ -103,18 +103,18 @@ function EditPermissionForm({
       <p
         className="text-[11px] font-semibold uppercase tracking-widest"
         style={{ color: "var(--admin-text-faint)" }}>
-        Modifica permesso
+        Edit permission
       </p>
 
       <div>
         <label
           className="block text-xs font-medium mb-1"
           style={{ color: "var(--admin-text-muted)" }}>
-          Chiave{" "}
+          Key{" "}
           <span
             className="font-normal text-[11px]"
             style={{ color: "var(--admin-text-faint)" }}>
-            (non modificabile)
+            (not editable)
           </span>
         </label>
         <div
@@ -141,7 +141,7 @@ function EditPermissionForm({
           className="text-[11px] mt-1 flex items-center gap-1"
           style={{ color: "var(--admin-text-faint)" }}>
           <AlertTriangle size={10} />
-          Modificare la chiave romperebbe i controlli nel codice sorgente
+          Changing key could break access check in source code
         </p>
       </div>
 
@@ -150,13 +150,13 @@ function EditPermissionForm({
           <label
             className="block text-xs font-medium mb-1"
             style={{ color: "var(--admin-text-muted)" }}>
-            Etichetta *
+            Label *
           </label>
           <input
             name="label"
             required
             defaultValue={perm.label}
-            placeholder="Es. Pubblica articoli"
+            placeholder="Ex. Publish articles"
             className={inputCls}
             style={inputStyle}
           />
@@ -165,13 +165,13 @@ function EditPermissionForm({
           <label
             className="block text-xs font-medium mb-1"
             style={{ color: "var(--admin-text-muted)" }}>
-            Gruppo *
+            Group *
           </label>
           <input
             name="group"
             required
             defaultValue={perm.group}
-            placeholder="Es. Contenuti"
+            placeholder="Es. Content"
             className={inputCls}
             style={inputStyle}
           />
@@ -180,12 +180,12 @@ function EditPermissionForm({
           <label
             className="block text-xs font-medium mb-1"
             style={{ color: "var(--admin-text-muted)" }}>
-            Descrizione
+            Description
           </label>
           <input
             name="description"
             defaultValue={perm.description ?? ""}
-            placeholder="Opzionale"
+            placeholder="Optional"
             className={inputCls}
             style={inputStyle}
           />
@@ -209,7 +209,7 @@ function EditPermissionForm({
             background: "var(--admin-hover-bg)",
             color: "var(--admin-text-muted)",
           }}>
-          Annulla
+          Cancel
         </button>
         <button
           type="submit"
@@ -218,10 +218,10 @@ function EditPermissionForm({
           style={{ background: "var(--admin-accent)", color: "#fff" }}>
           {pending ? (
             <>
-              <Loader2 size={12} className="animate-spin" /> Salvataggio...
+              <Loader2 size={12} className="animate-spin" /> Saving...
             </>
           ) : (
-            "Salva modifiche"
+            "Save changes"
           )}
         </button>
       </div>
@@ -251,7 +251,7 @@ function PermissionCatalog({
   const suggested = systemKeys.find((k) => k.key === keyValue) ?? null;
 
   const grouped = permissions.reduce<Record<string, Permission[]>>((acc, p) => {
-    const g = p.group ?? "Altro";
+    const g = p.group ?? "Other";
     (acc[g] ??= []).push(p);
     return acc;
   }, {});
@@ -271,7 +271,7 @@ function PermissionCatalog({
       )
     : grouped;
 
-  function handleCreate(e: React.FormEvent<HTMLFormElement>) {
+  function handleCreate(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     setFormError(null);
@@ -305,7 +305,7 @@ function PermissionCatalog({
           />
           <input
             type="text"
-            placeholder="Filtra permessi..."
+            placeholder="Filter permissions..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-8 pr-4 py-2 text-sm rounded-lg outline-none"
@@ -321,7 +321,7 @@ function PermissionCatalog({
             onClick={() => setShowCreate(true)}
             className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg text-white whitespace-nowrap"
             style={{ background: "var(--admin-accent)" }}>
-            <Plus size={13} /> Nuovo
+            <Plus size={13} /> New
           </button>
         )}
       </div>
@@ -337,7 +337,7 @@ function PermissionCatalog({
           <p
             className="text-[11px] font-semibold uppercase tracking-widest"
             style={{ color: "var(--admin-text-faint)" }}>
-            Nuovo permesso
+            New permission
           </p>
           <datalist id={datalistId}>
             {systemKeys.map((k) => (
@@ -355,7 +355,7 @@ function PermissionCatalog({
                 name="key"
                 list={datalistId}
                 required
-                placeholder="risorsa:azione"
+                placeholder="resource:action"
                 className={inputCls}
                 style={inputStyle}
                 value={keyValue}
@@ -366,12 +366,12 @@ function PermissionCatalog({
               <label
                 className="block text-xs font-medium mb-1"
                 style={{ color: "var(--admin-text-muted)" }}>
-                Etichetta *
+                Label *
               </label>
               <input
                 name="label"
                 required
-                placeholder="Es. Pubblica articoli"
+                placeholder="Ex. Publish article"
                 className={inputCls}
                 style={inputStyle}
                 defaultValue={suggested?.description ?? ""}
@@ -382,12 +382,12 @@ function PermissionCatalog({
               <label
                 className="block text-xs font-medium mb-1"
                 style={{ color: "var(--admin-text-muted)" }}>
-                Gruppo *
+                Group *
               </label>
               <input
                 name="group"
                 required
-                placeholder="Es. Contenuti"
+                placeholder="Ex. content"
                 className={inputCls}
                 style={inputStyle}
                 defaultValue={suggested?.group ?? ""}
@@ -401,7 +401,7 @@ function PermissionCatalog({
               <label
                 className="block text-xs font-medium mb-1"
                 style={{ color: "var(--admin-text-muted)" }}>
-                Descrizione
+                Description
               </label>
               <input
                 name="description"
@@ -430,7 +430,7 @@ function PermissionCatalog({
                 background: "var(--admin-hover-bg)",
                 color: "var(--admin-text-muted)",
               }}>
-              Annulla
+              Cancel
             </button>
             <button
               type="submit"
