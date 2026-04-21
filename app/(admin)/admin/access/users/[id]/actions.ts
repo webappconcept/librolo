@@ -1,14 +1,14 @@
-// app/(admin)/admin/users/[id]/actions.ts
 "use server";
 
-import {
-  addUserPermissionOverride,
-  removeUserPermissionOverride,
-  purgeExpiredOverrides,
-} from "@/lib/rbac/permissions-queries";
+import { getAdminPath } from "@/lib/admin-nav";
+import { db } from "@/lib/db/drizzle";
 import { getUser } from "@/lib/db/queries";
 import { activityLogs, ActivityType, permissions } from "@/lib/db/schema";
-import { db } from "@/lib/db/drizzle";
+import {
+  addUserPermissionOverride,
+  purgeExpiredOverrides,
+  removeUserPermissionOverride,
+} from "@/lib/rbac/permissions-queries";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
@@ -32,31 +32,33 @@ async function logRbacAction(
   });
 }
 
-const OverrideSchema = z.object({
-  userId: z.string().uuid(),
-  permissionId: z.coerce.number().int().positive(),
-  granted: z.string().transform((v) => v === "true"),
-  reason: z.string().max(500).optional(),
-  /**
-   * Riceviamo due campi separati:
-   * - expiresAt: stringa datetime-local (es. "2026-04-09T08:10") — ora locale del browser
-   * - tzOffset: offset in minuti da UTC (es. -180 per EEST UTC+3)
-   *
-   * Convertiamo in UTC sottraendo l'offset:
-   *   utcMs = localMs + offsetMinutes * 60_000
-   */
-  expiresAt: z.string().optional(),
-  tzOffset: z.coerce.number().default(0),
-}).transform((data) => {
-  let expiresAt: Date | undefined;
-  if (data.expiresAt && data.expiresAt.trim() !== "") {
-    // new Date("2026-04-09T08:10") è interpretato come UTC in Node — correggere con l'offset
-    const localMs = new Date(data.expiresAt).getTime();
-    // tzOffset è negativo per UTC+ (convenzione JS getTimezoneOffset)
-    expiresAt = new Date(localMs + data.tzOffset * 60_000);
-  }
-  return { ...data, expiresAt };
-});
+const OverrideSchema = z
+  .object({
+    userId: z.string().uuid(),
+    permissionId: z.coerce.number().int().positive(),
+    granted: z.string().transform((v) => v === "true"),
+    reason: z.string().max(500).optional(),
+    /**
+     * Riceviamo due campi separati:
+     * - expiresAt: stringa datetime-local (es. "2026-04-09T08:10") — ora locale del browser
+     * - tzOffset: offset in minuti da UTC (es. -180 per EEST UTC+3)
+     *
+     * Convertiamo in UTC sottraendo l'offset:
+     *   utcMs = localMs + offsetMinutes * 60_000
+     */
+    expiresAt: z.string().optional(),
+    tzOffset: z.coerce.number().default(0),
+  })
+  .transform((data) => {
+    let expiresAt: Date | undefined;
+    if (data.expiresAt && data.expiresAt.trim() !== "") {
+      // new Date("2026-04-09T08:10") è interpretato come UTC in Node — correggere con l'offset
+      const localMs = new Date(data.expiresAt).getTime();
+      // tzOffset è negativo per UTC+ (convenzione JS getTimezoneOffset)
+      expiresAt = new Date(localMs + data.tzOffset * 60_000);
+    }
+    return { ...data, expiresAt };
+  });
 
 export async function addOverride(formData: FormData) {
   const admin = await getUser();
@@ -91,7 +93,8 @@ export async function addOverride(formData: FormData) {
       (reason ? ` reason="${reason}"` : ""),
   );
 
-  revalidatePath(`/admin/users/${userId}`);
+  revalidatePath(`${getAdminPath("users-list")}/${userId}`);
+
   return { success: true };
 }
 
@@ -107,7 +110,7 @@ export async function removeOverride(overrideId: number, userId: string) {
     `remove_override overrideId=${overrideId} userId=${userId}`,
   );
 
-  revalidatePath(`/admin/users/${userId}`);
+  revalidatePath(`${getAdminPath("users-list")}/${userId}`);
   return { success: true };
 }
 
@@ -129,6 +132,6 @@ export async function purgeExpired(userId: string) {
     );
   }
 
-  revalidatePath(`/admin/users/${userId}`);
+  revalidatePath(`${getAdminPath("users-list")}/${userId}`);
   return { success: true, deleted };
 }

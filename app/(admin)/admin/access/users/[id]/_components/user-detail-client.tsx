@@ -5,22 +5,23 @@ import type { AdminUserDetail } from "@/lib/db/admin-queries";
 import type { RoleRow } from "@/lib/db/roles-queries";
 import { Check, Shield, ShieldBan, ShieldCheck, Trash2 } from "lucide-react";
 import { useState, useTransition } from "react";
+import { setUserRole } from "../../../../roles/actions";
 import BanModal from "../../_components/ban-modal";
 import DeleteModal from "../../_components/delete-modal";
 import { unbanUser } from "../../actions";
-import { setUserRole } from "../../../roles/actions";
 
 // ─── BanButton ────────────────────────────────────────────────────────
 export function BanButton({ user }: { user: AdminUserDetail }) {
   const [showModal, setShowModal] = useState(false);
   const [pending, startTransition] = useTransition();
   const isBanned = !!user.bannedAt;
-  const userName = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email;
+  const userName =
+    [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email;
 
   if (user.isAdmin) {
     return (
       <span className="text-xs text-gray-400 italic">
-        Gli admin non possono essere sospesi
+        Admins cannot be suspended
       </span>
     );
   }
@@ -32,17 +33,21 @@ export function BanButton({ user }: { user: AdminUserDetail }) {
           disabled={pending}
           onClick={() => startTransition(() => unbanUser(user.id))}
           className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-emerald-50 text-emerald-700 rounded-lg hover:bg-emerald-100 transition-colors disabled:opacity-50">
-          <ShieldCheck size={15} /> Riattiva account
+          <ShieldCheck size={15} /> Reactivate account
         </button>
       ) : (
         <button
           onClick={() => setShowModal(true)}
           className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors">
-          <ShieldBan size={15} /> Sospendi account
+          <ShieldBan size={15} /> Suspend account
         </button>
       )}
       {showModal && (
-        <BanModal userId={user.id} userName={userName} onClose={() => setShowModal(false)} />
+        <BanModal
+          userId={user.id}
+          userName={userName}
+          onClose={() => setShowModal(false)}
+        />
       )}
     </>
   );
@@ -58,7 +63,7 @@ export function DeleteButton({
 }) {
   const [showModal, setShowModal] = useState(false);
 
-  // Non mostrare nulla se: non ha permesso, è già eliminato, o è admin
+  // Don't show anything if: no permission, already deleted, or is admin
   if (!canDelete || !!user.deletedAt || user.isAdmin) return null;
 
   const fullName =
@@ -68,15 +73,15 @@ export function DeleteButton({
     <>
       <button
         onClick={() => setShowModal(true)}
-        title="Elimina utente"
-        aria-label="Elimina utente"
+        title="Delete user"
+        aria-label="Delete user"
         className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors"
         style={{
           background: "var(--admin-hover-bg)",
           color: "var(--color-error, #a12c7b)",
         }}>
         <Trash2 size={15} />
-        Elimina account
+        Delete account
       </button>
       {showModal && (
         <DeleteModal
@@ -90,7 +95,7 @@ export function DeleteButton({
   );
 }
 
-// ─── RoleSelector — con ruoli da DB ──────────────────────────────────
+// ─── RoleSelector — with DB roles ──────────────────────────────────
 export function RoleSelector({
   user,
   availableRoles,
@@ -119,7 +124,7 @@ export function RoleSelector({
 
   return (
     <div className="space-y-4">
-      {/* Griglia ruoli */}
+      {/* Role Grid */}
       <div className="grid grid-cols-1 gap-2">
         {availableRoles.map((role) => {
           const isSelected = selected === role.name;
@@ -135,7 +140,7 @@ export function RoleSelector({
                   ? `2px solid ${role.color}`
                   : "2px solid var(--admin-card-border)",
               }}>
-              {/* Icona */}
+              {/* Icon */}
               <div
                 className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
                 style={{ background: role.color + "20" }}>
@@ -146,23 +151,28 @@ export function RoleSelector({
                 <div className="flex items-center gap-1.5">
                   <span
                     className="text-sm font-semibold"
-                    style={{ color: isSelected ? role.color : "var(--admin-text)" }}>
+                    style={{
+                      color: isSelected ? role.color : "var(--admin-text)",
+                    }}>
                     {role.label}
                   </span>
                   {role.isAdmin && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded font-medium"
+                    <span
+                      className="text-[10px] px-1.5 py-0.5 rounded font-medium"
                       style={{ background: "#f5f3ff", color: "#7c3aed" }}>
                       Admin
                     </span>
                   )}
                 </div>
                 {role.description && (
-                  <p className="text-[11px] mt-0.5 truncate" style={{ color: "var(--admin-text-faint)" }}>
+                  <p
+                    className="text-[11px] mt-0.5 truncate"
+                    style={{ color: "var(--admin-text-faint)" }}>
                     {role.description}
                   </p>
                 )}
               </div>
-              {/* Check selezione */}
+              {/* Selection Check */}
               {isSelected && (
                 <div
                   className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
@@ -175,15 +185,16 @@ export function RoleSelector({
         })}
       </div>
 
-      {/* Footer — salva solo se cambiato */}
+      {/* Footer — save only if changed */}
       {selected !== user.role && (
         <div className="flex items-center justify-between pt-1">
           <p className="text-xs" style={{ color: "var(--admin-text-faint)" }}>
-            Cambio da{" "}
+            Changing from{" "}
             <strong style={{ color: "var(--admin-text-muted)" }}>
-              {availableRoles.find((r) => r.name === user.role)?.label ?? user.role}
-            </strong>
-            {" "}→{" "}
+              {availableRoles.find((r) => r.name === user.role)?.label ??
+                user.role}
+            </strong>{" "}
+            →{" "}
             <strong style={{ color: currentRoleData?.color }}>
               {currentRoleData?.label ?? selected}
             </strong>
@@ -198,7 +209,7 @@ export function RoleSelector({
             ) : saved ? (
               <Check size={12} />
             ) : null}
-            {saved ? "Salvato" : "Applica ruolo"}
+            {saved ? "Saved" : "Apply role"}
           </button>
         </div>
       )}

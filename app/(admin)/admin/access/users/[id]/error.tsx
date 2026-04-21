@@ -1,4 +1,3 @@
-// app/(admin)/admin/users/[id]/error.tsx
 "use client";
 
 import { AlertTriangle, ArrowLeft, RefreshCw } from "lucide-react";
@@ -28,37 +27,31 @@ export default function UserDetailError({
         <Link
           href="/admin/users"
           className="flex items-center gap-1.5 text-sm"
-          style={{ color: "var(--admin-text-muted)" }}
-        >
+          style={{ color: "var(--admin-text-muted)" }}>
           <ArrowLeft size={15} />
-          Utenti
+          Users
         </Link>
       </div>
 
-      <div
-        className="flex flex-col items-center justify-center min-h-[50vh] gap-5 text-center px-4"
-      >
+      <div className="flex flex-col items-center justify-center min-h-[50vh] gap-5 text-center px-4">
         <div
           className="w-12 h-12 rounded-2xl flex items-center justify-center"
-          style={{ background: "#fef2f2" }}
-        >
+          style={{ background: "#fef2f2" }}>
           <AlertTriangle size={22} style={{ color: "#dc2626" }} />
         </div>
 
         <div className="space-y-1.5">
           <h2
             className="text-base font-semibold"
-            style={{ color: "var(--admin-text)" }}
-          >
-            Errore nel caricamento utente
+            style={{ color: "var(--admin-text)" }}>
+            Error loading user
           </h2>
           <p
             className="text-sm max-w-sm"
-            style={{ color: "var(--admin-text-muted)" }}
-          >
+            style={{ color: "var(--admin-text-muted)" }}>
             {isMissingTable
-              ? "Le tabelle RBAC non sono ancora presenti nel DB. Esegui la migrazione 0013 su Supabase, poi ricarica."
-              : error.message || "Si è verificato un errore imprevisto."}
+              ? "RBAC tables are not yet present in the DB. Run migration 0013 on Supabase, then reload."
+              : error.message || "An unexpected error occurred."}
           </p>
         </div>
 
@@ -69,18 +62,16 @@ export default function UserDetailError({
             style={{
               background: "var(--admin-hover-bg)",
               color: "var(--admin-text-muted)",
-            }}
-          >
+            }}>
             <ArrowLeft size={14} />
-            Torna agli utenti
+            Back to users
           </Link>
           <button
             onClick={reset}
             className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg text-white"
-            style={{ background: "var(--admin-accent)" }}
-          >
+            style={{ background: "var(--admin-accent)" }}>
             <RefreshCw size={14} />
-            Riprova
+            Try again
           </button>
         </div>
       </div>

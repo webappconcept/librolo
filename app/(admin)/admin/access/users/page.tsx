@@ -1,12 +1,11 @@
-// app/(admin)/admin/users/page.tsx
-import type { Metadata } from "next";
 import { getAdminUsers } from "@/lib/db/admin-queries";
 import { getAdminRoles } from "@/lib/db/roles-queries";
 import { Search, Users } from "lucide-react";
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import UsersTable from "./_components/users-table";
 
-export const metadata: Metadata = { title: "Utenti" };
+export const metadata: Metadata = { title: "Users" };
 
 async function UsersContent({
   search,
@@ -21,7 +20,13 @@ async function UsersContent({
   verified: string;
   page: number;
 }) {
-  const { users, total } = await getAdminUsers({ search, role, plan, verified, page });
+  const { users, total } = await getAdminUsers({
+    search,
+    role,
+    plan,
+    verified,
+    page,
+  });
   const totalPages = Math.ceil(total / 20);
 
   const buildHref = (p: number) => {
@@ -38,7 +43,7 @@ async function UsersContent({
   return (
     <>
       <p className="text-sm -mt-4" style={{ color: "var(--admin-text-faint)" }}>
-        {total} utenti trovati
+        {total} users found
       </p>
 
       <div
@@ -53,16 +58,21 @@ async function UsersContent({
           <div
             className="flex items-center justify-between px-4 py-3"
             style={{ borderTop: "1px solid var(--admin-divider)" }}>
-            <span className="text-xs" style={{ color: "var(--admin-text-faint)" }}>
-              Pagina {page} di {totalPages}
+            <span
+              className="text-xs"
+              style={{ color: "var(--admin-text-faint)" }}>
+              Page {page} of {totalPages}
             </span>
             <div className="flex gap-2">
               {page > 1 && (
                 <a
                   href={buildHref(page - 1)}
                   className="px-3 py-1.5 text-xs rounded-lg transition-colors"
-                  style={{ background: "var(--admin-hover-bg)", color: "var(--admin-text-muted)" }}>
-                  ← Precedente
+                  style={{
+                    background: "var(--admin-hover-bg)",
+                    color: "var(--admin-text-muted)",
+                  }}>
+                  ← Previous
                 </a>
               )}
               {page < totalPages && (
@@ -70,7 +80,7 @@ async function UsersContent({
                   href={buildHref(page + 1)}
                   className="px-3 py-1.5 text-xs text-white rounded-lg transition-colors"
                   style={{ background: "var(--admin-accent)" }}>
-                  Successiva →
+                  Next →
                 </a>
               )}
             </div>
@@ -91,14 +101,32 @@ function UsersTableSkeleton() {
       }}>
       {Array.from({ length: 8 }).map((_, i) => (
         <div key={i} className="flex items-center gap-4">
-          <div className="w-8 h-8 rounded-full animate-pulse shrink-0" style={{ background: "var(--admin-hover-bg)" }} />
+          <div
+            className="w-8 h-8 rounded-full animate-pulse shrink-0"
+            style={{ background: "var(--admin-hover-bg)" }}
+          />
           <div className="flex-1 space-y-1.5">
-            <div className="h-3 rounded animate-pulse w-1/3" style={{ background: "var(--admin-hover-bg)" }} />
-            <div className="h-2.5 rounded animate-pulse w-1/2" style={{ background: "var(--admin-divider)" }} />
+            <div
+              className="h-3 rounded animate-pulse w-1/3"
+              style={{ background: "var(--admin-hover-bg)" }}
+            />
+            <div
+              className="h-2.5 rounded animate-pulse w-1/2"
+              style={{ background: "var(--admin-divider)" }}
+            />
           </div>
-          <div className="h-5 w-16 rounded-full animate-pulse" style={{ background: "var(--admin-hover-bg)" }} />
-          <div className="h-5 w-14 rounded-full animate-pulse" style={{ background: "var(--admin-hover-bg)" }} />
-          <div className="h-5 w-20 rounded animate-pulse" style={{ background: "var(--admin-hover-bg)" }} />
+          <div
+            className="h-5 w-16 rounded-full animate-pulse"
+            style={{ background: "var(--admin-hover-bg)" }}
+          />
+          <div
+            className="h-5 w-14 rounded-full animate-pulse"
+            style={{ background: "var(--admin-hover-bg)" }}
+          />
+          <div
+            className="h-5 w-20 rounded animate-pulse"
+            style={{ background: "var(--admin-hover-bg)" }}
+          />
         </div>
       ))}
     </div>
@@ -132,21 +160,33 @@ export default async function AdminUsersPage({
         <div
           className="w-9 h-9 rounded-xl flex items-center justify-center"
           style={{
-            background: "color-mix(in srgb, var(--admin-accent) 12%, var(--admin-card-bg))",
-            border: "1px solid color-mix(in srgb, var(--admin-accent) 25%, transparent)",
-          }}
-        >
+            background:
+              "color-mix(in srgb, var(--admin-accent) 12%, var(--admin-card-bg))",
+            border:
+              "1px solid color-mix(in srgb, var(--admin-accent) 25%, transparent)",
+          }}>
           <Users size={18} style={{ color: "var(--admin-accent)" }} />
         </div>
         <div>
-          <h2 className="text-xl font-bold" style={{ color: "var(--admin-text)" }}>Utenti</h2>
-          <p className="text-sm mt-0.5" style={{ color: "var(--admin-text-muted)" }}>Gestione iscritti</p>
+          <h2
+            className="text-xl font-bold"
+            style={{ color: "var(--admin-text)" }}>
+            Users
+          </h2>
+          <p
+            className="text-sm mt-0.5"
+            style={{ color: "var(--admin-text-muted)" }}>
+            Manage members
+          </p>
         </div>
       </div>
 
       <div
         className="rounded-xl shadow-sm p-4"
-        style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-card-border)" }}>
+        style={{
+          background: "var(--admin-card-bg)",
+          border: "1px solid var(--admin-card-border)",
+        }}>
         <form className="flex flex-wrap gap-3">
           <div className="relative flex-1 min-w-[200px]">
             <Search
@@ -157,7 +197,7 @@ export default async function AdminUsersPage({
             <input
               name="q"
               defaultValue={search}
-              placeholder="Cerca per nome o email..."
+              placeholder="Search by name or email..."
               className="w-full pl-9 pr-3 py-2 text-sm rounded-lg focus:outline-none transition-colors"
               style={{
                 background: "var(--admin-page-bg)",
@@ -176,7 +216,7 @@ export default async function AdminUsersPage({
               border: "1px solid var(--admin-input-border)",
               color: role ? "var(--admin-text)" : "var(--admin-text-muted)",
             }}>
-            <option value="">Tutti i ruoli</option>
+            <option value="">All roles</option>
             {allRoles.map((r) => (
               <option key={r.name} value={r.name}>
                 {r.label}
@@ -193,7 +233,7 @@ export default async function AdminUsersPage({
               border: "1px solid var(--admin-input-border)",
               color: plan ? "var(--admin-text)" : "var(--admin-text-muted)",
             }}>
-            <option value="">Tutti i piani</option>
+            <option value="">All plans</option>
             <option value="free">Free</option>
             <option value="premium">Premium</option>
           </select>
@@ -207,23 +247,26 @@ export default async function AdminUsersPage({
               border: "1px solid var(--admin-input-border)",
               color: verified ? "var(--admin-text)" : "var(--admin-text-muted)",
             }}>
-            <option value="">Tutti (verifica email)</option>
-            <option value="true">✓ Email verificata</option>
-            <option value="false">✗ Email non verificata</option>
+            <option value="">All (email verification)</option>
+            <option value="true">✓ Verified email</option>
+            <option value="false">✗ Unverified email</option>
           </select>
 
           <button
             type="submit"
             className="px-4 py-2 text-white text-sm font-medium rounded-lg transition-colors"
             style={{ background: "var(--admin-accent)" }}>
-            Filtra
+            Filter
           </button>
 
           {hasFilters && (
             <a
               href="/admin/users"
               className="px-4 py-2 text-sm font-medium rounded-lg transition-colors"
-              style={{ background: "var(--admin-hover-bg)", color: "var(--admin-text-muted)" }}>
+              style={{
+                background: "var(--admin-hover-bg)",
+                color: "var(--admin-text-muted)",
+              }}>
               Reset
             </a>
           )}

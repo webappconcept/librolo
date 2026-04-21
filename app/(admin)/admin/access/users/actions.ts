@@ -1,14 +1,19 @@
-// app/(admin)/admin/users/actions.ts
 "use server";
 
+import { getAdminPath } from "@/lib/admin-nav";
 import { db } from "@/lib/db/drizzle";
-import { roles, users, userProfiles, activityLogs } from "@/lib/db/schema";
-import { requireAdmin } from "@/lib/rbac/guards";
+import {
+  activityLogs,
+  ActivityType,
+  roles,
+  userProfiles,
+  users,
+} from "@/lib/db/schema";
+import { sendUserDeletedEmail } from "@/lib/email/templates/user-deleted";
 import { can } from "@/lib/rbac/can";
-import { ActivityType } from "@/lib/db/schema";
+import { requireAdmin } from "@/lib/rbac/guards";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { sendUserDeletedEmail } from "@/lib/email/templates/user-deleted";
 
 export async function banUser(userId: string, reason?: string) {
   await requireAdmin();
@@ -20,14 +25,18 @@ export async function banUser(userId: string, reason?: string) {
     .limit(1);
 
   if (target?.isAdmin) {
-    throw new Error("Non puoi sospendere un admin.");
+    throw new Error("You cannot suspend an admin.");
   }
 
   await db
     .update(users)
-    .set({ bannedAt: new Date(), bannedReason: reason ?? null, updatedAt: new Date() })
+    .set({
+      bannedAt: new Date(),
+      bannedReason: reason ?? null,
+      updatedAt: new Date(),
+    })
     .where(eq(users.id, userId));
-  revalidatePath("/admin/users");
+  revalidatePath(getAdminPath("users-list"));
 }
 
 export async function unbanUser(userId: string) {
@@ -36,14 +45,14 @@ export async function unbanUser(userId: string) {
     .update(users)
     .set({ bannedAt: null, updatedAt: new Date() })
     .where(eq(users.id, userId));
-  revalidatePath("/admin/users");
+  revalidatePath(getAdminPath("users-list"));
 }
 
 export async function deleteUser(userId: string) {
   const adminUser = await requireAdmin();
 
   const allowed = await can(adminUser, "users:delete");
-  if (!allowed) throw new Error("Non hai il permesso users:delete.");
+  if (!allowed) throw new Error("You do not have the users:delete permission.");
 
   const rows = await db
     .select({
@@ -59,9 +68,9 @@ export async function deleteUser(userId: string) {
     .limit(1);
 
   const target = rows[0];
-  if (!target) throw new Error("Utente non trovato.");
-  if (target.isAdmin) throw new Error("Non puoi eliminare un account admin.");
-  if (target.deletedAt) throw new Error("Utente già eliminato.");
+  if (!target) throw new Error("User not found.");
+  if (target.isAdmin) throw new Error("You cannot delete an admin account.");
+  if (target.deletedAt) throw new Error("User already deleted.");
 
   const deletedAt = new Date();
 
@@ -83,13 +92,13 @@ export async function deleteUser(userId: string) {
       deletedAt,
     );
   } catch (emailError) {
-    console.error("[deleteUser] Errore invio email:", emailError);
+    console.error("[deleteUser] Error sending email:", emailError);
   }
 
-  revalidatePath("/admin/users");
+  revalidatePath(getAdminPath("users-list"));
 }
 
-/** @deprecated Usa setUserRole in /admin/roles/actions.ts */
+/** @deprecated Use setUserRole in /admin/roles/actions.ts */
 export async function changeUserRole(userId: string, roleName: string) {
   await requireAdmin();
 
@@ -108,5 +117,5 @@ export async function changeUserRole(userId: string, roleName: string) {
     })
     .where(eq(users.id, userId));
 
-  revalidatePath("/admin/users");
+  revalidatePath(getAdminPath("users-list"));
 }

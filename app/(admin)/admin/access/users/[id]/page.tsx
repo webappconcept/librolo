@@ -1,12 +1,16 @@
-// app/(admin)/admin/users/[id]/page.tsx
 import { getAdminUserActivity, getAdminUserById } from "@/lib/db/admin-queries";
-import { getAdminRoles } from "@/lib/db/roles-queries";
-import { getAllPermissions, getPermissionsByRole, getUserPermissionOverrides, purgeExpiredOverrides } from "@/lib/rbac/permissions-queries";
 import { db } from "@/lib/db/drizzle";
-import { roles } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
 import { getUser } from "@/lib/db/queries";
+import { getAdminRoles } from "@/lib/db/roles-queries";
+import { roles } from "@/lib/db/schema";
 import { can } from "@/lib/rbac/can";
+import {
+  getAllPermissions,
+  getPermissionsByRole,
+  getUserPermissionOverrides,
+  purgeExpiredOverrides,
+} from "@/lib/rbac/permissions-queries";
+import { eq } from "drizzle-orm";
 import {
   Activity,
   ArrowLeft,
@@ -20,29 +24,55 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { ActivityList } from "./_components/activity-list";
-import { BanButton, DeleteButton, RoleSelector } from "./_components/user-detail-client";
 import { UserAccessTab } from "./_components/user-access-tab";
+import {
+  BanButton,
+  DeleteButton,
+  RoleSelector,
+} from "./_components/user-detail-client";
 import { UserDetailTabs } from "./_components/user-detail-tabs";
 
 // UUID v4 regex
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function StatusBadge({ user }: { user: Awaited<ReturnType<typeof getAdminUserById>> }) {
+function StatusBadge({
+  user,
+}: {
+  user: Awaited<ReturnType<typeof getAdminUserById>>;
+}) {
   if (!user) return null;
   if (user.bannedAt)
-    return <span className="px-2.5 py-1 text-xs font-semibold bg-red-100 text-red-700 rounded-full">Sospeso</span>;
-  if (user.deletedAt)
     return (
-      <span className="px-2.5 py-1 text-xs font-semibold rounded-full"
-        style={{ background: "var(--admin-hover-bg)", color: "var(--admin-text-muted)" }}>
-        Cancellato
+      <span className="px-2.5 py-1 text-xs font-semibold bg-red-100 text-red-700 rounded-full">
+        Suspended
       </span>
     );
-  return <span className="px-2.5 py-1 text-xs font-semibold bg-emerald-100 text-emerald-700 rounded-full">Attivo</span>;
+  if (user.deletedAt)
+    return (
+      <span
+        className="px-2.5 py-1 text-xs font-semibold rounded-full"
+        style={{
+          background: "var(--admin-hover-bg)",
+          color: "var(--admin-text-muted)",
+        }}>
+        Deleted
+      </span>
+    );
+  return (
+    <span className="px-2.5 py-1 text-xs font-semibold bg-emerald-100 text-emerald-700 rounded-full">
+      Active
+    </span>
+  );
 }
 
-async function UserContent({ id, canDelete }: { id: string; canDelete: boolean }) {
+async function UserContent({
+  id,
+  canDelete,
+}: {
+  id: string;
+  canDelete: boolean;
+}) {
   const [user, activity, availableRoles, allPermissions] = await Promise.all([
     getAdminUserById(id),
     getAdminUserActivity(id),
@@ -76,36 +106,76 @@ async function UserContent({ id, canDelete }: { id: string; canDelete: boolean }
 
   const infoContent = (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <div className="rounded-xl shadow-sm p-5"
-        style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-card-border)" }}>
-        <h4 className="text-sm font-semibold mb-4" style={{ color: "var(--admin-text)" }}>Informazioni account</h4>
+      <div
+        className="rounded-xl shadow-sm p-5"
+        style={{
+          background: "var(--admin-card-bg)",
+          border: "1px solid var(--admin-card-border)",
+        }}>
+        <h4
+          className="text-sm font-semibold mb-4"
+          style={{ color: "var(--admin-text)" }}>
+          Account Information
+        </h4>
         <div className="space-y-3">
           {[
             { icon: Mail, label: "Email", value: user.email },
-            { icon: Calendar, label: "Iscritto il", value: new Date(user.createdAt).toLocaleDateString("it-IT", { day: "numeric", month: "long", year: "numeric" }) },
-            { icon: CreditCard, label: "Piano", value: user.planName ?? "Free" },
-            { icon: isPremium ? ShieldCheck : ShieldX, label: "Stripe", value: user.stripeCustomerId ?? "Non collegato" },
+            {
+              icon: Calendar,
+              label: "Joined on",
+              value: new Date(user.createdAt).toLocaleDateString("en-US", {
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              }),
+            },
+            { icon: CreditCard, label: "Plan", value: user.planName ?? "Free" },
+            {
+              icon: isPremium ? ShieldCheck : ShieldX,
+              label: "Stripe",
+              value: user.stripeCustomerId ?? "Not connected",
+            },
           ].map(({ icon: Icon, label, value }) => (
             <div key={label} className="flex items-center gap-3">
-              <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+              <div
+                className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
                 style={{ background: "var(--admin-hover-bg)" }}>
                 <Icon size={13} style={{ color: "var(--admin-text-faint)" }} />
               </div>
               <div>
-                <p className="text-[11px]" style={{ color: "var(--admin-text-faint)" }}>{label}</p>
-                <p className="text-sm font-medium" style={{ color: "var(--admin-text)" }}>{value}</p>
+                <p
+                  className="text-[11px]"
+                  style={{ color: "var(--admin-text-faint)" }}>
+                  {label}
+                </p>
+                <p
+                  className="text-sm font-medium"
+                  style={{ color: "var(--admin-text)" }}>
+                  {value}
+                </p>
               </div>
             </div>
           ))}
         </div>
       </div>
 
-      <div className="rounded-xl shadow-sm p-5"
-        style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-card-border)" }}>
+      <div
+        className="rounded-xl shadow-sm p-5"
+        style={{
+          background: "var(--admin-card-bg)",
+          border: "1px solid var(--admin-card-border)",
+        }}>
         <div className="flex items-center justify-between mb-4">
-          <h4 className="text-sm font-semibold" style={{ color: "var(--admin-text)" }}>Ruolo</h4>
-          <Link href="/admin/roles" className="text-xs transition-colors" style={{ color: "var(--admin-accent)" }}>
-            Gestisci ruoli →
+          <h4
+            className="text-sm font-semibold"
+            style={{ color: "var(--admin-text)" }}>
+            Role
+          </h4>
+          <Link
+            href="/admin/roles"
+            className="text-xs transition-colors"
+            style={{ color: "var(--admin-accent)" }}>
+            Manage roles →
           </Link>
         </div>
         <RoleSelector user={user} availableRoles={availableRoles} />
@@ -114,13 +184,26 @@ async function UserContent({ id, canDelete }: { id: string; canDelete: boolean }
   );
 
   const activityContent = (
-    <div className="rounded-xl shadow-sm p-5"
-      style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-card-border)" }}>
+    <div
+      className="rounded-xl shadow-sm p-5"
+      style={{
+        background: "var(--admin-card-bg)",
+        border: "1px solid var(--admin-card-border)",
+      }}>
       <div className="flex items-center gap-2 mb-4">
         <Activity size={15} style={{ color: "var(--admin-text-faint)" }} />
-        <h4 className="text-sm font-semibold" style={{ color: "var(--admin-text)" }}>Attività recente</h4>
+        <h4
+          className="text-sm font-semibold"
+          style={{ color: "var(--admin-text)" }}>
+          Recent Activity
+        </h4>
       </div>
-      <Suspense fallback={<p className="text-sm" style={{ color: "var(--admin-text-faint)" }}>Caricamento...</p>}>
+      <Suspense
+        fallback={
+          <p className="text-sm" style={{ color: "var(--admin-text-faint)" }}>
+            Loading...
+          </p>
+        }>
         <ActivityList activity={activity} />
       </Suspense>
     </div>
@@ -138,7 +221,7 @@ async function UserContent({ id, canDelete }: { id: string; canDelete: boolean }
 
   return (
     <div className="space-y-6">
-      {/* Header utente */}
+      {/* User Header */}
       <div className="flex items-start gap-4">
         <div
           className="w-14 h-14 rounded-2xl flex items-center justify-center text-lg font-bold shrink-0 text-white"
@@ -147,7 +230,9 @@ async function UserContent({ id, canDelete }: { id: string; canDelete: boolean }
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h2 className="text-xl font-bold" style={{ color: "var(--admin-text)" }}>
+            <h2
+              className="text-xl font-bold"
+              style={{ color: "var(--admin-text)" }}>
               {user.firstName && user.lastName
                 ? `${user.firstName} ${user.lastName}`
                 : user.email}
@@ -212,13 +297,19 @@ export default async function AdminUserPage({
         className="inline-flex items-center gap-1.5 text-sm transition-colors"
         style={{ color: "var(--admin-text-muted)" }}>
         <ArrowLeft size={14} />
-        Tutti gli utenti
+        All users
       </Link>
       <Suspense
         fallback={
           <div className="animate-pulse space-y-4">
-            <div className="h-14 rounded-2xl" style={{ background: "var(--admin-hover-bg)" }} />
-            <div className="h-64 rounded-xl" style={{ background: "var(--admin-hover-bg)" }} />
+            <div
+              className="h-14 rounded-2xl"
+              style={{ background: "var(--admin-hover-bg)" }}
+            />
+            <div
+              className="h-64 rounded-xl"
+              style={{ background: "var(--admin-hover-bg)" }}
+            />
           </div>
         }>
         <UserContent id={id} canDelete={canDelete} />

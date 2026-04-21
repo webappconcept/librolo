@@ -65,7 +65,7 @@ export function ActivityList({ activity }: { activity: ActivityItem[] }) {
       <p
         className="text-sm text-center py-8"
         style={{ color: "var(--admin-text-faint)" }}>
-        Nessuna attività registrata.
+        No activity logged.
       </p>
     );
   }
