@@ -22,6 +22,8 @@ export const users = pgTable("users", {
   emailVerified: boolean("email_verified").notNull().default(false),
   acceptedTermsAt: timestamp("accepted_terms_at"),
   acceptedPrivacyAt: timestamp("accepted_privacy_at"),
+  acceptedMarketingAt: timestamp("accepted_marketing_at"),
+  acceptedMarketingVersion: text("accepted_marketing_version"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
   deletedAt: timestamp("deleted_at"),

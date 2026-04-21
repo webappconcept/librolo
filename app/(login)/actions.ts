@@ -25,6 +25,8 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+const MARKETING_CONSENT_VERSION = "2026-04";
+
 async function logActivity(
   userId: string,
   type: ActivityType,
@@ -133,6 +135,7 @@ const signUpSchema = z
     confirmPassword: z.string().min(8).max(30),
     acceptTerms: z.literal("on", "Devi accettare i Termini e Condizioni per procedere"),
     acceptPrivacy: z.literal("on", "Devi accettare la Privacy Policy per procedere"),
+    acceptMarketing: z.literal("on").optional(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Le password non sono uguali",
@@ -194,6 +197,10 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
       role: defaultRole,
       acceptedTermsAt: now,
       acceptedPrivacyAt: now,
+      acceptedMarketingAt:
+        data.acceptMarketing === "on" ? now : null,
+      acceptedMarketingVersion:
+        data.acceptMarketing === "on" ? MARKETING_CONSENT_VERSION : null,
     })
     .returning();
 
