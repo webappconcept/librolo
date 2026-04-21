@@ -1,3 +1,4 @@
+import { getAdminPath } from "@/lib/admin-nav";
 import { getAdminUsers } from "@/lib/db/admin-queries";
 import { getAdminRoles } from "@/lib/db/roles-queries";
 import { Search, Users } from "lucide-react";
@@ -37,7 +38,7 @@ async function UsersContent({
     if (verified) params.set("verified", verified);
     if (p > 1) params.set("page", String(p));
     const qs = params.toString();
-    return `/admin/users${qs ? `?${qs}` : ""}`;
+    return `${getAdminPath("users-list")}${qs ? `?${qs}` : ""}`;
   };
 
   return (
@@ -261,7 +262,7 @@ export default async function AdminUsersPage({
 
           {hasFilters && (
             <a
-              href="/admin/users"
+              href={getAdminPath("users-list")}
               className="px-4 py-2 text-sm font-medium rounded-lg transition-colors"
               style={{
                 background: "var(--admin-hover-bg)",

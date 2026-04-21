@@ -41,28 +41,28 @@ export const ADMIN_NAV: NavItem[] = [
     children: [
       {
         key: "users-list",
-        href: "/admin/users",
+        href: "/admin/access/users",
         label: "Users",
         icon: "Users",
         permission: "admin:users",
       },
       {
         key: "users-staff",
-        href: "/admin/staff",
+        href: "/admin/access/staff",
         label: "Staff",
         icon: "UserCog",
         permission: "admin:staff",
       },
       {
         key: "users-roles",
-        href: "/admin/roles",
+        href: "/admin/access/roles",
         label: "Roles",
         icon: "ShieldCheck",
         permission: "admin:roles",
       },
       {
         key: "users-permissions",
-        href: "/admin/permissions",
+        href: "/admin/access/permissions",
         label: "Permissions",
         icon: "KeyRound",
         permission: "admin:roles",

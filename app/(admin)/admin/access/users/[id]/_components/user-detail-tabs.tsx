@@ -1,7 +1,6 @@
-// app/(admin)/admin/users/[id]/_components/user-detail-tabs.tsx
 "use client";
 
-import { Key, Activity, User } from "lucide-react";
+import { Activity, Key, User } from "lucide-react";
 import { useState } from "react";
 
 type Props = {
@@ -47,9 +46,7 @@ export function UserDetailTabs({
               style={{
                 background: isActive ? "var(--admin-accent)" : "transparent",
                 color: isActive ? "#fff" : "var(--admin-text-muted)",
-                boxShadow: isActive
-                  ? "0 1px 3px oklch(0 0 0 / 0.15)"
-                  : "none",
+                boxShadow: isActive ? "0 1px 3px oklch(0 0 0 / 0.15)" : "none",
               }}>
               <Icon size={13} />
               {t.label}
