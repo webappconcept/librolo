@@ -1,4 +1,3 @@
-// app/(admin)/admin/users/[id]/_components/user-detail-client.tsx
 "use client";
 
 import type { AdminUserDetail } from "@/lib/db/admin-queries";

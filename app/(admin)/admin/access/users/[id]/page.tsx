@@ -1,3 +1,4 @@
+import { getAdminPath } from "@/lib/admin-nav";
 import { getAdminUserActivity, getAdminUserById } from "@/lib/db/admin-queries";
 import { db } from "@/lib/db/drizzle";
 import { getUser } from "@/lib/db/queries";
@@ -172,7 +173,7 @@ async function UserContent({
             Role
           </h4>
           <Link
-            href="/admin/roles"
+            href={getAdminPath("users-roles")}
             className="text-xs transition-colors"
             style={{ color: "var(--admin-accent)" }}>
             Manage roles →
@@ -293,7 +294,7 @@ export default async function AdminUserPage({
   return (
     <div className="space-y-6">
       <Link
-        href="/admin/users"
+        href={getAdminPath("users-list")}
         className="inline-flex items-center gap-1.5 text-sm transition-colors"
         style={{ color: "var(--admin-text-muted)" }}>
         <ArrowLeft size={14} />
