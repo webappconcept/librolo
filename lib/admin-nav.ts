@@ -72,13 +72,13 @@ export const ADMIN_NAV: NavItem[] = [
     childrenMaxHeight: "120px",
     children: [
       {
-        href: "/admin/content-pages",
+        href: "/admin/content/pages",
         label: "Pages",
         icon: "FileText",
         permission: "admin:content",
       },
       {
-        href: "/admin/template",
+        href: "/admin/content/templates",
         label: "Template",
         icon: "PanelTop",
         permission: "admin:content",
