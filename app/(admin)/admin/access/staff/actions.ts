@@ -1,6 +1,6 @@
-// app/(admin)/admin/staff/actions.ts
 "use server";
 
+import { getAdminPath } from "@/lib/admin-nav";
 import { db } from "@/lib/db/drizzle";
 import { roles, users } from "@/lib/db/schema";
 import { requireAdmin } from "@/lib/rbac/guards";
@@ -16,9 +16,9 @@ export async function changeStaffRole(userId: string, roleName: string) {
     .where(eq(roles.name, roleName))
     .limit(1);
 
-  if (!role) throw new Error("Ruolo non trovato.");
+  if (!role) throw new Error("Role not found.");
   if (!role.isAdmin) {
-    throw new Error("Puoi assegnare solo ruoli con flag Amministratore.");
+    throw new Error("You can only assign roles with the Administrator flag.");
   }
 
   await db
@@ -30,5 +30,5 @@ export async function changeStaffRole(userId: string, roleName: string) {
     })
     .where(eq(users.id, userId));
 
-  revalidatePath("/admin/staff");
+  revalidatePath(getAdminPath("users-staff"));
 }

@@ -32,10 +32,11 @@ function StaffRow({ user }: { user: AdminUser }) {
     <tr
       className="transition-colors"
       style={{ borderBottom: "1px solid var(--admin-divider)" }}
-      onMouseEnter={(e) => (e.currentTarget.style.background = "var(--admin-hover-bg)")}
+      onMouseEnter={(e) =>
+        (e.currentTarget.style.background = "var(--admin-hover-bg)")
+      }
       onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
-
-      {/* Avatar + nome cliccabile */}
+      {/* Avatar + clickable name */}
       <td className="px-4 py-3">
         <div className="flex items-center gap-3">
           <div
@@ -50,33 +51,37 @@ function StaffRow({ user }: { user: AdminUser }) {
               style={{ color: "var(--admin-text)" }}>
               {user.firstName} {user.lastName}
             </Link>
-            <p className="text-xs mt-0.5" style={{ color: "var(--admin-text-faint)" }}>
+            <p
+              className="text-xs mt-0.5"
+              style={{ color: "var(--admin-text-faint)" }}>
               {user.email}
             </p>
           </div>
         </div>
       </td>
 
-      {/* Ruolo — solo badge read-only */}
+      {/* Role — read-only badge */}
       <td className="px-4 py-3">
         <RoleBadge label={roleLabel} color={roleColor} />
       </td>
 
-      {/* Email verificata */}
+      {/* Verified Email */}
       <td className="px-4 py-3 hidden lg:table-cell">
         <span
           className={`text-[11px] font-medium ${
             user.emailVerified ? "text-emerald-600" : ""
           }`}
-          style={!user.emailVerified ? { color: "var(--admin-text-faint)" } : {}}>
-          {user.emailVerified ? "✓ Verificata" : "Non verificata"}
+          style={
+            !user.emailVerified ? { color: "var(--admin-text-faint)" } : {}
+          }>
+          {user.emailVerified ? "✓ Verified" : "Not verified"}
         </span>
       </td>
 
-      {/* Data aggiunta */}
+      {/* Date Added */}
       <td className="px-4 py-3 hidden lg:table-cell">
         <span className="text-xs" style={{ color: "var(--admin-text-faint)" }}>
-          {new Date(user.createdAt).toLocaleDateString("it-IT")}
+          {new Date(user.createdAt).toLocaleDateString("en-US")}
         </span>
       </td>
     </tr>
@@ -86,8 +91,10 @@ function StaffRow({ user }: { user: AdminUser }) {
 export default function StaffTable({ users }: { users: AdminUser[] }) {
   if (users.length === 0) {
     return (
-      <div className="text-center py-16 text-sm" style={{ color: "var(--admin-text-faint)" }}>
-        Nessun membro dello staff trovato.
+      <div
+        className="text-center py-16 text-sm"
+        style={{ color: "var(--admin-text-faint)" }}>
+        No staff members found.
       </div>
     );
   }
@@ -97,7 +104,7 @@ export default function StaffTable({ users }: { users: AdminUser[] }) {
       <table className="w-full min-w-[500px]">
         <thead>
           <tr style={{ borderBottom: "1px solid var(--admin-divider)" }}>
-            {["Membro", "Ruolo", "Email", "Aggiunto il"].map((h, i) => (
+            {["Member", "Role", "Email", "Added on"].map((h, i) => (
               <th
                 key={h}
                 className={`px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide ${
