@@ -458,7 +458,7 @@ function PermissionCatalog({
           className="py-10 text-center"
           style={{ color: "var(--admin-text-faint)" }}>
           <Shield size={28} className="mx-auto mb-2 opacity-30" />
-          <p className="text-sm">Nessun permesso trovato</p>
+          <p className="text-sm">No permission found</p>
         </div>
       )}
     </div>
@@ -617,13 +617,13 @@ function GroupSection({
                       }
                       title={
                         perm.isSystem
-                          ? "I permessi di sistema non possono essere eliminati"
-                          : `Elimina "${perm.label}"`
+                          ? "System permissions can't be deleted"
+                          : `Delete "${perm.label}"`
                       }
                       aria-label={
                         perm.isSystem
-                          ? "Permesso di sistema, non eliminabile"
-                          : `Elimina permesso ${perm.label}`
+                          ? "System permissions can't be deleted"
+                          : `Delete permission ${perm.label}`
                       }>
                       <Trash2 size={13} />
                     </button>
@@ -632,7 +632,7 @@ function GroupSection({
                       onClick={() => setEditingId(null)}
                       className="p-1.5 rounded-lg transition-colors"
                       style={{ color: "var(--admin-text-muted)" }}
-                      title="Annulla modifica">
+                      title="Cancel">
                       <X size={13} />
                     </button>
                   )}
@@ -745,9 +745,9 @@ function PresetGroupHeader({
               border:
                 "1px solid color-mix(in oklch, var(--admin-accent) 25%, transparent)",
             }}
-            title={`Assegna tutti i permessi del gruppo "${group}" a questo ruolo`}>
+            title={`Assign all permissions in the group "${group}" to this role`}>
             <CheckSquare size={10} />
-            Assegna tutti
+            Grant all
           </button>
         )}
         {/* Revoca tutto il gruppo */}
@@ -768,7 +768,7 @@ function PresetGroupHeader({
             }}
             title={`Revoca tutti i permessi del gruppo "${group}" da questo ruolo`}>
             <X size={10} />
-            Revoca tutti
+            Revoke all
           </button>
         )}
       </div>
@@ -983,7 +983,7 @@ function RoleMatrix({
                       ? "var(--admin-text-muted)"
                       : "var(--admin-text-faint)",
                   }}>
-                  {count} permessi
+                  {count} permissions
                 </span>
               </div>
             </button>
@@ -1019,14 +1019,14 @@ function RoleMatrix({
                       background: "var(--admin-hover-bg)",
                       color: "var(--admin-text-faint)",
                     }}>
-                    Admin — tutti i permessi impliciti
+                    Admin — all permissions by default
                   </span>
                 )}
                 {presetLoading && (
                   <span
                     className="flex items-center gap-1 text-[10px]"
                     style={{ color: "var(--admin-accent)" }}>
-                    <Loader2 size={10} className="animate-spin" /> Applicazione
+                    <Loader2 size={10} className="animate-spin" /> Applying
                     preset...
                   </span>
                 )}
@@ -1051,7 +1051,7 @@ function RoleMatrix({
                         border:
                           "1px solid color-mix(in oklch, var(--admin-accent) 25%, transparent)",
                       }}
-                      title="Assegna TUTTI i permessi a questo ruolo">
+                      title="Grant ALL permissions to this Role">
                       <CheckSquare size={10} /> Tutti
                     </button>
                     <button
@@ -1068,8 +1068,8 @@ function RoleMatrix({
                         color: "#dc2626",
                         border: "1px solid #fecaca",
                       }}
-                      title="Revoca TUTTI i permessi da questo ruolo">
-                      <X size={10} /> Nessuno
+                      title="Revole ALL permissions to this Role">
+                      <X size={10} /> None
                     </button>
                   </div>
                 )}
@@ -1147,15 +1147,15 @@ function RoleMatrix({
                             role.isAdmin
                               ? "Admin ha tutti i permessi"
                               : has
-                                ? `Revoca "${perm.label}"`
-                                : `Assegna "${perm.label}"`
+                                ? `Revoke "${perm.label}"`
+                                : `Grant "${perm.label}"`
                           }
                           aria-label={
                             role.isAdmin
-                              ? "Admin ha tutti i permessi"
+                              ? "Admin has all permissions"
                               : has
-                                ? `Revoca permesso ${perm.label}`
-                                : `Assegna permesso ${perm.label}`
+                                ? `Revoke permission ${perm.label}`
+                                : `Grant permission ${perm.label}`
                           }
                           style={{
                             background: has
@@ -1186,7 +1186,7 @@ function RoleMatrix({
                 <div
                   className="py-10 text-center"
                   style={{ color: "var(--admin-text-faint)" }}>
-                  <p className="text-sm">Nessun permesso trovato</p>
+                  <p className="text-sm">No permission found</p>
                 </div>
               )}
             </div>
@@ -1227,7 +1227,7 @@ function SystemKeysPanel({ keys }: { keys: Props["systemKeys"] }) {
           <span
             className="text-sm font-medium"
             style={{ color: "var(--admin-text)" }}>
-            Chiavi di sistema disponibili
+            System keys available
           </span>
         </div>
         <div className="flex items-center gap-2">
