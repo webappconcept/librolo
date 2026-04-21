@@ -21,15 +21,15 @@ import { EditorPageHeader } from "../../../_components/editor-page-header";
 const FORM_ID = "template-editor-form";
 
 const FIELD_TYPES = [
-  { value: "text", label: "Testo breve" },
-  { value: "textarea", label: "Testo lungo" },
+  { value: "text", label: "Short text" },
+  { value: "textarea", label: "Long text" },
   { value: "richtext", label: "Rich text" },
-  { value: "image", label: "Immagine (URL)" },
+  { value: "image", label: "Image (URL)" },
   { value: "url", label: "URL" },
-  { value: "date", label: "Data" },
-  { value: "select", label: "Selezione" },
+  { value: "date", label: "Date" },
+  { value: "select", label: "Select" },
   { value: "toggle", label: "Toggle" },
-  { value: "number", label: "Numero" },
+  { value: "number", label: "Number" },
 ];
 
 interface FieldDraft {
@@ -84,7 +84,7 @@ const tabStyle = (active: boolean): React.CSSProperties => ({
   transition: "color 150ms, border-color 150ms",
 });
 
-// ─── Componente guida implementation ────────────────────────────────────────
+// ─── Implementation guide component ─────────────────────────────────────────
 function ImplementationGuide({
   slug,
   fields,
@@ -247,9 +247,9 @@ export default function ${componentName}({ page, fields: rawFields }: TemplatePr
         Implementation Guide
       </h2>
       <p className="text-xs mb-5" style={{ color: "var(--admin-text-muted)" }}>
-        Segui questi passaggi per collegare questo template al codice React
-        dell&apos;app. Il codice si aggiorna in tempo reale in base ai campi
-        custom configurati nel tab Generale.
+        Follow these steps to connect this template to the React code of the
+        app. The code updates in real time based on the custom fields configured
+        in the General tab.
       </p>
 
       {!slug && (
@@ -263,19 +263,18 @@ export default function ${componentName}({ page, fields: rawFields }: TemplatePr
             }}
           />
           <span>
-            Inserisci un{" "}
-            <strong style={{ color: "var(--admin-text)" }}>Nome</strong> nel tab
-            Generale per generare automaticamente lo slug e vedere il percorso
-            del componente.
+            Enter a <strong style={{ color: "var(--admin-text)" }}>Name</strong>{" "}
+            in the General tab to automatically generate the slug and view the
+            component path.
           </span>
         </div>
       )}
 
-      {/* Step unico — Crea il componente */}
+      {/* Single step — Create the component */}
       <div className="mb-6">
         <p style={sectionTitle}>
           <span style={stepBadge}>1</span>
-          Crea il file del componente
+          Create the component file
         </p>
         <div style={pathPill}>
           <FileCode2 size={13} />
@@ -285,7 +284,7 @@ export default function ${componentName}({ page, fields: rawFields }: TemplatePr
           <div style={codeBlockStyle}>{componentCode}</div>
           <button
             type="button"
-            title="Copia codice"
+            title="Copy code"
             onClick={() => copyToClipboard(componentCode, "component")}
             style={{
               position: "absolute",
@@ -311,7 +310,7 @@ export default function ${componentName}({ page, fields: rawFields }: TemplatePr
         </div>
       </div>
 
-      {/* Nota: nessun registry da aggiornare */}
+      {/* Note: no registry to update */}
       <div
         className="rounded-lg px-4 py-3 flex items-start gap-2 mb-4"
         style={{
@@ -327,21 +326,21 @@ export default function ${componentName}({ page, fields: rawFields }: TemplatePr
           className="text-xs leading-relaxed"
           style={{ color: "var(--admin-text-muted)" }}>
           <strong style={{ color: "var(--admin-text)" }}>
-            Nessun registry da aggiornare.
+            No registry to update.
           </strong>{" "}
-          Il sistema carica automaticamente{" "}
+          The system automatically loads{" "}
           <code style={{ fontFamily: "monospace", fontSize: "0.75rem" }}>
             {componentName}.tsx
           </code>{" "}
-          in base allo slug{" "}
+          based on the slug{" "}
           <code style={{ fontFamily: "monospace", fontSize: "0.75rem" }}>
             &#34;{slugLabel}&#34;
           </code>
-          . Basta creare il file con il nome corretto.
+          . Just create the file with the correct name.
         </p>
       </div>
 
-      {/* Nota campi */}
+      {/* Fields note */}
       {fields.length > 0 && (
         <div
           className="rounded-lg px-4 py-3"
@@ -354,7 +353,7 @@ export default function ${componentName}({ page, fields: rawFields }: TemplatePr
           <p
             className="text-xs font-semibold mb-2"
             style={{ color: "var(--admin-text)" }}>
-            Campi custom in questo template
+            Custom fields in this template
           </p>
           <div className="space-y-1">
             {fields.map((f) => (
@@ -388,7 +387,7 @@ export default function ${componentName}({ page, fields: rawFields }: TemplatePr
                   <span
                     className="text-xs px-1 py-0.5 rounded"
                     style={{ color: "#f59e0b", fontSize: "0.65rem" }}>
-                    obbligatorio
+                    required
                   </span>
                 )}
               </div>
@@ -411,7 +410,7 @@ export default function TemplateFormClient({
     "general" | "rules" | "implementation"
   >("general");
   const [name, setName] = useState(template?.name ?? "");
-  // In creazione lo slug è sempre derivato dal nome; in modifica è bloccato.
+  // On creation, the slug is always derived from the name; on edit it is locked.
   const [slug, setSlug] = useState(template?.slug ?? "");
   const [description, setDescription] = useState(template?.description ?? "");
 
@@ -439,7 +438,7 @@ export default function TemplateFormClient({
   const [error, setError] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
-  // Auto-genera slug dal nome solo in modalità creazione
+  // Auto-generate slug from name only in creation mode
   useEffect(() => {
     if (!isEdit) {
       setSlug(slugify(name));
@@ -538,7 +537,7 @@ export default function TemplateFormClient({
 
       await saveAction(fd);
       setSavedAt(
-        new Date().toLocaleTimeString("it-IT", {
+        new Date().toLocaleTimeString("en-US", {
           hour: "2-digit",
           minute: "2-digit",
         }),
@@ -546,7 +545,7 @@ export default function TemplateFormClient({
     } catch (err) {
       if (isRedirectError(err)) throw err;
       console.error(err);
-      setError("Errore durante il salvataggio. Riprova.");
+      setError("Error while saving. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -590,7 +589,7 @@ export default function TemplateFormClient({
       <EditorPageHeader
         breadcrumbs={[
           { label: "Pages", href: getAdminPath("content-pages") },
-          { label: "Template", href: getAdminPath("content-templates") },
+          { label: "Templates", href: getAdminPath("content-templates") },
         ]}
         currentLabel={currentLabel}
         backHref={getAdminPath("content-templates")}
@@ -668,7 +667,7 @@ export default function TemplateFormClient({
 
       {activeTab === "general" && (
         <>
-          {/* Informazioni base */}
+          {/* Basic information */}
           <section
             className="rounded-xl p-5 mb-5"
             style={{
@@ -678,14 +677,14 @@ export default function TemplateFormClient({
             <h2
               className="text-sm font-semibold mb-4"
               style={{ color: "var(--admin-text)" }}>
-              Informazioni base
+              Basic information
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label
                   className={labelCls}
                   style={{ color: "var(--admin-text-muted)" }}>
-                  Nome *
+                  Name *
                 </label>
                 <input
                   name="name"
@@ -694,7 +693,7 @@ export default function TemplateFormClient({
                   onChange={(e) => setName(e.target.value)}
                   className={inputCls}
                   style={inputStyle}
-                  placeholder="Es. Articolo Blog"
+                  placeholder="e.g. Blog Article"
                 />
               </div>
               <div>
@@ -706,14 +705,14 @@ export default function TemplateFormClient({
                     <span
                       className="ml-1.5 text-xs font-normal"
                       style={{ color: "var(--admin-text-faint)" }}>
-                      — generato automaticamente dal nome
+                      — automatically generated from the name
                     </span>
                   )}
                   {isEdit && (
                     <span
                       className="ml-1.5 text-xs font-normal"
                       style={{ color: "var(--admin-text-faint)" }}>
-                      — non modificabile dopo la creazione
+                      — cannot be changed after creation
                     </span>
                   )}
                 </label>
@@ -723,7 +722,7 @@ export default function TemplateFormClient({
                   readOnly
                   className={inputCls}
                   style={inputReadonlyStyle}
-                  placeholder="generato dal nome…"
+                  placeholder="generated from the name…"
                 />
                 {componentName && (
                   <p
@@ -740,7 +739,7 @@ export default function TemplateFormClient({
                 <label
                   className={labelCls}
                   style={{ color: "var(--admin-text-muted)" }}>
-                  Descrizione
+                  Description
                 </label>
                 <textarea
                   name="description"
@@ -749,13 +748,13 @@ export default function TemplateFormClient({
                   rows={2}
                   className={inputCls}
                   style={inputStyle}
-                  placeholder="Breve descrizione dell'uso del template…"
+                  placeholder="Brief description of how the template is used…"
                 />
               </div>
             </div>
           </section>
 
-          {/* Campi custom */}
+          {/* Custom fields */}
           <section
             className="rounded-xl p-5 mb-6"
             style={{
@@ -766,14 +765,14 @@ export default function TemplateFormClient({
               <h2
                 className="text-sm font-semibold"
                 style={{ color: "var(--admin-text)" }}>
-                Campi custom ({fields.length})
+                Custom fields ({fields.length})
               </h2>
               <button
                 type="button"
                 onClick={addField}
                 className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg"
                 style={{ background: "var(--admin-accent)", color: "#fff" }}>
-                <Plus size={13} /> Aggiungi campo
+                <Plus size={13} /> Add field
               </button>
             </div>
 
@@ -781,7 +780,7 @@ export default function TemplateFormClient({
               <p
                 className="text-sm text-center py-6"
                 style={{ color: "var(--admin-text-muted)" }}>
-                Nessun campo — il template usa solo il contenuto principale
+                No fields — the template uses only the main content
               </p>
             )}
 
@@ -802,7 +801,7 @@ export default function TemplateFormClient({
                     <span
                       className="text-xs font-semibold"
                       style={{ color: "var(--admin-text)" }}>
-                      Campo
+                      Field
                     </span>
                     <button
                       type="button"
@@ -817,14 +816,14 @@ export default function TemplateFormClient({
                       <label
                         className={labelCls}
                         style={{ color: "var(--admin-text-muted)" }}>
-                        Chiave (key) *
+                        Key *
                       </label>
                       <input
                         value={field.fieldKey}
                         onChange={(e) =>
                           updateField(field._id, "fieldKey", e.target.value)
                         }
-                        placeholder="es. coverImage"
+                        placeholder="e.g. coverImage"
                         className={inputCls}
                         style={fieldInputStyle}
                         required
@@ -834,14 +833,14 @@ export default function TemplateFormClient({
                       <label
                         className={labelCls}
                         style={{ color: "var(--admin-text-muted)" }}>
-                        Etichetta *
+                        Label *
                       </label>
                       <input
                         value={field.label}
                         onChange={(e) =>
                           updateField(field._id, "label", e.target.value)
                         }
-                        placeholder="ex. Cover Image"
+                        placeholder="e.g. Cover Image"
                         className={inputCls}
                         style={fieldInputStyle}
                         required
@@ -851,7 +850,7 @@ export default function TemplateFormClient({
                       <label
                         className={labelCls}
                         style={{ color: "var(--admin-text-muted)" }}>
-                        Tipo
+                        Type
                       </label>
                       <select
                         value={field.fieldType}
@@ -878,7 +877,7 @@ export default function TemplateFormClient({
                         onChange={(e) =>
                           updateField(field._id, "placeholder", e.target.value)
                         }
-                        placeholder="Testo suggerimento"
+                        placeholder="Hint text"
                         className={inputCls}
                         style={fieldInputStyle}
                       />
@@ -887,14 +886,14 @@ export default function TemplateFormClient({
                       <label
                         className={labelCls}
                         style={{ color: "var(--admin-text-muted)" }}>
-                        Valore default
+                        Default value
                       </label>
                       <input
                         value={field.defaultValue}
                         onChange={(e) =>
                           updateField(field._id, "defaultValue", e.target.value)
                         }
-                        placeholder="Lascia vuoto se nessuno"
+                        placeholder="Leave empty if none"
                         className={inputCls}
                         style={fieldInputStyle}
                       />
@@ -912,7 +911,7 @@ export default function TemplateFormClient({
                         <span
                           className="text-xs font-medium"
                           style={{ color: "var(--admin-text-muted)" }}>
-                          Obbligatorio
+                          Required
                         </span>
                       </label>
                     </div>
@@ -935,17 +934,17 @@ export default function TemplateFormClient({
             <h2
               className="text-sm font-semibold mb-1"
               style={{ color: "var(--admin-text)" }}>
-              Template figli consentiti
+              Allowed child templates
             </h2>
             <p
               className="text-xs leading-relaxed"
               style={{ color: "var(--admin-text-muted)" }}>
-              Seleziona quali template possono essere usati dalle pagine figlie
-              di una pagina con questo template. Se selezioni un solo template,
-              verrà assegnato automaticamente alla nuova pagina figlia senza
-              richiedere alcuna scelta. Se ne selezioni più di uno, verrà
-              mostrato un selettore prima di creare la pagina. Se non selezioni
-              nulla, qualsiasi template può essere usato.
+              Select which templates can be used by the child pages of a page
+              with this template. If you select a single template, it will be
+              automatically assigned to the new child page without prompting for
+              a choice. If you select more than one, a selector will be shown
+              before creating the page. If you select none, any template can be
+              used.
             </p>
           </div>
 
@@ -959,8 +958,8 @@ export default function TemplateFormClient({
                 className="text-sm"
                 style={{ color: "var(--admin-text-muted)" }}>
                 {isEdit
-                  ? "Non ci sono altri template nel sistema."
-                  : "Salva prima il template, poi potrai configurare le regole."}
+                  ? "There are no other templates in the system."
+                  : "Save the template first, then you can configure the rules."}
               </p>
             </div>
           ) : (
@@ -1006,7 +1005,7 @@ export default function TemplateFormClient({
                             "color-mix(in srgb, var(--admin-accent) 15%, var(--admin-card-bg))",
                           color: "var(--admin-accent)",
                         }}>
-                        Consentito
+                        Allowed
                       </span>
                     )}
                   </label>
@@ -1034,7 +1033,7 @@ export default function TemplateFormClient({
                 style={{ color: "var(--admin-text-muted)" }}>
                 {allowedChildIds.length === 1 ? (
                   <>
-                    Il template{" "}
+                    The template{" "}
                     <strong style={{ color: "var(--admin-text)" }}>
                       {
                         availableTemplates.find(
@@ -1042,17 +1041,16 @@ export default function TemplateFormClient({
                         )?.name
                       }
                     </strong>{" "}
-                    verrà assegnato <strong>automaticamente</strong> alla nuova
-                    pagina figlia — nessuna scelta richiesta.
+                    will be assigned <strong>automatically</strong> to the new
+                    child page — no choice required.
                   </>
                 ) : (
                   <>
-                    Alla creazione di una pagina figlia verrà mostrato un
-                    selettore con{" "}
+                    When creating a child page, a selector will be shown with{" "}
                     <strong style={{ color: "var(--admin-text)" }}>
-                      {allowedChildIds.length} template
+                      {allowedChildIds.length} templates
                     </strong>{" "}
-                    tra cui scegliere.
+                    to choose from.
                   </>
                 )}
               </p>
