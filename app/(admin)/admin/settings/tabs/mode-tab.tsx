@@ -54,15 +54,15 @@ function ModeTabInner({ settings }: { settings: AppSettings }) {
             style={{ borderTop: "1px solid var(--admin-divider)" }}>
             <SettingToggle
               name="registrations_enabled"
-              label="Registrazioni aperte"
-              description="Registrazione Utenti abilitata"
+              label="SignUp Open"
+              description="User can sign up to the app"
               defaultValue={settings.registrations_enabled === "true"}
               activeColor="bg-green-500"
             />
             <SettingToggle
               name="maintenance_mode"
-              label="Modalità manutenzione"
-              description="Modalità manutenzione"
+              label="Maintenance Mode"
+              description="All pages are unavailable, a message will be displayed"
               defaultValue={settings.maintenance_mode === "true"}
               activeColor="bg-red-500"
             />
@@ -86,7 +86,7 @@ function ModeTabInner({ settings }: { settings: AppSettings }) {
           ) : (
             <Save size={15} />
           )}
-          {isPending ? "Salvataggio..." : "Salva"}
+          {isPending ? "Saving..." : "Save"}
         </button>
       </form>
 

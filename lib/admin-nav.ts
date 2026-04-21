@@ -246,7 +246,7 @@ export const ADMIN_NAV: NavItem[] = [
       },
       {
         key: "settings-mode",
-        href: "/admin/settings/mode",
+        href: "/admin/settings/operation-mode",
         label: "Operation Mode",
         icon: "SlidersHorizontal",
         permission: "admin:settings",
