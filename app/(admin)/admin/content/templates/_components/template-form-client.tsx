@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { useEffect, useRef, useState } from "react";
-import { EditorPageHeader } from "../../_components/editor-page-header";
+import { EditorPageHeader } from "../../../_components/editor-page-header";
 
 const FORM_ID = "template-editor-form";
 
@@ -147,7 +147,7 @@ export default function ${componentName}({ page, fields: rawFields }: TemplatePr
     <main>
       <article>
         <h1>{page.title}</h1>
-${fieldsUsageLines}
+          ${fieldsUsageLines}
         {page.content && (
           <div dangerouslySetInnerHTML={{ __html: page.content }} />
         )}

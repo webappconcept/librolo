@@ -42,7 +42,7 @@ export default async function TemplatePage() {
           </div>
         </div>
         <Link
-          href={getAdminPath("content-templates")}
+          href={`${getAdminPath("content-templates")}/new`}
           className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-sm font-medium text-white shrink-0"
           style={{ background: "var(--admin-accent)" }}>
           <Plus size={16} />
@@ -72,7 +72,7 @@ export default async function TemplatePage() {
             Create your first Template for your Pages
           </p>
           <Link
-            href={`${getAdminPath("content-templates")}/nuovo`}
+            href={`${getAdminPath("content-templates")}/new`}
             className="mt-6 px-4 py-2 rounded-lg text-sm font-medium text-white"
             style={{ background: "var(--admin-accent)" }}>
             Create Template
