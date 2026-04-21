@@ -1,48 +1,46 @@
-// app/(admin)/admin/[...not-found]/page.tsx
-// Catch-all: cattura qualsiasi URL /admin/* non matchato da altre route.
-// Mostra un 404 con il layout admin (sidebar + header) invece del 404 del front.
+// Catch-all: captures any unmatched /admin/* URLs.
+// Shows a 404 with the admin layout (sidebar + header) instead of the main site's 404.
 import { LayoutDashboard, SearchX } from "lucide-react";
-import Link from "next/link";
 import type { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Pagina non trovata",
+  title: "Page Not Found",
   robots: "noindex",
 };
 
 export default function AdminCatchAll() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-6 gap-6">
-      {/* Icona */}
+      {/* Icon */}
       <div
         className="w-16 h-16 rounded-2xl flex items-center justify-center"
         style={{
-          background: "color-mix(in srgb, var(--admin-accent) 10%, var(--admin-card-bg))",
-          border: "1px solid color-mix(in srgb, var(--admin-accent) 20%, transparent)",
-        }}
-      >
+          background:
+            "color-mix(in srgb, var(--admin-accent) 10%, var(--admin-card-bg))",
+          border:
+            "1px solid color-mix(in srgb, var(--admin-accent) 20%, transparent)",
+        }}>
         <SearchX size={28} style={{ color: "var(--admin-accent)" }} />
       </div>
 
-      {/* Testo */}
+      {/* Text */}
       <div className="space-y-2">
         <p
           className="text-xs font-semibold uppercase tracking-widest"
-          style={{ color: "var(--admin-accent)" }}
-        >
-          Errore 404
+          style={{ color: "var(--admin-accent)" }}>
+          404 Error
         </p>
         <h1
           className="text-2xl font-bold"
-          style={{ color: "var(--admin-text)" }}
-        >
-          Pagina non trovata
+          style={{ color: "var(--admin-text)" }}>
+          Page Not Found
         </h1>
         <p
           className="text-sm max-w-xs mx-auto"
-          style={{ color: "var(--admin-text-muted)" }}
-        >
-          La sezione che stai cercando non esiste o è stata rimossa dall&apos;area admin.
+          style={{ color: "var(--admin-text-muted)" }}>
+          The section you are looking for does not exist or has been removed
+          from the admin area.
         </p>
       </div>
 
@@ -53,10 +51,9 @@ export default function AdminCatchAll() {
         style={{
           background: "var(--admin-accent)",
           color: "#fff",
-        }}
-      >
+        }}>
         <LayoutDashboard size={15} />
-        Torna alla Dashboard
+        Back to Dashboard
       </Link>
     </div>
   );
