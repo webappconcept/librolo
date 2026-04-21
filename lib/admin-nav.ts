@@ -203,7 +203,7 @@ export const ADMIN_NAV: NavItem[] = [
         permission: "admin:seo",
       },
       {
-        href: "/admin/route-registry",
+        href: "/admin/seo/route-registry",
         label: "Route Registry",
         icon: "Map",
         permission: "admin:seo",
