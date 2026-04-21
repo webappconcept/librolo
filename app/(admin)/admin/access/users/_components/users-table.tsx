@@ -8,7 +8,7 @@ import { useState, useTransition } from "react";
 import { unbanUser } from "../actions";
 import BanModal from "./ban-modal";
 
-/** Badge ruolo colorato — il colore viene passato dal server tramite roleColor */
+/** Colored role badge — the color is passed from the server via roleColor */
 function RoleBadge({ label, color }: { label: string; color: string }) {
   return (
     <span
@@ -58,7 +58,6 @@ function UserRow({ user }: { user: AdminUser }) {
         (e.currentTarget.style.background = "var(--admin-hover-bg)")
       }
       onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
-      {/* Avatar + nome + @username + email */}
       <td className="px-4 py-3">
         <div className="flex items-center gap-3">
           <div
@@ -89,7 +88,7 @@ function UserRow({ user }: { user: AdminUser }) {
         </div>
       </td>
 
-      {/* Ruolo */}
+      {/* Role */}
       <td className="px-4 py-3">
         <RoleBadge
           label={user.roleLabel ?? user.role}
@@ -97,12 +96,12 @@ function UserRow({ user }: { user: AdminUser }) {
         />
       </td>
 
-      {/* Piano */}
+      {/* Plan */}
       <td className="px-4 py-3">
         <PlanBadge status={user.subscriptionStatus} />
       </td>
 
-      {/* Email verificata */}
+      {/* Verified Email */}
       <td className="px-4 py-3 hidden lg:table-cell">
         <span
           className={`text-[11px] font-medium ${
@@ -111,18 +110,18 @@ function UserRow({ user }: { user: AdminUser }) {
           style={
             !user.emailVerified ? { color: "var(--admin-text-faint)" } : {}
           }>
-          {user.emailVerified ? "✓ Verificata" : "Non verificata"}
+          {user.emailVerified ? "✓ Verified" : "Not verified"}
         </span>
       </td>
 
-      {/* Data iscrizione */}
+      {/* Join Date */}
       <td className="px-4 py-3 hidden lg:table-cell">
         <span className="text-xs" style={{ color: "var(--admin-text-faint)" }}>
-          {new Date(user.createdAt).toLocaleDateString("it-IT")}
+          {new Date(user.createdAt).toLocaleDateString("en-US")}
         </span>
       </td>
 
-      {/* Azioni */}
+      {/* Actions */}
       <td className="px-4 py-3">
         {user.isAdmin ? (
           <span
@@ -144,7 +143,7 @@ function UserRow({ user }: { user: AdminUser }) {
                       <div className="w-2 h-2 bg-gray-900 rotate-45 mx-auto -mt-1" />
                     </div>
                     <span className="text-[11px] font-medium text-red-500 bg-red-50 px-2 py-0.5 rounded-full cursor-help">
-                      ⚠ motivo
+                      ⚠ reason
                     </span>
                   </div>
                 )}
@@ -152,7 +151,7 @@ function UserRow({ user }: { user: AdminUser }) {
                   disabled={pending}
                   onClick={() => startTransition(() => unbanUser(user.id))}
                   className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-lg transition-colors disabled:opacity-50 bg-emerald-50 text-emerald-700 hover:bg-emerald-100">
-                  <ShieldCheck size={13} /> Riattiva
+                  <ShieldCheck size={13} /> Reactivate
                 </button>
               </div>
             ) : (
@@ -183,7 +182,7 @@ export default function UsersTable({ users }: { users: AdminUser[] }) {
       <div
         className="text-center py-16 text-sm"
         style={{ color: "var(--admin-text-faint)" }}>
-        Nessun utente trovato.
+        No users found.
       </div>
     );
   }
@@ -193,7 +192,7 @@ export default function UsersTable({ users }: { users: AdminUser[] }) {
       <table className="w-full min-w-[640px]">
         <thead>
           <tr style={{ borderBottom: "1px solid var(--admin-divider)" }}>
-            {["Utente", "Ruolo", "Piano", "Email", "Iscritto il", "Azioni"].map(
+            {["User", "Role", "Plan", "Email", "Joined on", "Actions"].map(
               (h, i) => (
                 <th
                   key={h}
