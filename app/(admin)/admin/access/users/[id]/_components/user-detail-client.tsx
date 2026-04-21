@@ -4,7 +4,7 @@ import type { AdminUserDetail } from "@/lib/db/admin-queries";
 import type { RoleRow } from "@/lib/db/roles-queries";
 import { Check, Shield, ShieldBan, ShieldCheck, Trash2 } from "lucide-react";
 import { useState, useTransition } from "react";
-import { setUserRole } from "../../../../roles/actions";
+import { setUserRole } from "../../../roles/actions";
 import BanModal from "../../_components/ban-modal";
 import DeleteModal from "../../_components/delete-modal";
 import { unbanUser } from "../../actions";

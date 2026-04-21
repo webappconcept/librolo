@@ -1,4 +1,3 @@
-// app/(admin)/admin/roles/_components/roles-manager.tsx
 "use client";
 
 import type { RoleRow } from "@/lib/db/roles-queries";
@@ -14,10 +13,10 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useTransition, useState } from "react";
+import { useState, useTransition } from "react";
 import { createRole, deleteRole, updateRole } from "../actions";
 
-// ─── Sanitizza lo slug in tempo reale ──────────────────────────────────
+// ─── Real-time slug sanitization ──────────────────────────────────
 function sanitizeSlug(raw: string): string {
   return raw
     .toLowerCase()
@@ -27,10 +26,16 @@ function sanitizeSlug(raw: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-// ─── Colori preset ────────────────────────────────────────────
+// ─── Color presets ────────────────────────────────────────────
 const COLOR_PRESETS = [
-  "#6b7280", "#2563eb", "#16a34a", "#7c3aed",
-  "#dc2626", "#d97706", "#db2777", "#0891b2",
+  "#6b7280",
+  "#2563eb",
+  "#16a34a",
+  "#7c3aed",
+  "#dc2626",
+  "#d97706",
+  "#db2777",
+  "#0891b2",
 ];
 
 // ─── RoleBadge ──────────────────────────────────────────────
@@ -91,15 +96,17 @@ function RoleForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {/* Label — ora per prima */}
+        {/* Label */}
         <div>
-          <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--admin-text-muted)" }}>
-            Etichetta visibile
+          <label
+            className="block text-xs font-medium mb-1.5"
+            style={{ color: "var(--admin-text-muted)" }}>
+            Display Label
           </label>
           <input
             name="label"
             defaultValue={initial?.label}
-            placeholder="es. Content Editor"
+            placeholder="e.g. Content Editor"
             required
             className={inputCls}
             style={inputStyle}
@@ -108,15 +115,17 @@ function RoleForm({
 
         {/* Slug */}
         <div>
-          <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--admin-text-muted)" }}>
-            Slug (identificatore interno)
+          <label
+            className="block text-xs font-medium mb-1.5"
+            style={{ color: "var(--admin-text-muted)" }}>
+            Slug (internal identifier)
           </label>
           <input
             name="name"
             value={slug}
             onChange={handleSlugChange}
             disabled={isSystem}
-            placeholder="es. content-editor"
+            placeholder="e.g. content-editor"
             required
             autoComplete="off"
             spellCheck={false}
@@ -129,18 +138,26 @@ function RoleForm({
             }}
           />
           {isSystem ? (
-            <p className="text-[11px] mt-1" style={{ color: "var(--admin-text-faint)" }}>
-              Lo slug dei ruoli di sistema non può essere modificato.
+            <p
+              className="text-[11px] mt-1"
+              style={{ color: "var(--admin-text-faint)" }}>
+              System role slugs cannot be modified.
             </p>
           ) : (
-            <p className="text-[11px] mt-1 flex items-center gap-1" style={{ color: "var(--admin-text-faint)" }}>
-              Solo
+            <p
+              className="text-[11px] mt-1 flex items-center gap-1"
+              style={{ color: "var(--admin-text-faint)" }}>
+              Only
               <code
                 className="px-1 rounded"
-                style={{ background: "var(--admin-hover-bg)", color: "var(--admin-text-muted)", fontSize: "10px" }}>
+                style={{
+                  background: "var(--admin-hover-bg)",
+                  color: "var(--admin-text-muted)",
+                  fontSize: "10px",
+                }}>
                 a-z 0-9 -
               </code>
-              — spazi e caratteri speciali vengono rimossi automaticamente.
+              — spaces and special characters are removed automatically.
             </p>
           )}
         </div>
@@ -148,23 +165,27 @@ function RoleForm({
 
       {/* Description */}
       <div>
-        <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--admin-text-muted)" }}>
-          Descrizione (opzionale)
+        <label
+          className="block text-xs font-medium mb-1.5"
+          style={{ color: "var(--admin-text-muted)" }}>
+          Description (optional)
         </label>
         <textarea
           name="description"
           defaultValue={initial?.description ?? ""}
           rows={2}
-          placeholder="Cosa può fare questo ruolo..."
+          placeholder="What can this role do..."
           className={`${inputCls} resize-none`}
           style={inputStyle}
         />
       </div>
 
-      {/* Colore */}
+      {/* Color */}
       <div>
-        <label className="block text-xs font-medium mb-2" style={{ color: "var(--admin-text-muted)" }}>
-          Colore badge
+        <label
+          className="block text-xs font-medium mb-2"
+          style={{ color: "var(--admin-text-muted)" }}>
+          Badge Color
         </label>
         <div className="flex items-center gap-2 flex-wrap">
           {COLOR_PRESETS.map((c) => (
@@ -185,21 +206,28 @@ function RoleForm({
             onChange={(e) => setColor(e.target.value)}
             className="w-8 h-8 rounded cursor-pointer border"
             style={{ borderColor: "var(--admin-input-border)" }}
-            title="Colore personalizzato"
+            title="Custom color"
           />
           <span
             className="text-xs font-mono px-2 py-1 rounded"
-            style={{ background: "var(--admin-hover-bg)", color: "var(--admin-text-muted)" }}>
+            style={{
+              background: "var(--admin-hover-bg)",
+              color: "var(--admin-text-muted)",
+            }}>
             {color}
           </span>
         </div>
       </div>
 
-      {/* ─── Impostazioni avanzate (accordion) ───────────────────────── */}
+      {/* ─── Advanced Settings (accordion) ───────────────────────── */}
       <div
         className="rounded-lg overflow-hidden"
-        style={{ border: adminOpen ? "1px solid #f59e0b40" : "1px solid var(--admin-card-border)" }}>
-        {/* Trigger accordion */}
+        style={{
+          border: adminOpen
+            ? "1px solid #f59e0b40"
+            : "1px solid var(--admin-card-border)",
+        }}>
+        {/* Accordion trigger */}
         <button
           type="button"
           onClick={() => setAdminOpen((v) => !v)}
@@ -209,19 +237,23 @@ function RoleForm({
             color: adminOpen ? "#92400e" : "var(--admin-text-muted)",
           }}
           onMouseEnter={(e) => {
-            if (!adminOpen) (e.currentTarget as HTMLButtonElement).style.background = "var(--admin-card-border)";
+            if (!adminOpen)
+              (e.currentTarget as HTMLButtonElement).style.background =
+                "var(--admin-card-border)";
           }}
           onMouseLeave={(e) => {
-            if (!adminOpen) (e.currentTarget as HTMLButtonElement).style.background = "var(--admin-hover-bg)";
+            if (!adminOpen)
+              (e.currentTarget as HTMLButtonElement).style.background =
+                "var(--admin-hover-bg)";
           }}>
           <span className="flex items-center gap-2 text-xs font-medium">
             <Shield size={13} />
-            Impostazioni avanzate
+            Advanced Settings
             {isAdmin && (
               <span
                 className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded"
                 style={{ background: "#f5f3ff", color: "#7c3aed" }}>
-                <ShieldCheck size={9} /> super admin attivo
+                <ShieldCheck size={9} /> super admin active
               </span>
             )}
           </span>
@@ -234,21 +266,30 @@ function RoleForm({
           />
         </button>
 
-        {/* Contenuto collassabile */}
+        {/* Collapsible content */}
         {adminOpen && (
-          <div className="px-4 py-4 space-y-4" style={{ background: "var(--admin-card-bg)" }}>
+          <div
+            className="px-4 py-4 space-y-4"
+            style={{ background: "var(--admin-card-bg)" }}>
             {/* Warning banner */}
             <div
               className="flex items-start gap-3 rounded-lg px-3 py-2.5"
               style={{ background: "#fffbeb", border: "1px solid #f59e0b40" }}>
-              <AlertTriangle size={14} className="shrink-0 mt-0.5" style={{ color: "#d97706" }} />
-              <p className="text-[11px] leading-relaxed" style={{ color: "#92400e" }}>
-                Queste impostazioni sono riservate a casi estremi.
-                Per gestire gli accessi utilizza la <strong>matrice permessi RBAC</strong> — usa questa opzione solo per il ruolo super admin di sistema.
+              <AlertTriangle
+                size={14}
+                className="shrink-0 mt-0.5"
+                style={{ color: "#d97706" }}
+              />
+              <p
+                className="text-[11px] leading-relaxed"
+                style={{ color: "#92400e" }}>
+                These settings are reserved for extreme cases. To manage access
+                rights, please use the <strong>RBAC permissions matrix</strong>{" "}
+                — only use this option for the system super admin role.
               </p>
             </div>
 
-            {/* Checkbox isAdmin */}
+            {/* isAdmin checkbox */}
             <label className="flex items-start gap-3 cursor-pointer">
               <div className="mt-0.5 shrink-0">
                 <button
@@ -259,17 +300,33 @@ function RoleForm({
                   className="w-5 h-5 rounded border-2 flex items-center justify-center transition-colors"
                   style={{
                     background: isAdmin ? "#7c3aed" : "transparent",
-                    borderColor: isAdmin ? "#7c3aed" : "var(--admin-input-border)",
+                    borderColor: isAdmin
+                      ? "#7c3aed"
+                      : "var(--admin-input-border)",
                   }}>
                   {isAdmin && <Check size={11} className="text-white" />}
                 </button>
               </div>
               <div>
-                <p className="text-sm font-medium" style={{ color: "var(--admin-text)" }}>Super Amministratore</p>
-                <p className="text-xs mt-0.5" style={{ color: "var(--admin-text-faint)" }}>
-                  Accesso completo e illimitato al pannello admin.
-                  Bypassa completamente il sistema RBAC — incluso il permesso{" "}
-                  <code className="px-1 rounded" style={{ background: "var(--admin-hover-bg)", fontSize: "10px" }}>admin:access</code>.
+                <p
+                  className="text-sm font-medium"
+                  style={{ color: "var(--admin-text)" }}>
+                  Super Administrator
+                </p>
+                <p
+                  className="text-xs mt-0.5"
+                  style={{ color: "var(--admin-text-faint)" }}>
+                  Full and unrestricted access to the admin panel. Completely
+                  bypasses the RBAC system — including the{" "}
+                  <code
+                    className="px-1 rounded"
+                    style={{
+                      background: "var(--admin-hover-bg)",
+                      fontSize: "10px",
+                    }}>
+                    admin:access
+                  </code>{" "}
+                  permission.
                 </p>
               </div>
             </label>
@@ -277,14 +334,17 @@ function RoleForm({
         )}
       </div>
 
-      {/* Azioni */}
+      {/* Actions */}
       <div className="flex items-center justify-end gap-2 pt-2">
         <button
           type="button"
           onClick={onCancel}
           className="px-4 py-2 text-sm rounded-lg transition-colors"
-          style={{ color: "var(--admin-text-muted)", background: "var(--admin-hover-bg)" }}>
-          Annulla
+          style={{
+            color: "var(--admin-text-muted)",
+            background: "var(--admin-hover-bg)",
+          }}>
+          Cancel
         </button>
         <button
           type="submit"
@@ -296,7 +356,7 @@ function RoleForm({
           ) : (
             <Check size={14} />
           )}
-          {isEdit ? "Salva modifiche" : "Crea ruolo"}
+          {isEdit ? "Save changes" : "Create role"}
         </button>
       </div>
     </form>
@@ -304,7 +364,13 @@ function RoleForm({
 }
 
 // ─── RoleCard ─────────────────────────────────────────────────
-function RoleCard({ role, onEdit }: { role: RoleRow; onEdit: (r: RoleRow) => void }) {
+function RoleCard({
+  role,
+  onEdit,
+}: {
+  role: RoleRow;
+  onEdit: (r: RoleRow) => void;
+}) {
   const [pending, startTransition] = useTransition();
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -325,7 +391,10 @@ function RoleCard({ role, onEdit }: { role: RoleRow; onEdit: (r: RoleRow) => voi
         <div className="flex items-center gap-3">
           <div
             className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-            style={{ background: role.color + "18", border: `1px solid ${role.color}40` }}>
+            style={{
+              background: role.color + "18",
+              border: `1px solid ${role.color}40`,
+            }}>
             {role.isAdmin ? (
               <ShieldCheck size={16} style={{ color: role.color }} />
             ) : (
@@ -338,8 +407,11 @@ function RoleCard({ role, onEdit }: { role: RoleRow; onEdit: (r: RoleRow) => voi
               {role.isSystem && (
                 <span
                   className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded"
-                  style={{ background: "var(--admin-hover-bg)", color: "var(--admin-text-faint)" }}>
-                  <Lock size={9} /> sistema
+                  style={{
+                    background: "var(--admin-hover-bg)",
+                    color: "var(--admin-text-faint)",
+                  }}>
+                  <Lock size={9} /> system
                 </span>
               )}
               {role.isAdmin && (
@@ -350,7 +422,9 @@ function RoleCard({ role, onEdit }: { role: RoleRow; onEdit: (r: RoleRow) => voi
                 </span>
               )}
             </div>
-            <p className="text-[11px] font-mono mt-0.5" style={{ color: "var(--admin-text-faint)" }}>
+            <p
+              className="text-[11px] font-mono mt-0.5"
+              style={{ color: "var(--admin-text-faint)" }}>
               slug: {role.name}
             </p>
           </div>
@@ -361,19 +435,23 @@ function RoleCard({ role, onEdit }: { role: RoleRow; onEdit: (r: RoleRow) => voi
             onClick={() => onEdit(role)}
             className="p-1.5 rounded-lg transition-colors"
             style={{ color: "var(--admin-text-muted)" }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--admin-hover-bg)")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-            title="Modifica">
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.background = "var(--admin-hover-bg)")
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.background = "transparent")
+            }
+            title="Edit">
             <Pencil size={13} />
           </button>
-          {!role.isSystem && (
-            confirmDelete ? (
+          {!role.isSystem &&
+            (confirmDelete ? (
               <div className="flex items-center gap-1">
                 <button
                   onClick={handleDelete}
                   disabled={pending}
                   className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors disabled:opacity-50"
-                  title="Conferma eliminazione">
+                  title="Confirm deletion">
                   {pending ? (
                     <div className="w-3 h-3 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
                   ) : (
@@ -384,7 +462,7 @@ function RoleCard({ role, onEdit }: { role: RoleRow; onEdit: (r: RoleRow) => voi
                   onClick={() => setConfirmDelete(false)}
                   className="p-1.5 rounded-lg transition-colors"
                   style={{ color: "var(--admin-text-muted)" }}
-                  title="Annulla">
+                  title="Cancel">
                   <X size={13} />
                 </button>
               </div>
@@ -393,18 +471,23 @@ function RoleCard({ role, onEdit }: { role: RoleRow; onEdit: (r: RoleRow) => voi
                 onClick={() => setConfirmDelete(true)}
                 className="p-1.5 rounded-lg transition-colors"
                 style={{ color: "var(--admin-text-muted)" }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = "#fef2f2")}
-                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                title="Elimina">
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.background = "#fef2f2")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.background = "transparent")
+                }
+                title="Delete">
                 <Trash2 size={13} />
               </button>
-            )
-          )}
+            ))}
         </div>
       </div>
 
       {role.description && (
-        <p className="text-xs mt-2.5 leading-relaxed" style={{ color: "var(--admin-text-muted)" }}>
+        <p
+          className="text-xs mt-2.5 leading-relaxed"
+          style={{ color: "var(--admin-text-muted)" }}>
           {role.description}
         </p>
       )}
@@ -441,20 +524,37 @@ export function RolesManager({ roles }: { roles: RoleRow[] }) {
       {showCreate && (
         <div
           className="rounded-xl p-5"
-          style={{ background: "var(--admin-card-bg)", border: "1px solid var(--admin-card-border)" }}>
-          <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--admin-text)" }}>
-            Nuovo ruolo
+          style={{
+            background: "var(--admin-card-bg)",
+            border: "1px solid var(--admin-card-border)",
+          }}>
+          <h3
+            className="text-sm font-semibold mb-4"
+            style={{ color: "var(--admin-text)" }}>
+            New Role
           </h3>
-          <RoleForm onSave={handleCreate} onCancel={() => setShowCreate(false)} pending={pending} />
+          <RoleForm
+            onSave={handleCreate}
+            onCancel={() => setShowCreate(false)}
+            pending={pending}
+          />
         </div>
       )}
 
       {editingRole && (
         <div
           className="rounded-xl p-5"
-          style={{ background: "var(--admin-card-bg)", border: "2px solid var(--admin-accent)" }}>
-          <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--admin-text)" }}>
-            Modifica ruolo — <span style={{ color: editingRole.color }}>{editingRole.label}</span>
+          style={{
+            background: "var(--admin-card-bg)",
+            border: "2px solid var(--admin-accent)",
+          }}>
+          <h3
+            className="text-sm font-semibold mb-4"
+            style={{ color: "var(--admin-text)" }}>
+            Edit Role —{" "}
+            <span style={{ color: editingRole.color }}>
+              {editingRole.label}
+            </span>
           </h3>
           <RoleForm
             initial={editingRole}
@@ -467,8 +567,10 @@ export function RolesManager({ roles }: { roles: RoleRow[] }) {
 
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--admin-text-faint)" }}>
-            Ruoli di sistema ({systemRoles.length})
+          <h3
+            className="text-xs font-semibold uppercase tracking-widest"
+            style={{ color: "var(--admin-text-faint)" }}>
+            System Roles ({systemRoles.length})
           </h3>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -480,32 +582,40 @@ export function RolesManager({ roles }: { roles: RoleRow[] }) {
 
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--admin-text-faint)" }}>
-            Ruoli personalizzati ({customRoles.length})
+          <h3
+            className="text-xs font-semibold uppercase tracking-widest"
+            style={{ color: "var(--admin-text-faint)" }}>
+            Custom Roles ({customRoles.length})
           </h3>
           {!showCreate && !editingRole && (
             <button
               onClick={() => setShowCreate(true)}
               className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg text-white transition-colors"
               style={{ background: "var(--admin-accent)" }}>
-              <Plus size={13} /> Nuovo ruolo
+              <Plus size={13} /> New Role
             </button>
           )}
         </div>
         {customRoles.length === 0 ? (
           <div
             className="rounded-xl border-2 border-dashed flex flex-col items-center justify-center py-10 gap-3"
-            style={{ borderColor: "var(--admin-card-border)", color: "var(--admin-text-faint)" }}>
+            style={{
+              borderColor: "var(--admin-card-border)",
+              color: "var(--admin-text-faint)",
+            }}>
             <Shield size={28} style={{ opacity: 0.3 }} />
-            <p className="text-sm">Nessun ruolo personalizzato</p>
-            <p className="text-xs text-center max-w-xs" style={{ color: "var(--admin-text-faint)" }}>
-              Crea ruoli personalizzati e assegna i permessi granulari dalla matrice RBAC.
+            <p className="text-sm">No custom roles found</p>
+            <p
+              className="text-xs text-center max-w-xs"
+              style={{ color: "var(--admin-text-faint)" }}>
+              Create custom roles and assign granular permissions from the RBAC
+              matrix.
             </p>
             <button
               onClick={() => setShowCreate(true)}
               className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg text-white transition-colors"
               style={{ background: "var(--admin-accent)" }}>
-              <Plus size={13} /> Crea il primo
+              <Plus size={13} /> Create the first one
             </button>
           </div>
         ) : (

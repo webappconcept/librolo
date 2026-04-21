@@ -1,16 +1,16 @@
-// app/(admin)/admin/roles/actions.ts
 "use server";
 
+import { getAdminPath } from "@/lib/admin-nav";
 import { db } from "@/lib/db/drizzle";
 import { getAdminRoles } from "@/lib/db/roles-queries";
 import { activityLogs, ActivityType, roles, users } from "@/lib/db/schema";
 import { requireAdmin } from "@/lib/rbac/guards";
 import { and, eq, ne } from "drizzle-orm";
-import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { z } from "zod";
 
-/** Scrive un record su activity_logs con IP del richiedente. */
+/** Writes a record to activity_logs with the requester's IP. */
 async function logRbacAction(
   adminId: string,
   action: ActivityType,
@@ -31,16 +31,16 @@ async function logRbacAction(
 const roleSchema = z.object({
   name: z
     .string()
-    .min(2, "Minimo 2 caratteri")
+    .min(2, "Minimum 2 characters")
     .max(50)
-    .regex(/^[a-z0-9_-]+$/, "Solo lettere minuscole, numeri, - e _"),
-  label: z.string().min(2, "Minimo 2 caratteri").max(100),
-  color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Colore HEX non valido"),
+    .regex(/^[a-z0-9_-]+$/, "Only lowercase letters, numbers, - and _"),
+  label: z.string().min(2, "Minimum 2 characters").max(100),
+  color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Invalid HEX color"),
   description: z.string().max(300).optional(),
   /**
-   * isAdmin = true solo per il ruolo "admin" di sistema.
-   * Per tutti gli altri accessi usare i permessi RBAC (es. admin:access).
-   * Flag di emergenza: bypassa il sistema RBAC.
+   * isAdmin = true only for the system "admin" role.
+   * For all other access, use RBAC permissions (e.g., admin:access).
+   * Emergency flag: bypasses the RBAC system.
    */
   isAdmin: z.boolean().default(false),
 });
@@ -75,8 +75,8 @@ export async function createRole(formData: FormData) {
     `create_role name=${parsed.data.name} label="${parsed.data.label}" isAdmin=${parsed.data.isAdmin}`,
   );
 
-  revalidatePath("/admin/roles");
-  return { success: "Ruolo creato" };
+  revalidatePath(getAdminPath("users-roles"));
+  return { success: "Role created" };
 }
 
 export async function updateRole(id: number, formData: FormData) {
@@ -88,7 +88,7 @@ export async function updateRole(id: number, formData: FormData) {
     .where(eq(roles.id, id))
     .limit(1);
 
-  if (!existing) return { error: "Ruolo non trovato" };
+  if (!existing) return { error: "Role not found" };
 
   const parsed = roleSchema.safeParse({
     name: existing.isSystem ? existing.name : formData.get("name"),
@@ -105,7 +105,7 @@ export async function updateRole(id: number, formData: FormData) {
     .set({ ...parsed.data, updatedAt: new Date() })
     .where(eq(roles.id, id));
 
-  // Sincronizza is_admin su tutti gli utenti con questo ruolo
+  // Sync is_admin for all users with this role
   await db
     .update(users)
     .set({
@@ -120,9 +120,9 @@ export async function updateRole(id: number, formData: FormData) {
     `update_role name=${existing.name} label="${parsed.data.label}" isAdmin=${parsed.data.isAdmin}`,
   );
 
-  revalidatePath("/admin/roles");
-  revalidatePath("/admin/users");
-  return { success: "Ruolo aggiornato" };
+  revalidatePath(getAdminPath("users-roles"));
+  revalidatePath(getAdminPath("users-list"));
+  return { success: "Role updated" };
 }
 
 export async function deleteRole(id: number) {
@@ -134,10 +134,10 @@ export async function deleteRole(id: number) {
     .where(eq(roles.id, id))
     .limit(1);
 
-  if (!existing) return { error: "Ruolo non trovato" };
-  if (existing.isSystem) return { error: "I ruoli di sistema non possono essere eliminati" };
+  if (!existing) return { error: "Role not found" };
+  if (existing.isSystem) return { error: "System roles cannot be deleted" };
 
-  // Riassegna gli utenti con questo ruolo a 'member'
+  // Reassign users with this role to 'member'
   await db
     .update(users)
     .set({ role: "member", isAdmin: false, updatedAt: new Date() })
@@ -151,9 +151,9 @@ export async function deleteRole(id: number) {
     `delete_role name=${existing.name}`,
   );
 
-  revalidatePath("/admin/roles");
-  revalidatePath("/admin/users");
-  return { success: "Ruolo eliminato" };
+  revalidatePath(getAdminPath("users-roles"));
+  revalidatePath(getAdminPath("users-list"));
+  return { success: "Role deleted" };
 }
 
 export async function setUserRole(userId: string, roleName: string) {
@@ -165,7 +165,7 @@ export async function setUserRole(userId: string, roleName: string) {
     .where(eq(roles.name, roleName))
     .limit(1);
 
-  if (!role) return { error: "Ruolo non trovato" };
+  if (!role) return { error: "Role not found" };
 
   const [target] = await db
     .select({ role: users.role })
@@ -188,7 +188,7 @@ export async function setUserRole(userId: string, roleName: string) {
     `set_user_role userId=${userId} from=${target?.role ?? "?"} to=${roleName}`,
   );
 
-  revalidatePath("/admin/users");
-  revalidatePath(`/admin/users/${userId}`);
-  return { success: "Ruolo assegnato" };
+  revalidatePath(getAdminPath("users-list"));
+  revalidatePath(`${getAdminPath("users-list")}/${userId}`);
+  return { success: "Role assigned" };
 }

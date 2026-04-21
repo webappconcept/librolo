@@ -49,7 +49,7 @@ export default function AdminShellClient({
             <h1
               className="text-sm font-semibold hidden lg:block"
               style={{ color: "var(--admin-header-text)" }}>
-              Pannello Amministratore
+              Admin Dashboard
             </h1>
             <h1
               className="text-sm font-semibold lg:hidden"
