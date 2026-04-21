@@ -115,7 +115,7 @@ function FilterPill({
           ? `1px solid ${meta ? meta.border : "color-mix(in srgb, var(--admin-accent) 30%, transparent)"}`
           : "1px solid var(--admin-divider)",
       }}>
-      {vis === "all" ? "Tutte" : vis}
+      {vis === "all" ? "All" : vis}
       <span
         className="rounded-full px-1.5 py-0 text-xs"
         style={{
@@ -305,7 +305,7 @@ export default function RouteRegistryClient({
             className="space-y-1 text-sm"
             style={{ color: "var(--admin-text-muted)" }}>
             <p style={{ color: "var(--admin-text)" }} className="font-medium">
-              A cosa serve Routes
+              How to use Route
             </p>
             <p>
               This section dynamically manages the page metadata. All routes
@@ -513,7 +513,7 @@ export default function RouteRegistryClient({
               onClick={() => setVisFilter("all")}
               className="mt-3 text-xs underline"
               style={{ color: "var(--admin-accent)" }}>
-              Mostra tutte
+              Show All
             </button>
           )}
         </div>

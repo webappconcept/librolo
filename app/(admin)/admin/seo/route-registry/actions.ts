@@ -15,7 +15,7 @@ import { z } from "zod";
 const REVALIDATE = "/admin/route-registry";
 
 const schema = z.object({
-  id: z.string().uuid().optional(),
+  id: z.uuid({ message: "ID non valido" }).optional(),
   pathname: z
     .string()
     .min(1, "Il pathname è obbligatorio")
@@ -41,7 +41,7 @@ export async function upsertRouteAction(
   const raw = Object.fromEntries(formData);
   const parsed = schema.safeParse(raw);
   if (!parsed.success)
-    return { error: parsed.error.issues[0]?.message ?? "Dati non validi" };
+    return { error: parsed.error.issues[0]?.message ?? "Data not valid" };
 
   const { id, isActive, ...rest } = parsed.data;
   const data = {
@@ -57,30 +57,28 @@ export async function upsertRouteAction(
   } catch (err) {
     const msg = err instanceof Error ? err.message : "";
     if (msg.includes("unique") || msg.includes("duplicate"))
-      return { error: "Pathname già registrato." };
+      return { error: "Pathname already registered." };
     console.error("[upsertRouteAction]", err);
-    return { error: "Errore nel salvataggio." };
+    return { error: "Error while saving." };
   }
 
   return { success: true, savedAt: new Date().toISOString() };
 }
 
-export async function deleteRouteAction(
-  id: string,
-): Promise<ActionResult> {
+export async function deleteRouteAction(id: string): Promise<ActionResult> {
   await requireAdmin();
   try {
     const rows = await getAllRoutes();
     const route = rows.find((row) => row.id === id);
     if (route?.isSystemRoute) {
-      return { error: "Le route di sistema non possono essere eliminate." };
+      return { error: "System routes can't be deleted." };
     }
 
     await deleteRoute(id);
     revalidatePath(REVALIDATE);
   } catch (err) {
     console.error("[deleteRouteAction]", err);
-    return { error: "Errore nell'eliminazione." };
+    return { error: "Error while deleting." };
   }
   return { success: true };
 }
