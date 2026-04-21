@@ -1,6 +1,6 @@
-// app/(admin)/admin/users/_components/users-table.tsx
 "use client";
 
+import { getAdminPath } from "@/lib/admin-nav";
 import type { AdminUser } from "@/lib/db/admin-queries";
 import { ShieldBan, ShieldCheck } from "lucide-react";
 import Link from "next/link";
@@ -28,7 +28,9 @@ function PlanBadge({ status }: { status: string | null }) {
   return (
     <span
       className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
-        isPremium ? "bg-orange-100 text-orange-700" : "bg-gray-100 text-gray-500"
+        isPremium
+          ? "bg-orange-100 text-orange-700"
+          : "bg-gray-100 text-gray-500"
       }`}>
       {isPremium ? "Premium" : "Free"}
     </span>
@@ -55,10 +57,7 @@ function UserRow({ user }: { user: AdminUser }) {
       onMouseEnter={(e) =>
         (e.currentTarget.style.background = "var(--admin-hover-bg)")
       }
-      onMouseLeave={(e) =>
-        (e.currentTarget.style.background = "transparent")
-      }>
-
+      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
       {/* Avatar + nome + @username + email */}
       <td className="px-4 py-3">
         <div className="flex items-center gap-3">
@@ -69,7 +68,7 @@ function UserRow({ user }: { user: AdminUser }) {
           </div>
           <div>
             <Link
-              href={`/admin/users/${user.id}`}
+              href={`${getAdminPath("users-list")}/${user.id}`}
               className="text-sm font-medium transition-colors leading-none admin-user-link"
               style={{ color: "var(--admin-text)" }}>
               {user.firstName} {user.lastName}
@@ -109,16 +108,16 @@ function UserRow({ user }: { user: AdminUser }) {
           className={`text-[11px] font-medium ${
             user.emailVerified ? "text-emerald-600" : ""
           }`}
-          style={!user.emailVerified ? { color: "var(--admin-text-faint)" } : {}}>
+          style={
+            !user.emailVerified ? { color: "var(--admin-text-faint)" } : {}
+          }>
           {user.emailVerified ? "✓ Verificata" : "Non verificata"}
         </span>
       </td>
 
       {/* Data iscrizione */}
       <td className="px-4 py-3 hidden lg:table-cell">
-        <span
-          className="text-xs"
-          style={{ color: "var(--admin-text-faint)" }}>
+        <span className="text-xs" style={{ color: "var(--admin-text-faint)" }}>
           {new Date(user.createdAt).toLocaleDateString("it-IT")}
         </span>
       </td>
@@ -204,7 +203,7 @@ export default function UsersTable({ users }: { users: AdminUser[] }) {
                   style={{ color: "var(--admin-text-faint)" }}>
                   {h}
                 </th>
-              )
+              ),
             )}
           </tr>
         </thead>
