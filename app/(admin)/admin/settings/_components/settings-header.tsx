@@ -20,12 +20,12 @@ type SectionMeta = {
 };
 
 const SECTIONS: Record<string, SectionMeta> = {
-  generale: {
+  general: {
     label: "General",
     description: "Nome, logo e informazioni principali dell'applicazione.",
     icon: Globe,
   },
-  comportamento: {
+  mode: {
     label: "Operation Mode",
     description: "Gestisci le impostazioni di comportamento della piattaforma.",
     icon: SlidersHorizontal,
@@ -36,7 +36,7 @@ const SECTIONS: Record<string, SectionMeta> = {
       "Configura le opzioni di accesso e registrazione degli utenti.",
     icon: LogIn,
   },
-  sender: {
+  resend: {
     label: "Resend",
     description:
       "Configura le credenziali e il mittente per l'invio delle email.",
@@ -47,7 +47,7 @@ const SECTIONS: Record<string, SectionMeta> = {
     description: "Personalizza i template delle email inviate dal sistema.",
     icon: Mail,
   },
-  contenuti: {
+  snippets: {
     label: "Content",
     description:
       "Gestisci gli snippet e i contenuti testuali dell'applicazione.",
