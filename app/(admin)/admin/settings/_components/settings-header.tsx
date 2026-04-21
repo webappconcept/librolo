@@ -90,14 +90,12 @@ export function SettingsHeader() {
           style={{ color: "var(--admin-text)" }}>
           {section.label ? (
             <>
-              <span style={{ color: "var(--admin-text-muted)" }}>
-                Impostazioni
-              </span>
+              <span style={{ color: "var(--admin-text-muted)" }}>Settings</span>
               <span style={{ color: "var(--admin-text-faint)" }}> / </span>
               <span>{section.label}</span>
             </>
           ) : (
-            "Impostazioni"
+            "Settings"
           )}
         </h2>
         <p
