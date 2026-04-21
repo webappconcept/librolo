@@ -1237,7 +1237,7 @@ function SystemKeysPanel({ keys }: { keys: Props["systemKeys"] }) {
               background: "var(--admin-card-border)",
               color: "var(--admin-text-faint)",
             }}>
-            {keys.length} chiavi
+            {keys.length} keys
           </span>
           <ChevronRight
             size={13}
@@ -1294,8 +1294,8 @@ function SystemKeysPanel({ keys }: { keys: Props["systemKeys"] }) {
 
 // ─── Tabs ─────────────────────────────────────────────────────────────
 const TABS = [
-  { id: "matrix", label: "Assegnazione permessi ai ruoli", icon: ShieldCheck },
-  { id: "catalog", label: "Catalogo permessi", icon: Shield },
+  { id: "matrix", label: "Set Permissions to Roles", icon: ShieldCheck },
+  { id: "catalog", label: "Permission Catalog", icon: Shield },
 ] as const;
 type TabId = (typeof TABS)[number]["id"];
 
