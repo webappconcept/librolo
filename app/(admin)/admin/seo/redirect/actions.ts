@@ -56,7 +56,7 @@ export async function deleteRedirectAction(
 ): Promise<{ error?: string; success?: boolean }> {
   try {
     await deleteRedirect(id);
-    revalidatePath("/admin/redirect");
+    revalidatePath("/admin/seo/redirect");
   } catch (err) {
     console.error("[deleteRedirectAction]", err);
     return { error: "Errore nell'eliminazione." };

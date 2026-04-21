@@ -11,7 +11,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 
 const inputStyle: React.CSSProperties = {
   background: "var(--admin-page-bg)",
@@ -97,6 +97,11 @@ export default function RedirectsClient({
   deleteAction,
 }: Props) {
   const [rows, setRows] = useState<RedirectRow[]>(initialRows);
+
+  useEffect(() => {
+    setRows(initialRows);
+  }, [initialRows]);
+
   const [mode, setMode] = useState<FormMode | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -106,7 +111,7 @@ export default function RedirectsClient({
     async (prev: unknown, fd: FormData) => {
       const res = await upsertAction(prev, fd);
       if (res.success) {
-        window.location.reload();
+        setMode(null);
       }
       return res;
     },

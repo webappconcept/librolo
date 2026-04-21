@@ -12,7 +12,7 @@ import { requireAdmin } from "@/lib/rbac/guards";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-const REVALIDATE = "/admin/route-registry";
+const REVALIDATE = "/admin/seo/route-registry";
 
 const schema = z.object({
   id: z.uuid({ message: "ID not valid" }).optional(),
