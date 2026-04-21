@@ -15,17 +15,17 @@ import { z } from "zod";
 const REVALIDATE = "/admin/route-registry";
 
 const schema = z.object({
-  id: z.uuid({ message: "ID non valido" }).optional(),
+  id: z.uuid({ message: "ID not valid" }).optional(),
   pathname: z
     .string()
-    .min(1, "Il pathname è obbligatorio")
-    .regex(/^\//, { message: "Il pathname deve iniziare con /" }),
+    .min(1, "Pathname is mandatory")
+    .regex(/^\//, { message: "Pathname must starts with /" }),
   label: z
     .string()
-    .min(1, "L'etichetta è obbligatoria")
-    .max(150, "Max 150 caratteri"),
+    .min(1, "Label is mandatory")
+    .max(150, "Max 150 characterds"),
   visibility: z.enum(["public", "private", "admin", "auth-only"], {
-    error: "Visibilità non valida",
+    error: "Visibility not valid",
   }),
   isActive: z.string().optional(),
 });
