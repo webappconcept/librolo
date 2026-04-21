@@ -39,7 +39,7 @@ export default function BanModal({ userId, userName, onClose }: BanModalProps) {
             </div>
             <div>
               <h3 className="text-sm font-semibold text-gray-800">
-                Sospendi account
+                Suspend account
               </h3>
               <p className="text-xs text-gray-400 mt-0.5">{userName}</p>
             </div>
@@ -55,20 +55,21 @@ export default function BanModal({ userId, userName, onClose }: BanModalProps) {
         <div className="space-y-3">
           <label className="block">
             <span className="text-xs font-medium text-gray-600">
-              Motivo della sospensione{" "}
-              <span className="text-gray-400 font-normal">(opzionale)</span>
+              Reason for suspension{" "}
+              <span className="text-gray-400 font-normal">(optional)</span>
             </span>
             <textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="Es. Violazione dei termini di servizio, spam, ecc."
+              placeholder="e.g. Terms of service violation, spam, etc."
               rows={3}
               className="mt-1.5 w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-300 focus:border-red-400 resize-none"
             />
           </label>
 
           <p className="text-xs text-gray-400">
-            L'utente non potrà più accedere finché non viene riattivato.
+            The user will no longer be able to log in until the account is
+            reactivated.
           </p>
         </div>
 
@@ -78,7 +79,7 @@ export default function BanModal({ userId, userName, onClose }: BanModalProps) {
             onClick={onClose}
             disabled={pending}
             className="flex-1 px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50">
-            Annulla
+            Cancel
           </button>
           <button
             onClick={handleConfirm}
@@ -88,7 +89,7 @@ export default function BanModal({ userId, userName, onClose }: BanModalProps) {
               <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
             ) : (
               <>
-                <ShieldBan size={14} /> Sospendi
+                <ShieldBan size={14} /> Suspend
               </>
             )}
           </button>
