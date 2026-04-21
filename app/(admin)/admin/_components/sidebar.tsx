@@ -1,5 +1,6 @@
 "use client";
 
+import { ADMIN_NAV, type NavChild, type NavItem } from "@/lib/admin-nav";
 import {
   ArrowRight,
   BarChart2,
@@ -13,8 +14,8 @@ import {
   GitMerge,
   Globe,
   KeyRound,
-  LayoutDashboard,
   Layers,
+  LayoutDashboard,
   ListFilter,
   Lock,
   LogIn,
@@ -34,8 +35,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
-import { ADMIN_NAV, type NavItem, type NavChild } from "@/lib/admin-nav";
+import { useEffect, useState } from "react";
 
 const ICON_MAP: Record<string, React.ElementType> = {
   LayoutDashboard,
@@ -97,18 +97,16 @@ export default function AdminSidebar({
     return true;
   });
 
-  const initialOpen: Record<string, boolean> = {};
-  for (const item of visibleNav) {
-    if (item.children) {
-      initialOpen[item.key] = item.children.some((c) =>
-        pathname.startsWith(c.href),
-      );
-    }
-  }
-  const [groupOpen, setGroupOpen] = useState<Record<string, boolean>>(initialOpen);
+  // Logica Accordion: teniamo traccia solo della chiave del sottomenu aperto
+  const [openGroupKey, setOpenGroupKey] = useState<string | null>(() => {
+    const initial = visibleNav.find((item) =>
+      item.children?.some((c) => pathname.startsWith(c.href)),
+    );
+    return initial ? initial.key : null;
+  });
 
   function toggleGroup(key: string) {
-    setGroupOpen((prev) => ({ ...prev, [key]: !prev[key] }));
+    setOpenGroupKey((prev) => (prev === key ? null : key));
   }
 
   function isActive(href: string, exact?: boolean) {
@@ -116,6 +114,7 @@ export default function AdminSidebar({
     return pathname === href || pathname.startsWith(href + "/");
   }
 
+  // Sotto-componente per i link semplici
   function NavLink({
     href,
     label,
@@ -141,10 +140,10 @@ export default function AdminSidebar({
         style={{
           background: active
             ? "var(--admin-sidebar-item-active-bg)"
-            : sub
-            ? "transparent"
             : "transparent",
-          color: active ? "var(--admin-sidebar-text-active)" : "var(--admin-sidebar-text)",
+          color: active
+            ? "var(--admin-sidebar-text-active)"
+            : "var(--admin-sidebar-text)",
         }}
         onMouseEnter={(e) => {
           if (!active) {
@@ -159,12 +158,13 @@ export default function AdminSidebar({
             e.currentTarget.style.background = "transparent";
             e.currentTarget.style.color = "var(--admin-sidebar-text)";
           }
-        }}
-      >
+        }}>
         <Icon
           size={sub ? 15 : 18}
           style={{
-            color: active ? "var(--admin-accent)" : "var(--admin-sidebar-icon-inactive)",
+            color: active
+              ? "var(--admin-accent)"
+              : "var(--admin-sidebar-icon-inactive)",
           }}
         />
         {label}
@@ -178,11 +178,16 @@ export default function AdminSidebar({
     );
   }
 
+  // Sotto-componente per i gruppi espandibili
   function ExpandableGroup({ item }: { item: NavItem }) {
     const Icon = ICON_MAP[item.icon] ?? Settings;
-    const visibleChildren = (item.children ?? []).filter((c) => hasPerm(c.permission));
-    const isGroupActive = visibleChildren.some((c) => pathname.startsWith(c.href));
-    const isOpen = groupOpen[item.key] ?? false;
+    const visibleChildren = (item.children ?? []).filter((c) =>
+      hasPerm(c.permission),
+    );
+    const isGroupActive = visibleChildren.some((c) =>
+      pathname.startsWith(c.href),
+    );
+    const isOpen = openGroupKey === item.key;
 
     return (
       <div>
@@ -199,7 +204,8 @@ export default function AdminSidebar({
               : "var(--admin-sidebar-text)",
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = "var(--admin-sidebar-item-hover-bg)";
+            e.currentTarget.style.background =
+              "var(--admin-sidebar-item-hover-bg)";
             e.currentTarget.style.color = "var(--admin-sidebar-text-active)";
           }}
           onMouseLeave={(e) => {
@@ -210,8 +216,7 @@ export default function AdminSidebar({
             e.currentTarget.style.color = isGroupActive
               ? "var(--admin-sidebar-text-active)"
               : "var(--admin-sidebar-text)";
-          }}
-        >
+          }}>
           <Icon
             size={18}
             style={{
@@ -231,20 +236,18 @@ export default function AdminSidebar({
           />
         </button>
 
-        {/* Sottomenu con sfondo leggermente più scuro */}
         <div
           className="overflow-hidden transition-all duration-200"
           style={{
-            maxHeight: isOpen ? (item.childrenMaxHeight ?? "200px") : "0px",
+            maxHeight: isOpen ? (item.childrenMaxHeight ?? "400px") : "0px",
             opacity: isOpen ? 1 : 0,
-          }}
-        >
+          }}>
           <div
             className="mt-0.5 mb-0.5 mx-1 rounded-lg py-1 space-y-0.5"
             style={{
-              background: "color-mix(in srgb, var(--admin-sidebar-bg) 70%, #000 30%)",
-            }}
-          >
+              background:
+                "color-mix(in srgb, var(--admin-sidebar-bg) 70%, #000 30%)",
+            }}>
             {visibleChildren.map((child: NavChild) => (
               <NavLink
                 key={child.href}
@@ -263,25 +266,24 @@ export default function AdminSidebar({
   const content = (
     <aside
       className="w-[var(--admin-sidebar-width)] h-full flex flex-col"
-      style={{ background: "var(--admin-sidebar-bg)", color: "var(--admin-sidebar-text-active)" }}
-    >
+      style={{
+        background: "var(--admin-sidebar-bg)",
+        color: "var(--admin-sidebar-text-active)",
+      }}>
       <div
         className="flex items-center justify-between px-6 py-5"
-        style={{ borderBottom: "1px solid var(--admin-sidebar-border)" }}
-      >
+        style={{ borderBottom: "1px solid var(--admin-sidebar-border)" }}>
         <div className="flex items-center gap-3">
           <div
             className="w-8 h-8 rounded-lg flex items-center justify-center"
-            style={{ background: "var(--admin-accent)" }}
-          >
+            style={{ background: "var(--admin-accent)" }}>
             <BookOpen size={16} className="text-white" />
           </div>
           <div>
             <span className="font-bold text-sm tracking-wide">{appName}</span>
             <span
               className="block text-[10px] uppercase tracking-widest"
-              style={{ color: "var(--admin-sidebar-text-faint)" }}
-            >
+              style={{ color: "var(--admin-sidebar-text-faint)" }}>
               Admin Panel
             </span>
           </div>
@@ -292,10 +294,12 @@ export default function AdminSidebar({
             className="lg:hidden p-1 rounded-lg transition-colors"
             style={{ color: "var(--admin-sidebar-text)" }}
             onMouseEnter={(e) =>
-              (e.currentTarget.style.background = "var(--admin-sidebar-item-hover-bg)")
+              (e.currentTarget.style.background =
+                "var(--admin-sidebar-item-hover-bg)")
             }
-            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-          >
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.background = "transparent")
+            }>
             <X size={18} />
           </button>
         )}
@@ -317,13 +321,14 @@ export default function AdminSidebar({
         )}
       </nav>
 
-      <div className="px-5 py-4" style={{ borderTop: "1px solid var(--admin-sidebar-border)" }}>
+      <div
+        className="px-5 py-4"
+        style={{ borderTop: "1px solid var(--admin-sidebar-border)" }}>
         <Link
           href="/"
           className="text-xs transition-colors"
-          style={{ color: "var(--admin-sidebar-text-faint)" }}
-        >
-          ← Torna all&apos;app
+          style={{ color: "var(--admin-sidebar-text-faint)" }}>
+          ← Back to the App
         </Link>
       </div>
     </aside>
@@ -334,7 +339,10 @@ export default function AdminSidebar({
       <div className="hidden lg:flex shrink-0 h-full">{content}</div>
       {open && (
         <>
-          <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={onClose} />
+          <div
+            className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+            onClick={onClose}
+          />
           <div className="fixed inset-y-0 left-0 z-50 w-[var(--admin-sidebar-width)] lg:hidden">
             {content}
           </div>
