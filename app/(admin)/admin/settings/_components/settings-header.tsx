@@ -46,7 +46,7 @@ const SECTIONS: Record<string, SectionMeta> = {
     icon: Mail,
   },
   snippets: {
-    label: "Content",
+    label: "Snippets",
     description: "Manage snippets and textual content of the application.",
     icon: Code2,
   },
