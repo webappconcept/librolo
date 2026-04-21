@@ -61,6 +61,7 @@ export function Login({
   const [usernameError, setUsernameError] = useState("");
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [acceptPrivacy, setAcceptPrivacy] = useState(false);
+  const [acceptMarketing, setAcceptMarketing] = useState(false);
 
   const validateEmail = async (value: string) => {
     if (!value) {
@@ -444,6 +445,22 @@ export function Login({
                         className="font-medium text-brand-primary underline underline-offset-2 hover:text-brand-primary-hover">
                         Privacy Policy
                       </Link>
+                    </span>
+                  </label>
+
+                  <label className="flex items-start gap-3 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      name="acceptMarketing"
+                      checked={acceptMarketing}
+                      onChange={(e) => setAcceptMarketing(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 shrink-0 rounded border-brand-border accent-brand-accent cursor-pointer"
+                    />
+                    <span className="text-xs text-brand-text-muted leading-relaxed">
+                      <span className="font-medium text-brand-text-faint uppercase text-[10px] tracking-wide mr-1">
+                        Opzionale
+                      </span>
+                      Acconsento a ricevere comunicazioni promozionali e aggiornamenti via email. Puoi revocare il consenso in qualsiasi momento.
                     </span>
                   </label>
                 </div>
