@@ -1,5 +1,5 @@
 "use client";
-
+import { getAdminPath } from "@/lib/admin-nav";
 import type { TemplateField } from "@/lib/db/schema";
 import { slugify, slugToPascalCase } from "@/lib/utils/slugify";
 import {
@@ -84,7 +84,7 @@ const tabStyle = (active: boolean): React.CSSProperties => ({
   transition: "color 150ms, border-color 150ms",
 });
 
-// ─── Componente guida implementazione ────────────────────────────────────────
+// ─── Componente guida implementation ────────────────────────────────────────
 function ImplementationGuide({
   slug,
   fields,
@@ -96,9 +96,9 @@ function ImplementationGuide({
 
   const componentName = slug
     ? "Template" + slugToPascalCase(slug)
-    : "TemplateNome";
+    : "TemplateName";
 
-  const slugLabel = slug || "nome-template";
+  const slugLabel = slug || "template-name";
   const filePath = `app/(frontend)/_templates/${componentName}.tsx`;
 
   const fieldsTypeLines =
@@ -114,7 +114,7 @@ function ImplementationGuide({
             return `  ${f.fieldKey}${optional}: ${tsType}; // ${FIELD_TYPES.find((t) => t.value === f.fieldType)?.label ?? f.fieldType}`;
           })
           .join("\n")
-      : "  // nessun campo custom definito";
+      : "  // no custom fields defined";
 
   const fieldsUsageLines =
     fields.length > 0
@@ -131,11 +131,11 @@ function ImplementationGuide({
             }
           })
           .join("\n")
-      : "        {/* nessun campo custom — usa solo page.title e page.content */}";
+      : "        {/* no custom fields — use only page.title and page.content */}";
 
   const componentCode = `import type { TemplateProps } from "./types";
 
-// Campi custom definiti in questo template
+// Custom fields defined in this template
 interface Fields {
 ${fieldsTypeLines}
 }
@@ -244,7 +244,7 @@ export default function ${componentName}({ page, fields: rawFields }: TemplatePr
       <h2
         className="text-sm font-semibold mb-1"
         style={{ color: "var(--admin-text)" }}>
-        Guida all&apos;implementazione
+        Implementation Guide
       </h2>
       <p className="text-xs mb-5" style={{ color: "var(--admin-text-muted)" }}>
         Segui questi passaggi per collegare questo template al codice React
@@ -408,8 +408,8 @@ export default function TemplateFormClient({
 }: TemplateFormClientProps) {
   const isEdit = !!template;
   const [activeTab, setActiveTab] = useState<
-    "generale" | "regole" | "implementazione"
-  >("generale");
+    "general" | "rules" | "implementation"
+  >("general");
   const [name, setName] = useState(template?.name ?? "");
   // In creazione lo slug è sempre derivato dal nome; in modifica è bloccato.
   const [slug, setSlug] = useState(template?.slug ?? "");
@@ -552,24 +552,23 @@ export default function TemplateFormClient({
     }
   }
 
-  const inputCls =
-    "w-full px-3 py-2 rounded-lg text-sm outline-none transition-colors";
+  const inputCls = "w-full px-3 py-2 rounded-lg text-sm transition-colors";
   const inputStyle: React.CSSProperties = {
-    background: "var(--admin-input-bg)",
-    border: "1px solid var(--admin-border)",
+    background: "var(--admin-page-bg)",
+    border: "1px solid var(--admin-input-border)",
     color: "var(--admin-text)",
   };
   const inputReadonlyStyle: React.CSSProperties = {
     background: "var(--admin-input-bg)",
-    border: "1px solid var(--admin-border)",
+    border: "1px solid var(--admin-input-border)",
     color: "var(--admin-text-faint)",
     cursor: "not-allowed",
     fontFamily: "monospace",
     fontSize: "0.8rem",
   };
   const fieldInputStyle: React.CSSProperties = {
-    background: "var(--admin-card-bg)",
-    border: "1px solid var(--admin-border)",
+    background: "var(--admin-page-bg)",
+    border: "1px solid var(--admin-input-border)",
     color: "var(--admin-text)",
   };
   const labelCls = "block text-xs font-medium mb-1";
@@ -590,12 +589,12 @@ export default function TemplateFormClient({
 
       <EditorPageHeader
         breadcrumbs={[
-          { label: "Pages", href: "/admin/pages" },
-          { label: "Template", href: "/admin/template" },
+          { label: "Pages", href: getAdminPath("content-pages") },
+          { label: "Template", href: getAdminPath("content-templates") },
         ]}
         currentLabel={currentLabel}
-        backHref="/admin/template"
-        saveLabel={isEdit ? "Salva modifiche" : "Crea template"}
+        backHref={getAdminPath("content-templates")}
+        saveLabel={isEdit ? "Save" : "Create Template"}
         formId={FORM_ID}
         isPending={saving}
         savedAt={savedAt}
@@ -617,17 +616,17 @@ export default function TemplateFormClient({
           }}>
           <button
             type="button"
-            style={tabStyle(activeTab === "generale")}
-            onClick={() => setActiveTab("generale")}>
+            style={tabStyle(activeTab === "general")}
+            onClick={() => setActiveTab("general")}>
             <Settings size={14} />
-            Generale
+            General
           </button>
           <button
             type="button"
-            style={tabStyle(activeTab === "regole")}
-            onClick={() => setActiveTab("regole")}>
+            style={tabStyle(activeTab === "rules")}
+            onClick={() => setActiveTab("rules")}>
             <ShieldCheck size={14} />
-            Regole
+            Rules
             {allowedChildIds.length > 0 && (
               <span
                 className="ml-1 px-1.5 py-0.5 rounded-full text-xs font-semibold"
@@ -644,10 +643,10 @@ export default function TemplateFormClient({
           </button>
           <button
             type="button"
-            style={tabStyle(activeTab === "implementazione")}
-            onClick={() => setActiveTab("implementazione")}>
+            style={tabStyle(activeTab === "implementation")}
+            onClick={() => setActiveTab("implementation")}>
             <Code2 size={14} />
-            Implementazione
+            Implementation
             {isEdit && (
               <span
                 className="ml-1 px-1.5 py-0.5 rounded-full"
@@ -667,7 +666,7 @@ export default function TemplateFormClient({
         </div>
       </div>
 
-      {activeTab === "generale" && (
+      {activeTab === "general" && (
         <>
           {/* Informazioni base */}
           <section
@@ -842,7 +841,7 @@ export default function TemplateFormClient({
                         onChange={(e) =>
                           updateField(field._id, "label", e.target.value)
                         }
-                        placeholder="es. Immagine copertina"
+                        placeholder="ex. Cover Image"
                         className={inputCls}
                         style={fieldInputStyle}
                         required
@@ -925,7 +924,7 @@ export default function TemplateFormClient({
         </>
       )}
 
-      {activeTab === "regole" && (
+      {activeTab === "rules" && (
         <section
           className="rounded-xl p-5 mb-6"
           style={{
@@ -1062,7 +1061,7 @@ export default function TemplateFormClient({
         </section>
       )}
 
-      {activeTab === "implementazione" && (
+      {activeTab === "implementation" && (
         <ImplementationGuide slug={slug} fields={fields} />
       )}
     </form>
