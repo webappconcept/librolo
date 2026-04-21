@@ -1,8 +1,13 @@
-// app/(admin)/admin/settings/tabs/snippets-tab.tsx
 "use client";
 
-import type { SiteSnippet, SnippetPosition, SnippetType } from "@/lib/db/schema";
+import ConfirmModal from "@/app/(admin)/admin/_components/confirm-modal";
+import type {
+  SiteSnippet,
+  SnippetPosition,
+  SnippetType,
+} from "@/lib/db/schema";
 import {
+  ChevronRight,
   Code2,
   ExternalLink,
   FileCode2,
@@ -10,21 +15,19 @@ import {
   GripVertical,
   Pencil,
   Plus,
-  Trash2,
-  X,
   Save,
+  Trash2,
   Wand2,
-  ChevronRight,
+  X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, useTransition, useOptimistic } from "react";
+import { useOptimistic, useState, useTransition } from "react";
 import {
   createSnippetAction,
-  updateSnippetAction,
   deleteSnippetAction,
   toggleSnippetAction,
+  updateSnippetAction,
 } from "../actions";
-import ConfirmModal from "@/app/(admin)/admin/_components/confirm-modal";
 
 // ---------------------------------------------------------------------------
 // Costanti UI
@@ -55,7 +58,7 @@ const CONTENT_PLACEHOLDER: Record<SnippetType, string> = {
   style: "body { font-family: 'Inter', sans-serif; }",
   script_src: "https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXX",
   script: "window.dataLayer = window.dataLayer || [];\nfunction gtag(){...}",
-  raw: "<meta name=\"google-site-verification\" content=\"...\" />",
+  raw: '<meta name="google-site-verification" content="..." />',
 };
 
 // ---------------------------------------------------------------------------
@@ -108,7 +111,8 @@ const PRESETS: Preset[] = [
   {
     id: "gtm",
     label: "Google Tag Manager",
-    description: "Contenitore GTM per gestire tutti i tag da un'unica interfaccia",
+    description:
+      "Contenitore GTM per gestire tutti i tag da un'unica interfaccia",
     paramLabel: "Container ID",
     paramPlaceholder: "GTM-XXXXXXX",
     icon: "🏷️",
@@ -125,14 +129,15 @@ const PRESETS: Preset[] = [
         type: "raw",
         position: "body_end",
         content:
-          "<noscript><iframe src=\"https://www.googletagmanager.com/ns.html?id=${ID}\" height=\"0\" width=\"0\" style=\"display:none;visibility:hidden\"></iframe></noscript>",
+          '<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=${ID}" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>',
       },
     ],
   },
   {
     id: "meta_pixel",
     label: "Meta Pixel",
-    description: "Tracciamento conversioni e pubblici personalizzati per Facebook/Instagram Ads",
+    description:
+      "Tracciamento conversioni e pubblici personalizzati per Facebook/Instagram Ads",
     paramLabel: "Pixel ID",
     paramPlaceholder: "1234567890123456",
     icon: "🎯",
@@ -149,7 +154,7 @@ const PRESETS: Preset[] = [
         type: "raw",
         position: "head",
         content:
-          "<noscript><img height=\"1\" width=\"1\" style=\"display:none\" src=\"https://www.facebook.com/tr?id=${ID}&ev=PageView&noscript=1\" /></noscript>",
+          '<noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=${ID}&ev=PageView&noscript=1" /></noscript>',
       },
     ],
   },
@@ -165,7 +170,7 @@ const PRESETS: Preset[] = [
         name: "Search Console — verifica",
         type: "raw",
         position: "head",
-        content: "<meta name=\"google-site-verification\" content=\"${ID}\" />",
+        content: '<meta name="google-site-verification" content="${ID}" />',
       },
     ],
   },
@@ -216,8 +221,7 @@ function PresetPicker({
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: "rgba(0,0,0,0.55)" }}
-      onClick={onCancel}
-    >
+      onClick={onCancel}>
       <div
         className="rounded-2xl w-full max-w-lg"
         style={{
@@ -227,19 +231,35 @@ function PresetPicker({
           maxHeight: "90vh",
           overflowY: "auto",
         }}
-        onClick={(e) => e.stopPropagation()}
-      >
+        onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="flex items-center justify-between p-5 pb-4" style={{ borderBottom: "1px solid var(--admin-divider)" }}>
+        <div
+          className="flex items-center justify-between p-5 pb-4"
+          style={{ borderBottom: "1px solid var(--admin-divider)" }}>
           <div className="flex items-center gap-2">
             <Wand2 size={15} style={{ color: "var(--admin-accent)" }} />
-            <span className="text-sm font-semibold" style={{ color: "var(--admin-text)" }}>
+            <span
+              className="text-sm font-semibold"
+              style={{ color: "var(--admin-text)" }}>
               {selected ? selected.label : "Scegli un modello"}
             </span>
           </div>
-          <button type="button" onClick={selected ? () => { setSelected(null); setParamValue(""); } : onCancel}
+          <button
+            type="button"
+            onClick={
+              selected
+                ? () => {
+                    setSelected(null);
+                    setParamValue("");
+                  }
+                : onCancel
+            }
             style={{ color: "var(--admin-text-faint)" }}>
-            {selected ? <ChevronRight size={16} style={{ transform: "rotate(180deg)" }} /> : <X size={16} />}
+            {selected ? (
+              <ChevronRight size={16} style={{ transform: "rotate(180deg)" }} />
+            ) : (
+              <X size={16} />
+            )}
           </button>
         </div>
 
@@ -253,18 +273,36 @@ function PresetPicker({
                 onClick={() => setSelected(p)}
                 className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-left transition-colors"
                 style={{ background: "transparent" }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = "var(--admin-hover-bg)")}
-                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-              >
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.background = "var(--admin-hover-bg)")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.background = "transparent")
+                }>
                 <span className="text-xl shrink-0">{p.icon}</span>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium" style={{ color: "var(--admin-text)" }}>{p.label}</div>
-                  <div className="text-xs" style={{ color: "var(--admin-text-muted)" }}>{p.description}</div>
-                  <div className="text-xs mt-0.5" style={{ color: "var(--admin-text-faint)" }}>
-                    {p.steps.length === 1 ? "1 snippet" : `${p.steps.length} snippet`}
+                  <div
+                    className="text-sm font-medium"
+                    style={{ color: "var(--admin-text)" }}>
+                    {p.label}
+                  </div>
+                  <div
+                    className="text-xs"
+                    style={{ color: "var(--admin-text-muted)" }}>
+                    {p.description}
+                  </div>
+                  <div
+                    className="text-xs mt-0.5"
+                    style={{ color: "var(--admin-text-faint)" }}>
+                    {p.steps.length === 1
+                      ? "1 snippet"
+                      : `${p.steps.length} snippet`}
                   </div>
                 </div>
-                <ChevronRight size={14} style={{ color: "var(--admin-text-faint)", flexShrink: 0 }} />
+                <ChevronRight
+                  size={14}
+                  style={{ color: "var(--admin-text-faint)", flexShrink: 0 }}
+                />
               </button>
             ))}
           </div>
@@ -277,7 +315,9 @@ function PresetPicker({
 
             {/* Anteprima snippet che verranno creati */}
             <div className="space-y-1.5">
-              <p className="text-xs font-medium" style={{ color: "var(--admin-text-muted)" }}>
+              <p
+                className="text-xs font-medium"
+                style={{ color: "var(--admin-text-muted)" }}>
                 Verranno creati {selected.steps.length} snippet:
               </p>
               {selected.steps.map((s, i) => (
@@ -285,19 +325,26 @@ function PresetPicker({
                   key={i}
                   className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg"
                   style={{
-                    background: "color-mix(in srgb, var(--admin-accent) 6%, var(--admin-card-bg))",
-                    border: "1px solid color-mix(in srgb, var(--admin-accent) 14%, transparent)",
-                  }}
-                >
-                  <span style={{ color: "var(--admin-accent)" }}>{TYPE_ICONS[s.type]}</span>
-                  <span className="text-xs" style={{ color: "var(--admin-text-muted)" }}>{s.name}</span>
+                    background:
+                      "color-mix(in srgb, var(--admin-accent) 6%, var(--admin-card-bg))",
+                    border:
+                      "1px solid color-mix(in srgb, var(--admin-accent) 14%, transparent)",
+                  }}>
+                  <span style={{ color: "var(--admin-accent)" }}>
+                    {TYPE_ICONS[s.type]}
+                  </span>
+                  <span
+                    className="text-xs"
+                    style={{ color: "var(--admin-text-muted)" }}>
+                    {s.name}
+                  </span>
                   <span
                     className="ml-auto text-xs px-1.5 py-0.5 rounded-full"
                     style={{
-                      background: "color-mix(in srgb, var(--admin-text-faint) 12%, var(--admin-card-bg))",
+                      background:
+                        "color-mix(in srgb, var(--admin-text-faint) 12%, var(--admin-card-bg))",
                       color: "var(--admin-text-faint)",
-                    }}
-                  >
+                    }}>
                     {POSITION_LABELS[s.position]}
                   </span>
                 </div>
@@ -313,8 +360,7 @@ function PresetPicker({
                   fontWeight: 500,
                   marginBottom: "4px",
                   color: "var(--admin-text-muted)",
-                }}
-              >
+                }}>
                 {selected.paramLabel}
               </label>
               <input
@@ -329,14 +375,16 @@ function PresetPicker({
             <div className="flex justify-end gap-2 pt-1">
               <button
                 type="button"
-                onClick={() => { setSelected(null); setParamValue(""); }}
+                onClick={() => {
+                  setSelected(null);
+                  setParamValue("");
+                }}
                 className="px-4 py-2 text-sm rounded-lg"
                 style={{
                   background: "var(--admin-input-bg)",
                   border: "1px solid var(--admin-border)",
                   color: "var(--admin-text-muted)",
-                }}
-              >
+                }}>
                 Indietro
               </button>
               <button
@@ -347,8 +395,7 @@ function PresetPicker({
                 style={{
                   background: "var(--admin-accent)",
                   opacity: paramValue.trim() ? 1 : 0.5,
-                }}
-              >
+                }}>
                 <Save size={13} /> Aggiungi snippet
               </button>
             </div>
@@ -374,7 +421,9 @@ function SnippetForm({
   loading: boolean;
 }) {
   const [name, setName] = useState(initial?.name ?? "");
-  const [type, setType] = useState<SnippetType>((initial?.type as SnippetType) ?? "script");
+  const [type, setType] = useState<SnippetType>(
+    (initial?.type as SnippetType) ?? "script",
+  );
   const [position, setPosition] = useState<SnippetPosition>(
     (initial?.position as SnippetPosition) ?? "head",
   );
@@ -386,7 +435,14 @@ function SnippetForm({
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim() || !content.trim()) return;
-    onSave({ name, type, position, content, isActive, sortOrder: initial?.sortOrder ?? 0 });
+    onSave({
+      name,
+      type,
+      position,
+      content,
+      isActive,
+      sortOrder: initial?.sortOrder ?? 0,
+    });
   }
 
   const fieldStyle = {
@@ -412,8 +468,7 @@ function SnippetForm({
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: "rgba(0,0,0,0.55)" }}
-      onClick={onCancel}
-    >
+      onClick={onCancel}>
       <form
         onSubmit={handleSubmit}
         className="rounded-2xl p-6 w-full max-w-lg space-y-4"
@@ -424,13 +479,17 @@ function SnippetForm({
           maxHeight: "90vh",
           overflowY: "auto",
         }}
-        onClick={(e) => e.stopPropagation()}
-      >
+        onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold" style={{ color: "var(--admin-text)" }}>
+          <h3
+            className="text-sm font-semibold"
+            style={{ color: "var(--admin-text)" }}>
             {initial?.id ? "Modifica snippet" : "Nuovo snippet"}
           </h3>
-          <button type="button" onClick={onCancel} style={{ color: "var(--admin-text-faint)" }}>
+          <button
+            type="button"
+            onClick={onCancel}
+            style={{ color: "var(--admin-text-faint)" }}>
             <X size={16} />
           </button>
         </div>
@@ -454,10 +513,11 @@ function SnippetForm({
             <select
               value={type}
               onChange={(e) => setType(e.target.value as SnippetType)}
-              style={fieldStyle}
-            >
+              style={fieldStyle}>
               {(Object.keys(TYPE_LABELS) as SnippetType[]).map((k) => (
-                <option key={k} value={k}>{TYPE_LABELS[k]}</option>
+                <option key={k} value={k}>
+                  {TYPE_LABELS[k]}
+                </option>
               ))}
             </select>
           </div>
@@ -466,8 +526,7 @@ function SnippetForm({
             <select
               value={position}
               onChange={(e) => setPosition(e.target.value as SnippetPosition)}
-              style={fieldStyle}
-            >
+              style={fieldStyle}>
               <option value="head">&lt;head&gt;</option>
               <option value="body_end">Fine &lt;body&gt;</option>
             </select>
@@ -519,9 +578,10 @@ function SnippetForm({
               cursor: "pointer",
               flexShrink: 0,
               transition: "background 160ms ease",
-              background: isActive ? "var(--admin-accent)" : "var(--admin-input-border, #3a3937)",
-            }}
-          >
+              background: isActive
+                ? "var(--admin-accent)"
+                : "var(--admin-input-border, #3a3937)",
+            }}>
             <span
               style={{
                 position: "absolute",
@@ -537,8 +597,12 @@ function SnippetForm({
               }}
             />
           </button>
-          <span className="text-sm" style={{ color: "var(--admin-text-muted)" }}>
-            {isActive ? "Attivo — verrà iniettato nel frontend" : "Inattivo — salvato ma non iniettato"}
+          <span
+            className="text-sm"
+            style={{ color: "var(--admin-text-muted)" }}>
+            {isActive
+              ? "Attivo — verrà iniettato nel frontend"
+              : "Inattivo — salvato ma non iniettato"}
           </span>
         </div>
 
@@ -552,16 +616,17 @@ function SnippetForm({
               background: "var(--admin-input-bg)",
               border: "1px solid var(--admin-border)",
               color: "var(--admin-text-muted)",
-            }}
-          >
+            }}>
             Annulla
           </button>
           <button
             type="submit"
             disabled={loading}
             className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg text-white"
-            style={{ background: "var(--admin-accent)", opacity: loading ? 0.7 : 1 }}
-          >
+            style={{
+              background: "var(--admin-accent)",
+              opacity: loading ? 0.7 : 1,
+            }}>
             <Save size={14} />
             {loading ? "Salvataggio…" : "Salva"}
           </button>
@@ -591,7 +656,9 @@ function SnippetRow({
   const t = snippet.type as SnippetType;
   const p = snippet.position as SnippetPosition;
   const previewContent =
-    snippet.content.length > 60 ? snippet.content.slice(0, 60) + "…" : snippet.content;
+    snippet.content.length > 60
+      ? snippet.content.slice(0, 60) + "…"
+      : snippet.content;
 
   return (
     <div
@@ -601,38 +668,58 @@ function SnippetRow({
         border: "1px solid var(--admin-card-border)",
         opacity: isPending ? 0.6 : snippet.isActive ? 1 : 0.55,
         transition: "opacity 160ms ease",
-      }}
-    >
-      <GripVertical size={14} style={{ color: "var(--admin-text-faint)", flexShrink: 0, cursor: "grab" }} />
-      <span style={{ color: "var(--admin-accent)", flexShrink: 0 }}>{TYPE_ICONS[t]}</span>
+      }}>
+      <GripVertical
+        size={14}
+        style={{
+          color: "var(--admin-text-faint)",
+          flexShrink: 0,
+          cursor: "grab",
+        }}
+      />
+      <span style={{ color: "var(--admin-accent)", flexShrink: 0 }}>
+        {TYPE_ICONS[t]}
+      </span>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm font-medium" style={{ color: "var(--admin-text)" }}>{snippet.name}</span>
+          <span
+            className="text-sm font-medium"
+            style={{ color: "var(--admin-text)" }}>
+            {snippet.name}
+          </span>
           <span
             className="text-xs px-1.5 py-0.5 rounded-full"
             style={{
-              background: "color-mix(in srgb, var(--admin-accent) 10%, var(--admin-card-bg))",
+              background:
+                "color-mix(in srgb, var(--admin-accent) 10%, var(--admin-card-bg))",
               color: "var(--admin-accent)",
-              border: "1px solid color-mix(in srgb, var(--admin-accent) 20%, transparent)",
-            }}
-          >
+              border:
+                "1px solid color-mix(in srgb, var(--admin-accent) 20%, transparent)",
+            }}>
             {TYPE_LABELS[t]}
           </span>
           <span
             className="text-xs px-1.5 py-0.5 rounded-full"
             style={{
-              background: "color-mix(in srgb, var(--admin-text-faint) 12%, var(--admin-card-bg))",
+              background:
+                "color-mix(in srgb, var(--admin-text-faint) 12%, var(--admin-card-bg))",
               color: "var(--admin-text-muted)",
-              border: "1px solid color-mix(in srgb, var(--admin-text-faint) 20%, transparent)",
-            }}
-          >
+              border:
+                "1px solid color-mix(in srgb, var(--admin-text-faint) 20%, transparent)",
+            }}>
             {POSITION_LABELS[p]}
           </span>
           {!snippet.isActive && (
-            <span className="text-xs" style={{ color: "var(--admin-text-faint)" }}>inattivo</span>
+            <span
+              className="text-xs"
+              style={{ color: "var(--admin-text-faint)" }}>
+              inattivo
+            </span>
           )}
         </div>
-        <p className="text-xs font-mono mt-0.5 truncate" style={{ color: "var(--admin-text-faint)" }}>
+        <p
+          className="text-xs font-mono mt-0.5 truncate"
+          style={{ color: "var(--admin-text-faint)" }}>
           {previewContent}
         </p>
       </div>
@@ -653,10 +740,11 @@ function SnippetRow({
             cursor: isPending ? "not-allowed" : "pointer",
             flexShrink: 0,
             transition: "background 160ms ease",
-            background: snippet.isActive ? "var(--admin-accent)" : "var(--admin-input-border, #3a3937)",
+            background: snippet.isActive
+              ? "var(--admin-accent)"
+              : "var(--admin-input-border, #3a3937)",
             opacity: isPending ? 0.5 : 1,
-          }}
-        >
+          }}>
           <span
             style={{
               position: "absolute",
@@ -668,7 +756,9 @@ function SnippetRow({
               background: "#fff",
               boxShadow: "0 1px 3px rgba(0,0,0,0.25)",
               transition: "transform 160ms cubic-bezier(0.16,1,0.3,1)",
-              transform: snippet.isActive ? "translateX(16px)" : "translateX(0)",
+              transform: snippet.isActive
+                ? "translateX(16px)"
+                : "translateX(0)",
             }}
           />
         </button>
@@ -677,9 +767,14 @@ function SnippetRow({
           title="Modifica"
           className="p-1.5 rounded-lg transition-colors"
           style={{ color: "var(--admin-text-faint)" }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = "var(--admin-hover-bg)"; e.currentTarget.style.color = "var(--admin-text-muted)"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--admin-text-faint)"; }}
-        >
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "var(--admin-hover-bg)";
+            e.currentTarget.style.color = "var(--admin-text-muted)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "transparent";
+            e.currentTarget.style.color = "var(--admin-text-faint)";
+          }}>
           <Pencil size={13} />
         </button>
         <button
@@ -687,9 +782,15 @@ function SnippetRow({
           title="Elimina"
           className="p-1.5 rounded-lg transition-colors"
           style={{ color: "var(--admin-text-faint)" }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = "color-mix(in srgb, #ef4444 10%, var(--admin-card-bg))"; e.currentTarget.style.color = "#ef4444"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--admin-text-faint)"; }}
-        >
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background =
+              "color-mix(in srgb, #ef4444 10%, var(--admin-card-bg))";
+            e.currentTarget.style.color = "#ef4444";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "transparent";
+            e.currentTarget.style.color = "var(--admin-text-faint)";
+          }}>
           <Trash2 size={13} />
         </button>
       </div>
@@ -700,7 +801,11 @@ function SnippetRow({
 // ---------------------------------------------------------------------------
 // Tab principale
 // ---------------------------------------------------------------------------
-export function SnippetsTab({ initialSnippets }: { initialSnippets: SiteSnippet[] }) {
+export function SnippetsTab({
+  initialSnippets,
+}: {
+  initialSnippets: SiteSnippet[];
+}) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [snippets, setSnippets] = useOptimistic(initialSnippets);
@@ -709,10 +814,15 @@ export function SnippetsTab({ initialSnippets }: { initialSnippets: SiteSnippet[
   const [showPresets, setShowPresets] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
   const [pendingId, setPendingId] = useState<number | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState<{ id: number; name: string } | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{
+    id: number;
+    name: string;
+  } | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  async function handleSave(data: Omit<SiteSnippet, "id" | "createdAt" | "updatedAt">) {
+  async function handleSave(
+    data: Omit<SiteSnippet, "id" | "createdAt" | "updatedAt">,
+  ) {
     setFormLoading(true);
     if (editTarget) {
       await updateSnippetAction(editTarget.id, data);
@@ -761,7 +871,9 @@ export function SnippetsTab({ initialSnippets }: { initialSnippets: SiteSnippet[
 
   async function handleToggle(id: number, current: boolean) {
     setPendingId(id);
-    setSnippets((prev) => prev.map((s) => (s.id === id ? { ...s, isActive: !current } : s)));
+    setSnippets((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, isActive: !current } : s)),
+    );
     await toggleSnippetAction(id, !current);
     setPendingId(null);
     startTransition(() => router.refresh());
@@ -773,16 +885,18 @@ export function SnippetsTab({ initialSnippets }: { initialSnippets: SiteSnippet[
   function SectionTitle({ label, count }: { label: string; count: number }) {
     return (
       <div className="flex items-center gap-2 mb-2">
-        <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--admin-text-muted)" }}>
+        <span
+          className="text-xs font-semibold uppercase tracking-wider"
+          style={{ color: "var(--admin-text-muted)" }}>
           {label}
         </span>
         <span
           className="text-xs px-1.5 py-0.5 rounded-full"
           style={{
-            background: "color-mix(in srgb, var(--admin-text-faint) 12%, var(--admin-card-bg))",
+            background:
+              "color-mix(in srgb, var(--admin-text-faint) 12%, var(--admin-card-bg))",
             color: "var(--admin-text-faint)",
-          }}
-        >
+          }}>
           {count}
         </span>
       </div>
@@ -794,10 +908,14 @@ export function SnippetsTab({ initialSnippets }: { initialSnippets: SiteSnippet[
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-sm font-semibold" style={{ color: "var(--admin-text)" }}>
+          <h2
+            className="text-sm font-semibold"
+            style={{ color: "var(--admin-text)" }}>
             Snippet globali
           </h2>
-          <p className="text-xs mt-0.5" style={{ color: "var(--admin-text-muted)" }}>
+          <p
+            className="text-xs mt-0.5"
+            style={{ color: "var(--admin-text-muted)" }}>
             CSS, JavaScript e markup iniettati in tutte le pagine frontend.
           </p>
         </div>
@@ -811,19 +929,26 @@ export function SnippetsTab({ initialSnippets }: { initialSnippets: SiteSnippet[
               border: "1px solid var(--admin-border)",
               color: "var(--admin-text-muted)",
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--admin-hover-bg)")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "var(--admin-input-bg)")}
-          >
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.background = "var(--admin-hover-bg)")
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.background = "var(--admin-input-bg)")
+            }>
             <Wand2 size={13} /> Modelli
           </button>
           {/* Aggiungi manuale */}
           <button
-            onClick={() => { setEditTarget(null); setShowForm(true); }}
+            onClick={() => {
+              setEditTarget(null);
+              setShowForm(true);
+            }}
             className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white rounded-lg transition-colors"
             style={{ background: "var(--admin-accent)" }}
-            onMouseEnter={(e) => (e.currentTarget.style.filter = "brightness(0.88)")}
-            onMouseLeave={(e) => (e.currentTarget.style.filter = "none")}
-          >
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.filter = "brightness(0.88)")
+            }
+            onMouseLeave={(e) => (e.currentTarget.style.filter = "none")}>
             <Plus size={13} /> Aggiungi
           </button>
         </div>
@@ -838,7 +963,10 @@ export function SnippetsTab({ initialSnippets }: { initialSnippets: SiteSnippet[
               <SnippetRow
                 key={s.id}
                 snippet={s}
-                onEdit={(s) => { setEditTarget(s); setShowForm(true); }}
+                onEdit={(s) => {
+                  setEditTarget(s);
+                  setShowForm(true);
+                }}
                 onDelete={handleDelete}
                 onToggle={handleToggle}
                 pendingId={pendingId}
@@ -857,7 +985,10 @@ export function SnippetsTab({ initialSnippets }: { initialSnippets: SiteSnippet[
               <SnippetRow
                 key={s.id}
                 snippet={s}
-                onEdit={(s) => { setEditTarget(s); setShowForm(true); }}
+                onEdit={(s) => {
+                  setEditTarget(s);
+                  setShowForm(true);
+                }}
                 onDelete={handleDelete}
                 onToggle={handleToggle}
                 pendingId={pendingId}
@@ -874,14 +1005,18 @@ export function SnippetsTab({ initialSnippets }: { initialSnippets: SiteSnippet[
           style={{
             border: "1px dashed var(--admin-card-border)",
             color: "var(--admin-text-faint)",
-          }}
-        >
+          }}>
           <Code2 size={28} style={{ marginBottom: "0.75rem", opacity: 0.4 }} />
-          <p className="text-sm font-medium" style={{ color: "var(--admin-text-muted)" }}>
+          <p
+            className="text-sm font-medium"
+            style={{ color: "var(--admin-text-muted)" }}>
             Nessuno snippet
           </p>
-          <p className="text-xs mt-1" style={{ color: "var(--admin-text-faint)" }}>
-            Usa &quot;Modelli&quot; per aggiungere Analytics, GTM o altri script in pochi secondi.
+          <p
+            className="text-xs mt-1"
+            style={{ color: "var(--admin-text-faint)" }}>
+            Usa &quot;Modelli&quot; per aggiungere Analytics, GTM o altri script
+            in pochi secondi.
           </p>
         </div>
       )}
@@ -892,8 +1027,13 @@ export function SnippetsTab({ initialSnippets }: { initialSnippets: SiteSnippet[
         title="Elimina snippet"
         message={
           <>
-            Stai per eliminare <strong style={{ color: "var(--admin-text)" }}>{confirmDelete?.name}</strong>.
-            <br />L&apos;operazione è irreversibile.
+            Stai per eliminare{" "}
+            <strong style={{ color: "var(--admin-text)" }}>
+              {confirmDelete?.name}
+            </strong>
+            .
+            <br />
+            L&apos;operazione è irreversibile.
           </>
         }
         confirmLabel="Elimina"
@@ -907,7 +1047,10 @@ export function SnippetsTab({ initialSnippets }: { initialSnippets: SiteSnippet[
         <SnippetForm
           initial={editTarget ?? undefined}
           onSave={handleSave}
-          onCancel={() => { setShowForm(false); setEditTarget(null); }}
+          onCancel={() => {
+            setShowForm(false);
+            setEditTarget(null);
+          }}
           loading={formLoading}
         />
       )}

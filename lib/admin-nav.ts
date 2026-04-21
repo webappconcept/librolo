@@ -273,9 +273,9 @@ export const ADMIN_NAV: NavItem[] = [
         permission: "admin:settings",
       },
       {
-        key: "settings-content",
-        href: "/admin/settings/contenuti",
-        label: "Content",
+        key: "settings-snippets",
+        href: "/admin/settings/snippets",
+        label: "Snippets",
         icon: "Code2",
         permission: "admin:settings",
       },
