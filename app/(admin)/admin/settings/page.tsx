@@ -1,7 +1,6 @@
-// app/(admin)/admin/settings/page.tsx
-// Redirect immediato alla prima sottosezione
+import { getAdminPath } from "@/lib/admin-nav";
 import { redirect } from "next/navigation";
 
 export default function SettingsPage() {
-  redirect("/admin/settings/general");
+  redirect(getAdminPath("settings-general"));
 }

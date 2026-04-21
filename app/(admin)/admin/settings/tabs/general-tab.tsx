@@ -55,7 +55,6 @@ function GeneralTabInner({ settings }: { settings: AppSettings }) {
           </h3>
 
           <div className="space-y-4 max-w-lg">
-            {/* Nome */}
             <div>
               <label
                 className="block text-xs font-medium mb-1.5"
@@ -77,16 +76,15 @@ function GeneralTabInner({ settings }: { settings: AppSettings }) {
               <p
                 className="text-[11px] mt-1"
                 style={{ color: "var(--admin-text-faint)" }}>
-                Usato nell&apos;header, nelle email e nei meta tag.
+                Used everywere in the App
               </p>
             </div>
 
-            {/* Descrizione */}
             <div>
               <label
                 className="block text-xs font-medium mb-1.5"
                 style={{ color: "var(--admin-text-muted)" }}>
-                Descrizione breve
+                Short description, claim
               </label>
               <textarea
                 name="app_description"
@@ -103,22 +101,21 @@ function GeneralTabInner({ settings }: { settings: AppSettings }) {
               <p
                 className="text-[11px] mt-1"
                 style={{ color: "var(--admin-text-faint)" }}>
-                Mostrata come sottotitolo e nei meta description. Max 160
-                caratteri.
+                Used
               </p>
             </div>
 
-            {/* Dominio */}
             <div>
               <label
                 className="block text-xs font-medium mb-1.5"
                 style={{ color: "var(--admin-text-muted)" }}>
                 <span className="flex items-center gap-1.5">
                   <Globe size={12} />
-                  Dominio del sito
+                  Domain site
                 </span>
               </label>
-              <div className="flex items-center rounded-lg overflow-hidden"
+              <div
+                className="flex items-center rounded-lg overflow-hidden"
                 style={{
                   border: "1px solid var(--admin-input-border)",
                 }}>
@@ -146,10 +143,11 @@ function GeneralTabInner({ settings }: { settings: AppSettings }) {
               <p
                 className="text-[11px] mt-1"
                 style={{ color: "var(--admin-text-faint)" }}>
-                Solo il dominio, senza protocollo (es.{" "}
-                <code className="font-mono">esempio.it</code> oppure{" "}
-                <code className="font-mono">app.esempio.it</code>).{" "}
-                Il prefisso <code className="font-mono">https://</code> viene aggiunto automaticamente.
+                Just the domain (ex.{" "}
+                <code className="font-mono">example.it</code> or{" "}
+                <code className="font-mono">app.example.it</code>). Prefix{" "}
+                <code className="font-mono">https://</code> is added
+                automatically.
               </p>
             </div>
           </div>
@@ -172,7 +170,7 @@ function GeneralTabInner({ settings }: { settings: AppSettings }) {
           ) : (
             <Save size={15} />
           )}
-          {isPending ? "Salvataggio..." : "Salva"}
+          {isPending ? "Saving..." : "Save"}
         </button>
       </form>
 

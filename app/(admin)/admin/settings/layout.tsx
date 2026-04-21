@@ -1,4 +1,3 @@
-// app/(admin)/admin/settings/layout.tsx
 import { requireAdminSectionPage } from "@/lib/rbac/guards";
 import type { Metadata } from "next";
 import { SettingsHeader } from "./_components/settings-header";
