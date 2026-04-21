@@ -21,24 +21,25 @@ export default function PermissionsError({
     error.message?.toLowerCase().includes("relation");
 
   return (
-    <div
-      className="flex flex-col items-center justify-center min-h-[60vh] gap-5 text-center px-4"
-    >
+    <div className="flex flex-col items-center justify-center min-h-[60vh] gap-5 text-center px-4">
       <div
         className="w-12 h-12 rounded-2xl flex items-center justify-center"
-        style={{ background: "#fef2f2" }}
-      >
+        style={{ background: "#fef2f2" }}>
         <AlertTriangle size={22} style={{ color: "#dc2626" }} />
       </div>
 
       <div className="space-y-1.5">
-        <h2 className="text-base font-semibold" style={{ color: "var(--admin-text)" }}>
-          Errore nel caricamento dei permessi
+        <h2
+          className="text-base font-semibold"
+          style={{ color: "var(--admin-text)" }}>
+          Error loading permissions
         </h2>
-        <p className="text-sm max-w-sm" style={{ color: "var(--admin-text-muted)" }}>
+        <p
+          className="text-sm max-w-sm"
+          style={{ color: "var(--admin-text-muted)" }}>
           {isMissingTable
-            ? "Le tabelle RBAC non esistono ancora nel database. Esegui la migrazione SQL 0013 su Supabase."
-            : error.message || "Si è verificato un errore imprevisto."}
+            ? "RBAC tables do not exist in the database yet. Please run SQL migration 0013 on Supabase."
+            : error.message || "An unexpected error occurred."}
         </p>
       </div>
 
@@ -48,33 +49,37 @@ export default function PermissionsError({
           style={{
             background: "var(--admin-hover-bg)",
             border: "1px solid var(--admin-card-border)",
-          }}
-        >
-          <p className="text-xs font-semibold mb-2" style={{ color: "var(--admin-text-muted)" }}>
-            SQL da eseguire su Supabase → SQL Editor:
+          }}>
+          <p
+            className="text-xs font-semibold mb-2"
+            style={{ color: "var(--admin-text-muted)" }}>
+            SQL to run on Supabase → SQL Editor:
           </p>
           <pre
             className="text-[11px] overflow-x-auto"
-            style={{ color: "var(--admin-text-faint)", fontFamily: "monospace" }}
-          >{`-- Catalogo permessi
+            style={{
+              color: "var(--admin-text-faint)",
+              fontFamily: "monospace",
+            }}>
+            {`-- Permission catalog
 CREATE TABLE IF NOT EXISTS "permissions" (
   "id" serial PRIMARY KEY,
   "key" varchar(100) NOT NULL UNIQUE,
   "label" varchar(150) NOT NULL,
   "description" text,
-  "group" varchar(100) NOT NULL DEFAULT 'Generale',
+  "group" varchar(100) NOT NULL DEFAULT 'General',
   "is_system" boolean NOT NULL DEFAULT false,
   "created_at" timestamp NOT NULL DEFAULT now()
 );
 
--- Matrice ruolo → permesso
+-- Role → Permission matrix
 CREATE TABLE IF NOT EXISTS "role_permissions" (
   "role_id" integer NOT NULL REFERENCES "roles"("id") ON DELETE CASCADE,
   "permission_id" integer NOT NULL REFERENCES "permissions"("id") ON DELETE CASCADE,
   PRIMARY KEY ("role_id", "permission_id")
 );
 
--- Override individuali per utente
+-- Individual user overrides
 CREATE TABLE IF NOT EXISTS "user_permissions" (
   "id" serial PRIMARY KEY,
   "user_id" integer NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
@@ -86,7 +91,7 @@ CREATE TABLE IF NOT EXISTS "user_permissions" (
   "created_at" timestamp NOT NULL DEFAULT now()
 );
 
--- Indici
+-- Indexes
 CREATE INDEX IF NOT EXISTS idx_role_permissions_role ON "role_permissions"("role_id");
 CREATE INDEX IF NOT EXISTS idx_user_permissions_user ON "user_permissions"("user_id");`}
           </pre>
@@ -96,10 +101,9 @@ CREATE INDEX IF NOT EXISTS idx_user_permissions_user ON "user_permissions"("user
       <button
         onClick={reset}
         className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg text-white"
-        style={{ background: "var(--admin-accent)" }}
-      >
+        style={{ background: "var(--admin-accent)" }}>
         <RefreshCw size={14} />
-        Riprova
+        Try again
       </button>
     </div>
   );

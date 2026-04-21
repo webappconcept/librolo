@@ -1,4 +1,3 @@
-// app/(admin)/admin/permissions/_components/permissions-info-card.tsx
 "use client";
 
 import {
@@ -100,12 +99,12 @@ export function PermissionsInfoCard() {
           <span
             className="text-sm font-medium"
             style={{ color: "var(--admin-text)" }}>
-            Come funziona il sistema dei permessi?
+            How does the permission system work?
           </span>
           <span
             className="block text-xs"
             style={{ color: "var(--admin-text-faint)" }}>
-            Guida rapida, configurazione e esempio di utilizzo nel codice
+            Quick guide, configuration, and code usage examples
           </span>
         </div>
         <ChevronDown
@@ -118,38 +117,38 @@ export function PermissionsInfoCard() {
         />
       </button>
 
-      {/* Contenuto collassabile */}
+      {/* Collapsible Content */}
       <div
         className="transition-all duration-300 ease-in-out overflow-hidden"
         style={{ maxHeight: open ? "1200px" : "0px", opacity: open ? 1 : 0 }}>
         <div
           className="px-5 pb-5 pt-1 grid gap-5"
           style={{ borderTop: "1px solid var(--admin-card-border)" }}>
-          {/* Come funziona */}
+          {/* How it works */}
           <div className="pt-4">
-            <SectionTitle icon={BookOpen}>Come funziona</SectionTitle>
+            <SectionTitle icon={BookOpen}>How it works</SectionTitle>
             <p
               className="text-sm leading-relaxed"
               style={{ color: "var(--admin-text-muted)" }}>
-              Il sistema RBAC (Role-Based Access Control) si basa su tre livelli
-              sovrapposti:
+              The RBAC (Role-Based Access Control) system is based on three
+              overlapping layers:
             </p>
             <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
               {[
                 {
                   icon: Layers,
-                  title: "Permessi",
-                  desc: "Azioni atomiche dell'app. Usa il pattern risorsa:azione es. posts:publish, users:ban.",
+                  title: "Permissions",
+                  desc: "Atomic app actions. Use the resource:action pattern, e.g., posts:publish, users:ban.",
                 },
                 {
                   icon: ShieldCheck,
-                  title: "Ruoli",
-                  desc: "Insiemi di permessi. Assegna un set di permessi a ciascun ruolo in Gestione Ruoli.",
+                  title: "Roles",
+                  desc: "Sets of permissions. Assign a set of permissions to each role in Role Management.",
                 },
                 {
                   icon: User,
-                  title: "Override utente",
-                  desc: "Concedi o revoca un permesso specifico a un singolo utente, anche con scadenza.",
+                  title: "User Overrides",
+                  desc: "Grant or revoke a specific permission for a single user, including expiration dates.",
                 },
               ].map(({ icon: Icon, title, desc }) => (
                 <div
@@ -179,49 +178,47 @@ export function PermissionsInfoCard() {
 
           {/* Setup */}
           <div>
-            <SectionTitle icon={CheckCircle2}>
-              Configurazione iniziale
-            </SectionTitle>
+            <SectionTitle icon={CheckCircle2}>Initial Setup</SectionTitle>
             <ol className="space-y-2.5">
               <Step n={1}>
-                Vai su <strong>Catalogo permessi</strong> (tab accanto) e crea i
-                permessi che ti servono. Usa nomi nel formato{" "}
-                <Pill>risorsa:azione</Pill>, ad esempio{" "}
+                Go to the <strong>Permission Catalog</strong> (next tab) and
+                create the permissions you need. Use names in the format{" "}
+                <Pill>resource:action</Pill>, for example{" "}
                 <Pill>posts:publish</Pill>, <Pill>users:ban</Pill>,{" "}
                 <Pill>admin:access</Pill>.
               </Step>
               <Step n={2}>
-                Vai su <strong>Matrice ruoli</strong> e attiva/disattiva i
-                toggle per assegnare i permessi ai ruoli. Ogni cella è un
-                toggle: verde = permesso assegnato.
+                Go to the <strong>Role Matrix</strong> and use the toggles to
+                assign permissions to roles. Each cell is a toggle: green =
+                permission granted.
               </Step>
               <Step n={3}>
-                Per eccezioni individuali, apri il dettaglio di un utente in{" "}
-                <strong>Utenti</strong> → tab <strong>Accessi</strong> → sezione
-                Override. Puoi concedere o revocare un permesso con scadenza
-                opzionale.
+                For individual exceptions, open a user's details in{" "}
+                <strong>Users</strong> → <strong>Access</strong> tab → Overrides
+                section. You can grant or revoke a permission with an optional
+                expiration date.
               </Step>
               <Step n={4}>
-                Nel codice dell'app, usa la funzione <Pill>can()</Pill> per
-                verificare se l'utente corrente ha un determinato permesso (vedi
-                esempio sotto).
+                In your app's code, use the <Pill>can()</Pill> function to
+                verify if the current user has a specific permission (see
+                example below).
               </Step>
             </ol>
           </div>
 
-          {/* Convenzioni chiave */}
+          {/* Key Conventions */}
           <div>
-            <SectionTitle icon={Layers}>Convenzioni per le chiavi</SectionTitle>
+            <SectionTitle icon={Layers}>Key Conventions</SectionTitle>
             <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
               {[
-                { key: "admin:access", desc: "Accesso al pannello admin" },
-                { key: "users:view", desc: "Visualizza lista utenti" },
-                { key: "users:ban", desc: "Banna/sbanna un utente" },
-                { key: "users:delete", desc: "Elimina account utente" },
-                { key: "posts:create", desc: "Crea nuovi contenuti" },
-                { key: "posts:publish", desc: "Pubblica/depubblica" },
-                { key: "posts:delete", desc: "Elimina contenuti altrui" },
-                { key: "comments:delete", desc: "Elimina commenti" },
+                { key: "admin:access", desc: "Access to admin panel" },
+                { key: "users:view", desc: "View user list" },
+                { key: "users:ban", desc: "Ban/unban a user" },
+                { key: "users:delete", desc: "Delete user account" },
+                { key: "posts:create", desc: "Create new content" },
+                { key: "posts:publish", desc: "Publish/unpublish content" },
+                { key: "posts:delete", desc: "Delete others' content" },
+                { key: "comments:delete", desc: "Delete comments" },
               ].map(({ key, desc }) => (
                 <div key={key} className="flex items-center gap-2">
                   <Pill>{key}</Pill>
@@ -235,11 +232,9 @@ export function PermissionsInfoCard() {
             </div>
           </div>
 
-          {/* Esempio codice */}
+          {/* Code Example */}
           <div>
-            <SectionTitle icon={Code2}>
-              Esempio di utilizzo nel codice
-            </SectionTitle>
+            <SectionTitle icon={Code2}>Code Usage Example</SectionTitle>
             <div
               className="rounded-lg overflow-x-auto"
               style={{
@@ -249,39 +244,39 @@ export function PermissionsInfoCard() {
               <pre
                 className="text-[12px] leading-relaxed p-4 font-mono"
                 style={{ color: "var(--admin-text-muted)" }}>
-                {`// In un Server Component o Server Action
+                {`// In a Server Component or Server Action
 import { can } from "@/lib/rbac/can";
 import { getSession } from "@/lib/auth/session";
 
 export default async function PublishButton() {
   const session = await getSession();
 
-  // Verifica se l'utente ha il permesso
+  // Check if the user has permission
   const allowed = await can(session.user.id, "posts:publish");
 
   if (!allowed) {
-    return <p>Non hai il permesso per pubblicare.</p>;
+    return <p>You do not have permission to publish.</p>;
   }
 
-  return <button>Pubblica</button>;
+  return <button>Publish</button>;
 }
 
-// Oppure in una Server Action
+// Or in a Server Action
 export async function publishPost(postId: number) {
   const session = await getSession();
   const allowed = await can(session.user.id, "posts:publish");
   if (!allowed) throw new Error("Unauthorized");
 
-  // ... logica di pubblicazione
+  // ... publishing logic
 }`}
               </pre>
             </div>
             <p
               className="text-[12px] mt-2"
               style={{ color: "var(--admin-text-faint)" }}>
-              La funzione <Pill>can(userId, key)</Pill> risolve automaticamente
-              ruolo + override individuali (grant/revoke) e rispetta le
-              scadenze.
+              The <Pill>can(userId, key)</Pill> function automatically resolves
+              roles + individual overrides (grant/revoke) and respects
+              expiration dates.
             </p>
           </div>
         </div>

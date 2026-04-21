@@ -1,19 +1,26 @@
-// app/(admin)/admin/permissions/actions.ts
 "use server";
 
+import { getAdminPath } from "@/lib/admin-nav";
+import { db } from "@/lib/db/drizzle";
+import {
+  activityLogs,
+  ActivityType,
+  permissions,
+  rolePermissions,
+  roles,
+  userPermissions,
+} from "@/lib/db/schema";
+import { requireAdmin } from "@/lib/rbac/guards";
 import {
   addPermissionToRole,
   removePermissionFromRole,
 } from "@/lib/rbac/permissions-queries";
-import { requireAdmin } from "@/lib/rbac/guards";
-import { db } from "@/lib/db/drizzle";
-import { activityLogs, ActivityType, permissions, rolePermissions, roles, userPermissions } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { z } from "zod";
 import { headers } from "next/headers";
+import { z } from "zod";
 
-/** Scrive un record su activity_logs con IP del richiedente. */
+/** Writes a record to activity_logs with the requester's IP. */
 async function logRbacAction(
   adminId: string,
   action: ActivityType,
@@ -31,7 +38,7 @@ async function logRbacAction(
   });
 }
 
-// Toggle permesso su un ruolo (add / remove)
+/** Toggles a permission on a role (add / remove) */
 export async function toggleRolePermission(
   roleId: number,
   permissionId: number,
@@ -39,7 +46,7 @@ export async function toggleRolePermission(
 ) {
   const admin = await requireAdmin();
 
-  // Recupera label role e permesso per il log leggibile
+  // Retrieve role and permission labels for readable logging
   const [role] = await db
     .select({ name: roles.name })
     .from(roles)
@@ -59,18 +66,23 @@ export async function toggleRolePermission(
 
   await logRbacAction(
     admin.id,
-    granted ? ActivityType.ROLE_PERMISSION_ADDED : ActivityType.ROLE_PERMISSION_REMOVED,
+    granted
+      ? ActivityType.ROLE_PERMISSION_ADDED
+      : ActivityType.ROLE_PERMISSION_REMOVED,
     `role=${role?.name ?? roleId} perm=${perm?.key ?? permissionId}`,
   );
 
-  revalidatePath("/admin/permissions");
-  revalidatePath("/admin/roles");
+  revalidatePath(getAdminPath("users-permissions"));
+  revalidatePath(getAdminPath("users-roles"));
 }
 
 /**
- * Assegna un permesso a un ruolo (usato dalla RoleMatrix con optimistic UI).
+ * Grants a permission to a role (used by RoleMatrix with optimistic UI).
  */
-export async function grantPermissionToRole(roleId: number, permissionId: number) {
+export async function grantPermissionToRole(
+  roleId: number,
+  permissionId: number,
+) {
   const admin = await requireAdmin();
 
   const [role] = await db
@@ -92,14 +104,17 @@ export async function grantPermissionToRole(roleId: number, permissionId: number
     `role=${role?.name ?? roleId} perm=${perm?.key ?? permissionId}`,
   );
 
-  revalidatePath("/admin/permissions");
-  revalidatePath("/admin/roles");
+  revalidatePath(getAdminPath("users-permissions"));
+  revalidatePath(getAdminPath("users-roles"));
 }
 
 /**
- * Revoca un permesso da un ruolo (usato dalla RoleMatrix con optimistic UI).
+ * Revokes a permission from a role (used by RoleMatrix with optimistic UI).
  */
-export async function revokePermissionFromRole(roleId: number, permissionId: number) {
+export async function revokePermissionFromRole(
+  roleId: number,
+  permissionId: number,
+) {
   const admin = await requireAdmin();
 
   const [role] = await db
@@ -121,17 +136,17 @@ export async function revokePermissionFromRole(roleId: number, permissionId: num
     `role=${role?.name ?? roleId} perm=${perm?.key ?? permissionId}`,
   );
 
-  revalidatePath("/admin/permissions");
-  revalidatePath("/admin/roles");
+  revalidatePath(getAdminPath("users-permissions"));
+  revalidatePath(getAdminPath("users-roles"));
 }
 
-// Crea un nuovo permesso nel catalogo
+/** Creates a new permission in the catalog */
 const CreatePermissionSchema = z.object({
   key: z
     .string()
     .min(3)
     .regex(/^[a-z0-9_]+:[a-z0-9_]+$/, {
-      message: 'Formato richiesto: risorsa:azione (es. "posts:publish")',
+      message: 'Required format: resource:action (e.g. "posts:publish")',
     }),
   label: z.string().min(2).max(150),
   description: z.string().max(500).optional(),
@@ -141,9 +156,7 @@ const CreatePermissionSchema = z.object({
 export async function createPermission(formData: FormData) {
   const admin = await requireAdmin();
 
-  const parsed = CreatePermissionSchema.safeParse(
-    Object.fromEntries(formData),
-  );
+  const parsed = CreatePermissionSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
     return { error: parsed.error.issues[0].message };
   }
@@ -156,7 +169,7 @@ export async function createPermission(formData: FormData) {
     .limit(1);
 
   if (existing.length > 0) {
-    return { error: `Il permesso "${key}" esiste già.` };
+    return { error: `Permission "${key}" already exists.` };
   }
 
   await db.insert(permissions).values({ key, label, description, group });
@@ -167,11 +180,11 @@ export async function createPermission(formData: FormData) {
     `create_permission key=${key} group=${group}`,
   );
 
-  revalidatePath("/admin/permissions");
+  revalidatePath(getAdminPath("users-permissions"));
   return { success: true };
 }
 
-// Schema per l'aggiornamento — la key NON è modificabile
+/** Update schema — key is NOT editable */
 const UpdatePermissionSchema = z.object({
   label: z.string().min(2).max(150),
   description: z.string().max(500).optional(),
@@ -179,17 +192,18 @@ const UpdatePermissionSchema = z.object({
 });
 
 /**
- * Aggiorna label, description e group di un permesso esistente.
- * La `key` è intenzionalmente esclusa: modificarla romperebbe
- * tutti i controlli hasPermission() hardcodati nel codebase.
- * I permessi di sistema possono comunque essere aggiornati (solo i campi UI).
+ * Updates label, description, and group of an existing permission.
+ * The `key` is intentionally excluded: modifying it would break
+ * all hardcoded hasPermission() checks in the codebase.
+ * System permissions can still be updated (UI fields only).
  */
-export async function updatePermission(permissionId: number, formData: FormData) {
+export async function updatePermission(
+  permissionId: number,
+  formData: FormData,
+) {
   const admin = await requireAdmin();
 
-  const parsed = UpdatePermissionSchema.safeParse(
-    Object.fromEntries(formData),
-  );
+  const parsed = UpdatePermissionSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
     return { error: parsed.error.issues[0].message };
   }
@@ -201,7 +215,7 @@ export async function updatePermission(permissionId: number, formData: FormData)
     .limit(1);
 
   if (!existing) {
-    return { error: "Permesso non trovato." };
+    return { error: "Permission not found." };
   }
 
   const { label, description, group } = parsed.data;
@@ -217,25 +231,30 @@ export async function updatePermission(permissionId: number, formData: FormData)
     `update_permission key=${existing.key} label=${label} group=${group}`,
   );
 
-  revalidatePath("/admin/permissions");
+  revalidatePath(getAdminPath("users-permissions"));
   return { success: true };
 }
 
 /**
- * Restituisce il numero di assegnazioni collegate a un permesso
- * (ruoli + override individuali). Usato dal dialog di conferma.
+ * Returns the number of assignments linked to a permission
+ * (roles + individual overrides). Used by the confirmation dialog.
  */
 export async function getPermissionImpact(permissionId: number) {
   await requireAdmin();
 
   const perm = await db
-    .select({ isSystem: permissions.isSystem, key: permissions.key, label: permissions.label })
+    .select({
+      isSystem: permissions.isSystem,
+      key: permissions.key,
+      label: permissions.label,
+    })
     .from(permissions)
     .where(eq(permissions.id, permissionId))
     .limit(1);
 
-  if (!perm[0]) return { error: "Permesso non trovato." };
-  if (perm[0].isSystem) return { error: "I permessi di sistema non possono essere eliminati." };
+  if (!perm[0]) return { error: "Permission not found." };
+  if (perm[0].isSystem)
+    return { error: "System permissions cannot be deleted." };
 
   const roleCount = await db
     .select({ id: rolePermissions.roleId })
@@ -256,8 +275,8 @@ export async function getPermissionImpact(permissionId: number) {
 }
 
 /**
- * Elimina un permesso con cascade:
- * rimuove prima tutte le assegnazioni su ruoli e override individuali.
+ * Deletes a permission with cascade:
+ * removes all assignments on roles and individual overrides first.
  */
 export async function deletePermission(permissionId: number) {
   const admin = await requireAdmin();
@@ -269,14 +288,18 @@ export async function deletePermission(permissionId: number) {
     .limit(1);
 
   if (!perm || perm.isSystem) {
-    return { error: "I permessi di sistema non possono essere eliminati." };
+    return { error: "System permissions cannot be deleted." };
   }
 
-  // Cascade: rimuovi assegnazioni su ruoli
-  await db.delete(rolePermissions).where(eq(rolePermissions.permissionId, permissionId));
-  // Cascade: rimuovi override individuali
-  await db.delete(userPermissions).where(eq(userPermissions.permissionId, permissionId));
-  // Elimina il permesso
+  // Cascade: remove role assignments
+  await db
+    .delete(rolePermissions)
+    .where(eq(rolePermissions.permissionId, permissionId));
+  // Cascade: remove individual overrides
+  await db
+    .delete(userPermissions)
+    .where(eq(userPermissions.permissionId, permissionId));
+  // Delete the permission itself
   await db.delete(permissions).where(eq(permissions.id, permissionId));
 
   await logRbacAction(
@@ -285,17 +308,18 @@ export async function deletePermission(permissionId: number) {
     `delete_permission key=${perm.key}`,
   );
 
-  revalidatePath("/admin/permissions");
-  revalidatePath("/admin/roles");
+  revalidatePath(getAdminPath("users-permissions"));
+  revalidatePath(getAdminPath("users-roles"));
   return { success: true };
 }
 
 /**
- * Ritorna gli utenti che hanno un dato permesso (via ruolo o override).
- * Usato dal drawer "Chi ha questo permesso?" nel catalogo.
+ * Returns users who have a specific permission (via role or override).
+ * Used by the "Who has this permission?" drawer in the catalog.
  */
 export async function fetchUsersWithPermission(permissionKey: string) {
   await requireAdmin();
-  const { getUsersWithPermission } = await import("@/lib/rbac/permissions-queries");
+  const { getUsersWithPermission } =
+    await import("@/lib/rbac/permissions-queries");
   return getUsersWithPermission(permissionKey);
 }
