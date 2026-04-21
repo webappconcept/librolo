@@ -17,14 +17,14 @@ export function SenderTab({ settings }: { settings: AppSettings }) {
 }
 
 function SenderTabInner({ settings }: { settings: AppSettings }) {
-  const [saveState, saveAction, isSaving] = useActionState<ActionState, FormData>(
-    saveSenderSettings,
-    {},
-  );
-  const [testState, testAction, isTesting] = useActionState<ActionState, FormData>(
-    testResendConnection,
-    {},
-  );
+  const [saveState, saveAction, isSaving] = useActionState<
+    ActionState,
+    FormData
+  >(saveSenderSettings, {});
+  const [testState, testAction, isTesting] = useActionState<
+    ActionState,
+    FormData
+  >(testResendConnection, {});
   const [toast, setToast] = useState<{
     message: string;
     type: "success" | "error";
@@ -38,16 +38,20 @@ function SenderTabInner({ settings }: { settings: AppSettings }) {
     if (!("timestamp" in saveState)) return;
     if (saveState.timestamp === lastSaveTs.current) return;
     lastSaveTs.current = saveState.timestamp;
-    if ("success" in saveState) setToast({ message: saveState.success, type: "success" });
-    if ("error" in saveState) setToast({ message: saveState.error, type: "error" });
+    if ("success" in saveState)
+      setToast({ message: saveState.success, type: "success" });
+    if ("error" in saveState)
+      setToast({ message: saveState.error, type: "error" });
   }, [saveState]);
 
   useEffect(() => {
     if (!("timestamp" in testState)) return;
     if (testState.timestamp === lastTestTs.current) return;
     lastTestTs.current = testState.timestamp;
-    if ("success" in testState) setToast({ message: testState.success, type: "success" });
-    if ("error" in testState) setToast({ message: testState.error, type: "error" });
+    if ("success" in testState)
+      setToast({ message: testState.success, type: "success" });
+    if ("error" in testState)
+      setToast({ message: testState.error, type: "error" });
   }, [testState]);
 
   function handleTest() {
@@ -65,7 +69,6 @@ function SenderTabInner({ settings }: { settings: AppSettings }) {
   return (
     <>
       <form action={saveAction} className="space-y-5">
-        {/* Card Resend API Key */}
         <div
           className="rounded-xl shadow-sm p-6"
           style={{
@@ -73,7 +76,9 @@ function SenderTabInner({ settings }: { settings: AppSettings }) {
             border: "1px solid var(--admin-card-border)",
           }}>
           <div className="flex items-center justify-between mb-5">
-            <h3 className="text-sm font-semibold" style={{ color: "var(--admin-text)" }}>
+            <h3
+              className="text-sm font-semibold"
+              style={{ color: "var(--admin-text)" }}>
               Resend
             </h3>
             <a
@@ -82,7 +87,7 @@ function SenderTabInner({ settings }: { settings: AppSettings }) {
               rel="noopener noreferrer"
               className="flex items-center gap-1 text-xs transition-colors"
               style={{ color: "var(--admin-accent)" }}>
-              Ottieni API Key <ExternalLink size={11} />
+              Get API Key <ExternalLink size={11} />
             </a>
           </div>
 
@@ -111,7 +116,9 @@ function SenderTabInner({ settings }: { settings: AppSettings }) {
                   {showKey ? "Nascondi" : "Mostra"}
                 </button>
               </div>
-              <p className="text-[11px] mt-1" style={{ color: "var(--admin-text-faint)" }}>
+              <p
+                className="text-[11px] mt-1"
+                style={{ color: "var(--admin-text-faint)" }}>
                 Salvata in modo sicuro. Non viene mai esposta nel frontend.
               </p>
 
@@ -126,7 +133,11 @@ function SenderTabInner({ settings }: { settings: AppSettings }) {
                   color: "var(--admin-text-muted)",
                   border: "1px solid var(--admin-card-border)",
                 }}>
-                {isTesting ? <Loader2 size={13} className="animate-spin" /> : <Wifi size={13} />}
+                {isTesting ? (
+                  <Loader2 size={13} className="animate-spin" />
+                ) : (
+                  <Wifi size={13} />
+                )}
                 {isTesting ? "Test in corso..." : "Testa connessione Resend"}
               </button>
             </div>
@@ -140,7 +151,9 @@ function SenderTabInner({ settings }: { settings: AppSettings }) {
             background: "var(--admin-card-bg)",
             border: "1px solid var(--admin-card-border)",
           }}>
-          <h3 className="text-sm font-semibold mb-5" style={{ color: "var(--admin-text)" }}>
+          <h3
+            className="text-sm font-semibold mb-5"
+            style={{ color: "var(--admin-text)" }}>
             Mittente
           </h3>
 
@@ -174,7 +187,9 @@ function SenderTabInner({ settings }: { settings: AppSettings }) {
                 className="w-full px-3 py-2 text-sm rounded-lg focus:outline-none transition-colors"
                 style={inputStyle}
               />
-              <p className="text-[11px] mt-1" style={{ color: "var(--admin-text-faint)" }}>
+              <p
+                className="text-[11px] mt-1"
+                style={{ color: "var(--admin-text-faint)" }}>
                 Deve essere un dominio verificato su Resend.
               </p>
             </div>
@@ -187,10 +202,17 @@ function SenderTabInner({ settings }: { settings: AppSettings }) {
           className="flex items-center gap-2 px-5 py-2.5 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           style={{ background: "var(--admin-accent)" }}
           onMouseEnter={(e) =>
-            !isSaving && (e.currentTarget.style.background = "var(--admin-accent-hover)")
+            !isSaving &&
+            (e.currentTarget.style.background = "var(--admin-accent-hover)")
           }
-          onMouseLeave={(e) => (e.currentTarget.style.background = "var(--admin-accent)")}>
-          {isSaving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
+          onMouseLeave={(e) =>
+            (e.currentTarget.style.background = "var(--admin-accent)")
+          }>
+          {isSaving ? (
+            <Loader2 size={15} className="animate-spin" />
+          ) : (
+            <Save size={15} />
+          )}
           {isSaving ? "Salvataggio..." : "Salva"}
         </button>
       </form>

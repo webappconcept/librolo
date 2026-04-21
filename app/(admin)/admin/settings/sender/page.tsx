@@ -1,6 +1,6 @@
 import { getAppSettings } from "@/lib/db/settings-queries";
 import type { Metadata } from "next";
-import { SenderTab } from "../tabs/sender-tab";
+import { SenderTab } from "../tabs/resend-tab";
 
 export const metadata: Metadata = { title: "Impostazioni / Resend" };
 

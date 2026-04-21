@@ -239,7 +239,7 @@ export const ADMIN_NAV: NavItem[] = [
     children: [
       {
         key: "settings-general",
-        href: "/admin/settings/generale",
+        href: "/admin/settings/general",
         label: "General",
         icon: "Settings",
         permission: "admin:settings",
@@ -259,8 +259,8 @@ export const ADMIN_NAV: NavItem[] = [
         permission: "admin:settings",
       },
       {
-        key: "settings-sender",
-        href: "/admin/settings/sender",
+        key: "settings-resend",
+        href: "/admin/settings/resend",
         label: "Resend",
         icon: "Send",
         permission: "admin:settings",

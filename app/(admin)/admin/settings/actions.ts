@@ -1,5 +1,6 @@
 "use server";
 
+import { getAdminPath } from "@/lib/admin-nav";
 import { db } from "@/lib/db/drizzle";
 import type { SiteSnippet } from "@/lib/db/schema";
 import { disposableDomains, siteSnippets } from "@/lib/db/schema";
@@ -27,7 +28,7 @@ export async function saveAppSettings(
       formData.get("app_description") as string,
     );
     await updateAppSetting("app_domain", domain ? `https://${domain}` : "");
-    revalidatePath("/admin/settings");
+    revalidatePath(getAdminPath("settings-general"));
     return { success: "Impostazioni salvate.", timestamp: Date.now() };
   } catch {
     return { error: "Errore durante il salvataggio.", timestamp: Date.now() };
@@ -47,7 +48,8 @@ export async function saveModeSettings(
       "maintenance_mode",
       formData.get("maintenance_mode") as string,
     );
-    revalidatePath("/admin/settings");
+    revalidatePath(getAdminPath("settings-mode"));
+
     return {
       success: "Impostazioni comportamento salvate.",
       timestamp: Date.now(),
@@ -74,7 +76,7 @@ export async function saveSenderSettings(
       "email_from_address",
       formData.get("email_from_address") as string,
     );
-    revalidatePath("/admin/settings");
+    getAdminPath("settings-resend");
     return { success: "Impostazioni Resend salvate.", timestamp: Date.now() };
   } catch {
     return { error: "Errore durante il salvataggio.", timestamp: Date.now() };
@@ -141,7 +143,7 @@ export async function saveEmailTemplateSettings(
       const val = (formData.get(key) as string | null) ?? "";
       await updateAppSetting(key, val.trim() || null);
     }
-    revalidatePath("/admin/settings");
+    revalidatePath(getAdminPath("settings-email"));
     return { success: "Template email salvati.", timestamp: Date.now() };
   } catch {
     return { error: "Errore durante il salvataggio.", timestamp: Date.now() };
@@ -157,7 +159,7 @@ export async function saveUsersSettings(
       "default_role",
       formData.get("default_role") as string,
     );
-    revalidatePath("/admin/settings");
+    revalidatePath(getAdminPath("settings-signin"));
     return { success: "Impostazioni utenti salvate.", timestamp: Date.now() };
   } catch {
     return { error: "Errore durante il salvataggio.", timestamp: Date.now() };
@@ -177,7 +179,7 @@ export async function saveRedisSettings(
     ).trim();
     await updateAppSetting("upstash_redis_rest_url", url || null);
     await updateAppSetting("upstash_redis_rest_token", token || null);
-    revalidatePath("/admin/settings");
+    revalidatePath(getAdminPath("settings-redis"));
     return { success: "Credenziali Redis salvate.", timestamp: Date.now() };
   } catch {
     return { error: "Errore durante il salvataggio.", timestamp: Date.now() };
@@ -235,7 +237,7 @@ export async function addDisposableDomainAction(
       .insert(disposableDomains)
       .values({ domain: clean })
       .onConflictDoNothing();
-    revalidatePath("/admin/settings");
+    revalidatePath(getAdminPath("security-blocked-domains"));
     return { success: `"${clean}" aggiunto.`, timestamp: Date.now() };
   } catch {
     return { error: "Errore durante l'aggiunta.", timestamp: Date.now() };
@@ -249,7 +251,7 @@ export async function removeDisposableDomainAction(
     await db
       .delete(disposableDomains)
       .where(eq(disposableDomains.domain, domain.trim().toLowerCase()));
-    revalidatePath("/admin/settings");
+    revalidatePath(getAdminPath("security-blocked-domains"));
     return { success: `"${domain}" rimosso.`, timestamp: Date.now() };
   } catch {
     return { error: "Errore durante la rimozione.", timestamp: Date.now() };
@@ -267,7 +269,7 @@ export async function bulkImportDisposableDomainsAction(
       .filter(Boolean)
       .map((domain) => ({ domain }));
     await db.insert(disposableDomains).values(values).onConflictDoNothing();
-    revalidatePath("/admin/settings");
+    revalidatePath(getAdminPath("security-blocked-domains"));
     return {
       success: `${values.length} domini importati con successo.`,
       timestamp: Date.now(),
