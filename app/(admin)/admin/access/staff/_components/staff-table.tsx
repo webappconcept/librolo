@@ -1,6 +1,6 @@
-// app/(admin)/admin/staff/_components/staff-table.tsx
 "use client";
 
+import { getAdminPath } from "@/lib/admin-nav";
 import type { AdminUser } from "@/lib/db/admin-queries";
 import Link from "next/link";
 
@@ -46,7 +46,7 @@ function StaffRow({ user }: { user: AdminUser }) {
           </div>
           <div>
             <Link
-              href={`/admin/users/${user.id}`}
+              href={`${getAdminPath("users-list")}/${user.id}`}
               className="text-sm font-medium transition-colors leading-none admin-user-link"
               style={{ color: "var(--admin-text)" }}>
               {user.firstName} {user.lastName}
