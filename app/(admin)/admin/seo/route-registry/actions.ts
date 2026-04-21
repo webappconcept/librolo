@@ -20,10 +20,7 @@ const schema = z.object({
     .string()
     .min(1, "Pathname is mandatory")
     .regex(/^\//, { message: "Pathname must starts with /" }),
-  label: z
-    .string()
-    .min(1, "Label is mandatory")
-    .max(150, "Max 150 characterds"),
+  label: z.string().min(1, "Label is mandatory").max(150, "Max 150 characters"),
   visibility: z.enum(["public", "private", "admin", "auth-only"], {
     error: "Visibility not valid",
   }),
@@ -93,7 +90,7 @@ export async function toggleRouteActiveAction(
     revalidatePath(REVALIDATE);
   } catch (err) {
     console.error("[toggleRouteActiveAction]", err);
-    return { error: "Errore nell'aggiornamento." };
+    return { error: "Error while updating." };
   }
   return { success: true };
 }

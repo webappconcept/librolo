@@ -215,7 +215,7 @@ export default function RouteRegistryClient({
     <div className="space-y-5">
       <ConfirmModal
         open={deleteTarget !== null}
-        title="Elimina route"
+        title="Delete route"
         message={
           <>
             You are about to delete the route{" "}

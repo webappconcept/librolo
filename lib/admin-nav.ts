@@ -197,7 +197,7 @@ export const ADMIN_NAV: NavItem[] = [
         permission: "admin:seo",
       },
       {
-        href: "/admin/redirect",
+        href: "/admin/seo/redirect",
         label: "Redirect",
         icon: "GitMerge",
         permission: "admin:seo",
