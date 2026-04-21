@@ -22,40 +22,37 @@ type SectionMeta = {
 const SECTIONS: Record<string, SectionMeta> = {
   general: {
     label: "General",
-    description: "Nome, logo e informazioni principali dell'applicazione.",
+    description: "Name, logo, and main information of the application.",
     icon: Globe,
   },
   mode: {
     label: "Operation Mode",
-    description: "Gestisci le impostazioni di comportamento della piattaforma.",
+    description: "Manage the platform's behavior settings.",
     icon: SlidersHorizontal,
   },
   signin: {
     label: "SignIn",
-    description:
-      "Configura le opzioni di accesso e registrazione degli utenti.",
+    description: "Configure user access and registration options.",
     icon: LogIn,
   },
   resend: {
     label: "Resend",
-    description:
-      "Configura le credenziali e il mittente per l'invio delle email.",
+    description: "Configure credentials and sender for outgoing emails.",
     icon: Send,
   },
   email: {
     label: "Email",
-    description: "Personalizza i template delle email inviate dal sistema.",
+    description: "Customize email templates sent by the system.",
     icon: Mail,
   },
   snippets: {
     label: "Content",
-    description:
-      "Gestisci gli snippet e i contenuti testuali dell'applicazione.",
+    description: "Manage snippets and textual content of the application.",
     icon: Code2,
   },
   redis: {
     label: "Redis",
-    description: "Configura la connessione e le opzioni della cache Redis.",
+    description: "Configure Redis cache connection and options.",
     icon: Database,
   },
 };
