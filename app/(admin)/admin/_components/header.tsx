@@ -31,11 +31,7 @@ function useTheme() {
   return { theme, toggle };
 }
 
-export default function AdminHeaderRight({
-  user,
-}: {
-  user: UserWithProfile;
-}) {
+export default function AdminHeaderRight({ user }: { user: UserWithProfile }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const { theme, toggle } = useTheme();
@@ -109,7 +105,7 @@ export default function AdminHeaderRight({
             <p
               className="text-[10px] font-medium mt-0.5 uppercase tracking-wide"
               style={{ color: "var(--admin-accent)" }}>
-              Admin
+              @{user.username}
             </p>
           </div>
           <ChevronDown

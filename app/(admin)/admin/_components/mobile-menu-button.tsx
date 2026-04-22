@@ -11,7 +11,7 @@ export default function MobileMenuButton({ onClick }: MobileMenuButtonProps) {
     <button
       onClick={onClick}
       className="lg:hidden p-2 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
-      aria-label="Apri menu">
+      aria-label="Open menu">
       <Menu size={20} />
     </button>
   );
