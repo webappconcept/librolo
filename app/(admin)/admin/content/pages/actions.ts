@@ -149,7 +149,6 @@ export async function upsertPageAction(
     if (isCreating) {
       await logContentActivity(ActivityType.PAGE_CREATED, detail, uid);
     } else {
-      // Se lo stato è cambiato a published/draft logghiamo anche il cambio stato
       if (data.status === "published") {
         await logContentActivity(ActivityType.PAGE_PUBLISHED, detail, uid);
       }
@@ -189,6 +188,10 @@ export async function deletePageAction(
 
     return { success: true, deleted };
   } catch (err) {
+    // Guard: pagina di sistema non eliminabile
+    if (err instanceof Error && err.message === "SYSTEM_PAGE_PROTECTED") {
+      return { error: "Le pagine di sistema non possono essere eliminate." };
+    }
     console.error("[deletePageAction] error:", err);
     return { error: "Errore nell'eliminazione. Riprova." };
   }

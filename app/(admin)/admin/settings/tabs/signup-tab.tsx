@@ -3,10 +3,36 @@
 import { AdminToast } from "@/app/(admin)/admin/_components/toast";
 import type { Role } from "@/lib/db/schema";
 import type { AppSettings } from "@/lib/db/settings-queries";
-import { Loader2, Save } from "lucide-react";
+import { ExternalLink, FileText, Loader2, Save, ShieldCheck, Megaphone } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { saveUsersSettings, type ActionState } from "../actions";
+
+type SystemPageInfo = {
+  systemKey: string | null;
+  contentVersion: string;
+  slug: string;
+  title: string;
+  updatedAt: Date;
+};
+
+const SYSTEM_PAGE_META: Record<string, { label: string; icon: React.ReactNode; description: string }> = {
+  terms: {
+    label: "Termini e Condizioni",
+    icon: <FileText size={15} />,
+    description: "Versione salvata alla registrazione nel campo accepted_terms_version",
+  },
+  privacy: {
+    label: "Privacy Policy",
+    icon: <ShieldCheck size={15} />,
+    description: "Versione salvata alla registrazione nel campo accepted_privacy_version",
+  },
+  marketing: {
+    label: "Marketing Policy",
+    icon: <Megaphone size={15} />,
+    description: "Versione salvata alla registrazione nel campo accepted_marketing_version",
+  },
+};
 
 // ---------------------------------------------------------------------------
 // External Wrapper (resets on pathname change)
@@ -14,12 +40,14 @@ import { saveUsersSettings, type ActionState } from "../actions";
 export function SignUpTab({
   settings,
   roles,
+  systemPages,
 }: {
   settings: AppSettings;
   roles: Role[];
+  systemPages: SystemPageInfo[];
 }) {
   const pathname = usePathname();
-  return <SignUpTabInner key={pathname} settings={settings} roles={roles} />;
+  return <SignUpTabInner key={pathname} settings={settings} roles={roles} systemPages={systemPages} />;
 }
 
 // ---------------------------------------------------------------------------
@@ -28,19 +56,22 @@ export function SignUpTab({
 function SignUpTabInner({
   settings,
   roles,
+  systemPages,
 }: {
   settings: AppSettings;
   roles: Role[];
+  systemPages: SystemPageInfo[];
 }) {
   return (
     <div className="space-y-5">
       <RegistrationPanel settings={settings} roles={roles} />
+      <ConsentVersionsPanel systemPages={systemPages} />
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Registration Panel
+// Registration Panel (invariato)
 // ---------------------------------------------------------------------------
 function RegistrationPanel({
   settings,
@@ -218,5 +249,121 @@ function RegistrationPanel({
         />
       )}
     </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Consent Versions Panel (nuovo)
+// ---------------------------------------------------------------------------
+function ConsentVersionsPanel({ systemPages }: { systemPages: SystemPageInfo[] }) {
+  const ordered = ["terms", "privacy", "marketing"];
+  const byKey = Object.fromEntries(
+    systemPages
+      .filter((p) => p.systemKey !== null)
+      .map((p) => [p.systemKey!, p]),
+  );
+
+  return (
+    <div
+      className="rounded-xl shadow-sm p-6"
+      style={{
+        background: "var(--admin-card-bg)",
+        border: "1px solid var(--admin-card-border)",
+      }}>
+      <h3
+        className="text-sm font-semibold mb-1"
+        style={{ color: "var(--admin-text)" }}>
+        Versioni Consensi Registrazione
+      </h3>
+      <p
+        className="text-[11px] mb-5"
+        style={{ color: "var(--admin-text-faint)" }}>
+        Le versioni si aggiornano automaticamente ogni volta che il contenuto
+        della pagina viene modificato dal CMS. Non è necessaria nessuna azione manuale.
+      </p>
+
+      <div className="space-y-3">
+        {ordered.map((key) => {
+          const meta = SYSTEM_PAGE_META[key];
+          const page = byKey[key];
+          if (!meta) return null;
+          return (
+            <div
+              key={key}
+              className="flex items-start justify-between gap-4 px-4 py-3 rounded-lg"
+              style={{
+                background: "var(--admin-page-bg)",
+                border: "1px solid var(--admin-card-border)",
+              }}>
+              <div className="flex items-start gap-3 min-w-0">
+                <span
+                  className="mt-0.5 shrink-0"
+                  style={{ color: "var(--admin-text-muted)" }}>
+                  {meta.icon}
+                </span>
+                <div className="min-w-0">
+                  <p
+                    className="text-xs font-medium"
+                    style={{ color: "var(--admin-text)" }}>
+                    {meta.label}
+                  </p>
+                  <p
+                    className="text-[11px] mt-0.5"
+                    style={{ color: "var(--admin-text-faint)" }}>
+                    {meta.description}
+                  </p>
+                  {page && (
+                    <p
+                      className="text-[11px] mt-1"
+                      style={{ color: "var(--admin-text-faint)" }}>
+                      Ultimo aggiornamento:{" "}
+                      {new Date(page.updatedAt).toLocaleDateString("it-IT", {
+                        day: "2-digit",
+                        month: "long",
+                        year: "numeric",
+                      })}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-3 shrink-0">
+                {page ? (
+                  <>
+                    <span
+                      className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-mono font-semibold"
+                      style={{
+                        background: "var(--admin-accent)" + "18",
+                        color: "var(--admin-accent)",
+                        border: "1px solid " + "var(--admin-accent)" + "33",
+                      }}>
+                      v{page.contentVersion}
+                    </span>
+                    <a
+                      href={`/admin/content/pages/${page.slug}`}
+                      className="inline-flex items-center gap-1 text-[11px] transition-colors"
+                      style={{ color: "var(--admin-text-muted)" }}
+                      onMouseEnter={(e) =>
+                        (e.currentTarget.style.color = "var(--admin-accent)")
+                      }
+                      onMouseLeave={(e) =>
+                        (e.currentTarget.style.color = "var(--admin-text-muted)")
+                      }>
+                      <ExternalLink size={11} />
+                      Modifica
+                    </a>
+                  </>
+                ) : (
+                  <span
+                    className="text-xs italic"
+                    style={{ color: "var(--admin-text-faint)" }}>
+                    Pagina non trovata
+                  </span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
