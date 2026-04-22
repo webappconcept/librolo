@@ -9,7 +9,7 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { saveUsersSettings, type ActionState } from "../actions";
 
 // ---------------------------------------------------------------------------
-// Wrapper esterno (reset al cambio pathname)
+// External Wrapper (resets on pathname change)
 // ---------------------------------------------------------------------------
 export function SignUpTab({
   settings,
@@ -23,7 +23,7 @@ export function SignUpTab({
 }
 
 // ---------------------------------------------------------------------------
-// Inner
+// Inner Component
 // ---------------------------------------------------------------------------
 function SignUpTabInner({
   settings,
@@ -34,15 +34,15 @@ function SignUpTabInner({
 }) {
   return (
     <div className="space-y-5">
-      <RegistrazionePanel settings={settings} roles={roles} />
+      <RegistrationPanel settings={settings} roles={roles} />
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Pannello Registrazione
+// Registration Panel
 // ---------------------------------------------------------------------------
-function RegistrazionePanel({
+function RegistrationPanel({
   settings,
   roles,
 }: {
@@ -87,28 +87,27 @@ function RegistrazionePanel({
           <h3
             className="text-sm font-semibold mb-4"
             style={{ color: "var(--admin-text)" }}>
-            Registrazione utenti
+            User Registration
           </h3>
           <div className="space-y-5 max-w-lg">
             <div>
               <label
                 className="block text-xs font-medium mb-1.5"
                 style={{ color: "var(--admin-text-muted)" }}>
-                Ruolo predefinito alla registrazione
+                Default role upon registration
               </label>
               <p
                 className="text-[11px] mb-2.5"
                 style={{ color: "var(--admin-text-faint)" }}>
-                Ruolo assegnato automaticamente a ogni nuovo utente che si
-                registra. I ruoli con privilegi di amministratore non sono
-                selezionabili.
+                Role automatically assigned to every new user who registers.
+                Roles with administrator privileges are not selectable.
               </p>
               {assignableRoles.length === 0 ? (
                 <p
                   className="text-sm italic"
                   style={{ color: "var(--admin-text-faint)" }}>
-                  Nessun ruolo non-admin disponibile. Crea almeno un ruolo nella
-                  sezione Utenti › Ruoli.
+                  No non-admin roles available. Create at least one role in the
+                  Users › Roles section.
                 </p>
               ) : (
                 <select
@@ -157,7 +156,7 @@ function RegistrazionePanel({
                 <p
                   className="text-[11px] mb-2"
                   style={{ color: "var(--admin-text-faint)" }}>
-                  Ruoli disponibili
+                  Available roles
                 </p>
                 <div className="flex flex-wrap gap-1.5">
                   {assignableRoles.map((role) => (
@@ -208,7 +207,7 @@ function RegistrazionePanel({
           ) : (
             <Save size={15} />
           )}
-          {isPending ? "Salvataggio..." : "Salva"}
+          {isPending ? "Saving..." : "Save"}
         </button>
       </form>
       {toast && (
