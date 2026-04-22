@@ -3,7 +3,7 @@ import { roles } from "@/lib/db/schema";
 import { getAppSettings } from "@/lib/db/settings-queries";
 import { asc } from "drizzle-orm";
 import type { Metadata } from "next";
-import { SignInTab } from "../tabs/signin-tab";
+import { SignUpTab } from "../tabs/signup-tab";
 
 export const metadata: Metadata = { title: "Settings / SignUp" };
 
@@ -12,5 +12,5 @@ export default async function SettingsSignInPage() {
     getAppSettings(),
     db.select().from(roles).orderBy(asc(roles.sortOrder)),
   ]);
-  return <SignInTab settings={settings} roles={allRoles} />;
+  return <SignUpTab settings={settings} roles={allRoles} />;
 }

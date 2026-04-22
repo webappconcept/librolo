@@ -11,7 +11,7 @@ import { saveUsersSettings, type ActionState } from "../actions";
 // ---------------------------------------------------------------------------
 // Wrapper esterno (reset al cambio pathname)
 // ---------------------------------------------------------------------------
-export function SignInTab({
+export function SignUpTab({
   settings,
   roles,
 }: {
@@ -19,13 +19,13 @@ export function SignInTab({
   roles: Role[];
 }) {
   const pathname = usePathname();
-  return <SignInTabInner key={pathname} settings={settings} roles={roles} />;
+  return <SignUpTabInner key={pathname} settings={settings} roles={roles} />;
 }
 
 // ---------------------------------------------------------------------------
 // Inner
 // ---------------------------------------------------------------------------
-function SignInTabInner({
+function SignUpTabInner({
   settings,
   roles,
 }: {
