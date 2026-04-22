@@ -5,7 +5,7 @@ import { asc } from "drizzle-orm";
 import type { Metadata } from "next";
 import { SignInTab } from "../tabs/signin-tab";
 
-export const metadata: Metadata = { title: "Settings / SignIn" };
+export const metadata: Metadata = { title: "Settings / SignUp" };
 
 export default async function SettingsSignInPage() {
   const [settings, allRoles] = await Promise.all([

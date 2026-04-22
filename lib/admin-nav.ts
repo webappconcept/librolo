@@ -252,9 +252,9 @@ export const ADMIN_NAV: NavItem[] = [
         permission: "admin:settings",
       },
       {
-        key: "settings-signin",
-        href: "/admin/settings/signin",
-        label: "SignIn",
+        key: "settings-signup",
+        href: "/admin/settings/signup",
+        label: "SignUp",
         icon: "LogIn",
         permission: "admin:settings",
       },
