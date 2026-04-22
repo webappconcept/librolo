@@ -149,7 +149,7 @@ export default function AdminHeaderRight({ user }: { user: UserWithProfile }) {
                   (e.currentTarget.style.background = "transparent")
                 }>
                 <LogOut size={15} />
-                Esci
+                Logout
               </button>
             </form>
           </div>
