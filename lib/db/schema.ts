@@ -189,6 +189,10 @@ export const templateFieldsRelations = relations(
   }),
 );
 
+// System keys per le pagine di sistema legate ai consensi del form di registrazione
+export const SYSTEM_PAGE_KEYS = ["terms", "privacy", "marketing"] as const;
+export type SystemPageKey = (typeof SYSTEM_PAGE_KEYS)[number];
+
 export const pages = pgTable("pages", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   slug: varchar("slug", { length: 255 }).notNull().unique(),
@@ -204,6 +208,10 @@ export const pages = pgTable("pages", {
   customFields: text("custom_fields").default("{}"),
   pageType: varchar("page_type", { length: 50 }).notNull().default("page"),
   sortOrder: integer("sort_order").notNull().default(0),
+  // Campi per le pagine di sistema (privacy, termini, marketing)
+  isSystem: boolean("is_system").notNull().default(false),
+  systemKey: varchar("system_key", { length: 50 }).$type<SystemPageKey | null>(),
+  contentVersion: varchar("content_version", { length: 20 }).notNull().default("1-2026-04"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

@@ -1,5 +1,5 @@
 import { db } from "@/lib/db/drizzle";
-import { pages, pageTemplates, templateFields, type NewPage, type Page, type PageTemplate, type TemplateField } from "@/lib/db/schema";
+import { pages, pageTemplates, templateFields, type NewPage, type Page, type PageTemplate, type TemplateField, type SystemPageKey } from "@/lib/db/schema";
 import { asc, eq, inArray } from "drizzle-orm";
 
 // ---------------------------------------------------------------------------
@@ -72,15 +72,84 @@ export async function getPageWithTemplate(
   return { ...page, template: { ...template, fields } };
 }
 
+// ---------------------------------------------------------------------------
+// Versioning del contenuto per pagine di sistema
+// ---------------------------------------------------------------------------
+
+/**
+ * Calcola la nuova versione quando il contenuto di una pagina di sistema cambia.
+ * Formato: "{numero}-{YYYY}-{MM}"  es. "1-2026-04", "2-2026-07"
+ * - Se il mese/anno corrente è diverso dall'ultimo salvato → resetta a 1
+ * - Altrimenti incrementa il numero progressivo
+ */
+export function computeNextContentVersion(currentVersion: string): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const currentYM = `${year}-${month}`;
+
+  // Formato atteso: "N-YYYY-MM"
+  const match = currentVersion.match(/^(\d+)-(\d{4})-(\d{2})$/);
+  if (match) {
+    const [, numStr, vYear, vMonth] = match;
+    const savedYM = `${vYear}-${vMonth}`;
+    if (savedYM === currentYM) {
+      return `${Number(numStr) + 1}-${currentYM}`;
+    }
+  }
+  // Mese diverso oppure formato non riconosciuto → inizia da 1 nel mese corrente
+  return `1-${currentYM}`;
+}
+
+/**
+ * Restituisce le versioni correnti delle 3 pagine di sistema.
+ * Usato dall'action del form di registrazione al posto delle costanti hardcodate.
+ */
+export async function getConsentVersions(): Promise<{
+  termsVersion: string;
+  privacyVersion: string;
+  marketingVersion: string;
+}> {
+  const systemPages = await db
+    .select({ systemKey: pages.systemKey, contentVersion: pages.contentVersion })
+    .from(pages)
+    .where(eq(pages.isSystem, true));
+
+  const byKey = Object.fromEntries(
+    systemPages
+      .filter((p) => p.systemKey !== null)
+      .map((p) => [p.systemKey!, p.contentVersion]),
+  );
+
+  return {
+    termsVersion: byKey["terms"] ?? "1-2026-04",
+    privacyVersion: byKey["privacy"] ?? "1-2026-04",
+    marketingVersion: byKey["marketing"] ?? "1-2026-04",
+  };
+}
+
 /**
  * Crea o aggiorna una pagina.
  * - Se `data.id` è presente → UPDATE WHERE id (gestisce cambio slug senza duplicati).
  * - Se `data.id` è assente → INSERT ... ON CONFLICT (slug) DO UPDATE (crea nuova pagina).
+ * - Se la pagina è di sistema (isSystem=true) e il contenuto è cambiato,
+ *   calcola e aggiorna automaticamente contentVersion.
  * Ritorna sempre l'id della riga.
  */
 export async function upsertPage(data: NewPage & { id?: number }): Promise<number> {
   if (data.id) {
     const { id, ...rest } = data;
+
+    // Calcola nuova versione solo per pagine di sistema quando il contenuto cambia
+    let nextVersion: string | undefined;
+    if (rest.isSystem) {
+      const existing = await db.select().from(pages).where(eq(pages.id, id)).limit(1);
+      const current = existing[0];
+      if (current && rest.content !== undefined && rest.content !== current.content) {
+        nextVersion = computeNextContentVersion(current.contentVersion);
+      }
+    }
+
     await db
       .update(pages)
       .set({
@@ -95,6 +164,7 @@ export async function upsertPage(data: NewPage & { id?: number }): Promise<numbe
         customFields: rest.customFields ?? "{}",
         pageType: rest.pageType ?? "page",
         sortOrder: rest.sortOrder ?? 0,
+        ...(nextVersion ? { contentVersion: nextVersion } : {}),
         updatedAt: new Date(),
       })
       .where(eq(pages.id, id));
@@ -144,11 +214,16 @@ async function collectDescendantIds(rootId: number): Promise<number[]> {
 
 /**
  * Elimina una pagina e TUTTI i suoi discendenti (cascade applicativo).
+ * Le pagine di sistema (isSystem=true) non possono essere eliminate.
  * Ritorna il numero totale di righe eliminate (inclusa la pagina radice).
  */
 export async function deletePageCascade(slug: string): Promise<number> {
   const [root] = await db.select().from(pages).where(eq(pages.slug, slug)).limit(1);
   if (!root) return 0;
+
+  if (root.isSystem) {
+    throw new Error("SYSTEM_PAGE_PROTECTED");
+  }
 
   const descendantIds = await collectDescendantIds(root.id);
   const allIds = [...descendantIds, root.id];

@@ -19,15 +19,12 @@ import {
   type NewActivityLog,
 } from "@/lib/db/schema";
 import { getAppSettings } from "@/lib/db/settings-queries";
+import { getConsentVersions } from "@/lib/db/pages-queries";
 import { sendSignupVerificationEmail } from "@/lib/email/templates/signup-verification";
 import { eq, sql } from "drizzle-orm";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-
-const TERMS_CONSENT_VERSION = "2026-04";
-const PRIVACY_CONSENT_VERSION = "2026-04";
-const MARKETING_CONSENT_VERSION = "2026-04";
 
 async function logActivity(
   userId: string,
@@ -186,6 +183,9 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
     return { error: "Questo username è già in uso.", email, password };
   }
 
+  // Versioni consensi lette dinamicamente dal DB (pagine di sistema CMS)
+  const { termsVersion, privacyVersion, marketingVersion } = await getConsentVersions();
+
   const passwordHash = await hashPassword(password);
   const defaultRole = settings.default_role || "member";
   const now = new Date();
@@ -197,11 +197,11 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
       passwordHash,
       role: defaultRole,
       acceptedTermsAt: now,
-      acceptedTermsVersion: TERMS_CONSENT_VERSION,
+      acceptedTermsVersion: termsVersion,
       acceptedPrivacyAt: now,
-      acceptedPrivacyVersion: PRIVACY_CONSENT_VERSION,
+      acceptedPrivacyVersion: privacyVersion,
       acceptedMarketingAt: data.acceptMarketing === "on" ? now : null,
-      acceptedMarketingVersion: data.acceptMarketing === "on" ? MARKETING_CONSENT_VERSION : null,
+      acceptedMarketingVersion: data.acceptMarketing === "on" ? marketingVersion : null,
     })
     .returning();
 

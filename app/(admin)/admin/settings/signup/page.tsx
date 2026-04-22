@@ -1,16 +1,27 @@
 import { db } from "@/lib/db/drizzle";
-import { roles } from "@/lib/db/schema";
+import { pages, roles } from "@/lib/db/schema";
 import { getAppSettings } from "@/lib/db/settings-queries";
-import { asc } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import type { Metadata } from "next";
 import { SignUpTab } from "../tabs/signup-tab";
 
 export const metadata: Metadata = { title: "Settings / SignUp" };
 
 export default async function SettingsSignInPage() {
-  const [settings, allRoles] = await Promise.all([
+  const [settings, allRoles, systemPages] = await Promise.all([
     getAppSettings(),
     db.select().from(roles).orderBy(asc(roles.sortOrder)),
+    db
+      .select({
+        systemKey: pages.systemKey,
+        contentVersion: pages.contentVersion,
+        slug: pages.slug,
+        title: pages.title,
+        updatedAt: pages.updatedAt,
+      })
+      .from(pages)
+      .where(eq(pages.isSystem, true)),
   ]);
-  return <SignUpTab settings={settings} roles={allRoles} />;
+
+  return <SignUpTab settings={settings} roles={allRoles} systemPages={systemPages} />;
 }
