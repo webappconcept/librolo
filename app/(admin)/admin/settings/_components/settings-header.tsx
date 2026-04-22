@@ -30,9 +30,9 @@ const SECTIONS: Record<string, SectionMeta> = {
     description: "Manage the platform's behavior settings.",
     icon: SlidersHorizontal,
   },
-  signin: {
-    label: "SignIn",
-    description: "Configure user access and registration options.",
+  signup: {
+    label: "SignUp",
+    description: "Configure user registration options.",
     icon: LogIn,
   },
   resend: {
