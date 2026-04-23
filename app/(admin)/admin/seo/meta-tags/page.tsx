@@ -1,12 +1,9 @@
 // app/(admin)/admin/seo/meta-tags/page.tsx
 import { getAllPages } from "@/lib/db/pages-queries";
+import { getActiveRoutes } from "@/lib/db/route-registry-queries";
 import { getAllSeoPages } from "@/lib/db/seo-queries";
 import { getAppSettings } from "@/lib/db/settings-queries";
-import { getActiveRoutes } from "@/lib/db/route-registry-queries";
-import {
-  SYSTEM_AUTH_ROUTES,
-  SYSTEM_ALWAYS_PUBLIC,
-} from "@/lib/routes";
+import { SYSTEM_ALWAYS_PUBLIC, SYSTEM_AUTH_ROUTES } from "@/lib/routes";
 import { SearchCheck } from "lucide-react";
 import { Suspense } from "react";
 import SeoManager from "../_components/seo-manager";
@@ -27,20 +24,14 @@ async function SeoContent() {
 
   const appName = settings.app_name?.trim() ?? "";
 
-  // Route editoriali dal registry (esclude admin e system, già filtrate
-  // da isSystemRoute in route-registry/page, ma getActiveRoutes le include
-  // ancora — qui le teniamo per costruire la lista SEO completa)
-  const registryPaths = registryRoutes
-    .filter((r) => r.visibility !== "admin")
-    .map((r) => r.pathname);
+  // Route editoriali dal registry (getActiveRoutes esclude già le system
+  // route tramite isSystemRoute; qui prendiamo direttamente i pathname)
+  const registryPaths = registryRoutes.map((r) => r.pathname);
 
   // Route di sistema hardcoded: pathname reali del sito non presenti
   // nel route_registry dal punto di vista editoriale, ma per cui
   // l'admin deve poter creare meta tag (title, description, og, ecc.)
-  const systemPaths = [
-    ...SYSTEM_AUTH_ROUTES,
-    ...SYSTEM_ALWAYS_PUBLIC,
-  ];
+  const systemPaths = [...SYSTEM_AUTH_ROUTES, ...SYSTEM_ALWAYS_PUBLIC];
 
   // Route CMS dinamiche
   const cmsRoutes = cmsPages.map((p) => `/${p.slug}`);
