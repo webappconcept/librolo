@@ -2,7 +2,7 @@
 
 import { AdminToast } from "@/app/(admin)/admin/_components/toast";
 import type { AppSettings } from "@/lib/db/settings-queries";
-import { Database, Eye, EyeOff, Loader2, Save, Wifi } from "lucide-react";
+import { Eye, EyeOff, Loader2, Save, Wifi } from "lucide-react";
 import { useActionState, useEffect, useRef, useState } from "react";
 import {
   saveRedisSettings,
@@ -20,14 +20,14 @@ export function RedisTab({ settings }: { settings: AppSettings }) {
   const urlRef = useRef<HTMLInputElement>(null);
   const tokenRef = useRef<HTMLInputElement>(null);
 
-  const [saveState, saveAction, isSaving] = useActionState<ActionState, FormData>(
-    saveRedisSettings,
-    {},
-  );
-  const [testState, testAction, isTesting] = useActionState<ActionState, FormData>(
-    testRedisConnection,
-    {},
-  );
+  const [saveState, saveAction, isSaving] = useActionState<
+    ActionState,
+    FormData
+  >(saveRedisSettings, {});
+  const [testState, testAction, isTesting] = useActionState<
+    ActionState,
+    FormData
+  >(testRedisConnection, {});
 
   const lastSaveTs = useRef<number>(0);
   const lastTestTs = useRef<number>(0);
@@ -36,16 +36,20 @@ export function RedisTab({ settings }: { settings: AppSettings }) {
     if (!("timestamp" in saveState)) return;
     if (saveState.timestamp === lastSaveTs.current) return;
     lastSaveTs.current = saveState.timestamp;
-    if ("success" in saveState) setToast({ message: saveState.success, type: "success" });
-    if ("error" in saveState) setToast({ message: saveState.error, type: "error" });
+    if ("success" in saveState)
+      setToast({ message: saveState.success, type: "success" });
+    if ("error" in saveState)
+      setToast({ message: saveState.error, type: "error" });
   }, [saveState]);
 
   useEffect(() => {
     if (!("timestamp" in testState)) return;
     if (testState.timestamp === lastTestTs.current) return;
     lastTestTs.current = testState.timestamp;
-    if ("success" in testState) setToast({ message: testState.success, type: "success" });
-    if ("error" in testState) setToast({ message: testState.error, type: "error" });
+    if ("success" in testState)
+      setToast({ message: testState.success, type: "success" });
+    if ("error" in testState)
+      setToast({ message: testState.error, type: "error" });
   }, [testState]);
 
   const tokenMasked = settings.upstash_redis_rest_token
@@ -84,11 +88,15 @@ export function RedisTab({ settings }: { settings: AppSettings }) {
                 color: "var(--admin-text)",
                 outline: "none",
               }}
-              onFocus={(e) => (e.currentTarget.style.borderColor = "var(--admin-accent)")}
-              onBlur={(e) => (e.currentTarget.style.borderColor = "var(--admin-card-border)")}
+              onFocus={(e) =>
+                (e.currentTarget.style.borderColor = "var(--admin-accent)")
+              }
+              onBlur={(e) =>
+                (e.currentTarget.style.borderColor = "var(--admin-card-border)")
+              }
             />
             <p className="text-xs" style={{ color: "var(--admin-text-muted)" }}>
-              Trovalo in Upstash Console → Database → REST API → Endpoint
+              Find it in Upstash Console → Database → REST API → Endpoint
             </p>
           </div>
 
@@ -114,12 +122,17 @@ export function RedisTab({ settings }: { settings: AppSettings }) {
                   color: "var(--admin-text)",
                   outline: "none",
                 }}
-                onFocus={(e) => (e.currentTarget.style.borderColor = "var(--admin-accent)")}
-                onBlur={(e) => (e.currentTarget.style.borderColor = "var(--admin-card-border)")}
+                onFocus={(e) =>
+                  (e.currentTarget.style.borderColor = "var(--admin-accent)")
+                }
+                onBlur={(e) =>
+                  (e.currentTarget.style.borderColor =
+                    "var(--admin-card-border)")
+                }
               />
               <button
                 type="button"
-                aria-label={showToken ? "Nascondi token" : "Mostra token"}
+                aria-label={showToken ? "Hide token" : "Show token"}
                 onClick={() => setShowToken((v) => !v)}
                 className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded transition-colors"
                 style={{ color: "var(--admin-text-muted)" }}>
@@ -127,30 +140,64 @@ export function RedisTab({ settings }: { settings: AppSettings }) {
               </button>
             </div>
             <p className="text-xs" style={{ color: "var(--admin-text-muted)" }}>
-              Trovalo in Upstash Console → Database → REST API → Read/Write Token
+              Find it in Upstash Console → Database → REST API → Read/Write
+              Token
             </p>
           </div>
 
+          {/* Updated Info Box */}
           <div
             className="flex gap-3 px-4 py-3 rounded-lg text-xs"
             style={{
-              background: "color-mix(in oklch, var(--admin-accent) 6%, var(--admin-card-bg))",
-              border: "1px solid color-mix(in oklch, var(--admin-accent) 20%, transparent)",
+              background:
+                "color-mix(in oklch, var(--admin-accent) 6%, var(--admin-card-bg))",
+              border:
+                "1px solid color-mix(in oklch, var(--admin-accent) 20%, transparent)",
             }}>
-            <Wifi size={14} className="shrink-0 mt-0.5" style={{ color: "var(--admin-accent)" }} />
-            <p style={{ color: "var(--admin-text-muted)" }}>
-              Queste credenziali vengono usate dal{" "}
-              <strong style={{ color: "var(--admin-text)" }}>Bloom Filter</strong> per controllare
-              email, username e domini direttamente su Upstash Redis — senza roundtrip al database.
-              I valori sono salvati in{" "}
-              <code className="px-1 rounded" style={{ background: "var(--admin-card-border)" }}>
-                app_settings
-              </code>{" "}
-              e letti solo server-side.
-            </p>
+            <Wifi
+              size={14}
+              className="shrink-0 mt-0.5"
+              style={{ color: "var(--admin-accent)" }}
+            />
+            <div className="space-y-2">
+              <p style={{ color: "var(--admin-text-muted)" }}>
+                These credentials are used by the{" "}
+                <strong style={{ color: "var(--admin-text)" }}>
+                  Bloom Filter
+                </strong>{" "}
+                to check emails and usernames directly on Upstash Redis.
+              </p>
+              <p style={{ color: "var(--admin-text-muted)" }}>
+                <span
+                  className="font-semibold"
+                  style={{ color: "var(--admin-accent)" }}>
+                  Note:
+                </span>{" "}
+                The system automatically manages the
+                <code
+                  className="mx-1 px-1 rounded"
+                  style={{
+                    background: "var(--admin-card-border)",
+                    color: "var(--admin-text)",
+                  }}>
+                  bloom:emails
+                </code>
+                and
+                <code
+                  className="mx-1 px-1 rounded"
+                  style={{
+                    background: "var(--admin-card-border)",
+                    color: "var(--admin-text)",
+                  }}>
+                  bloom:usernames
+                </code>
+                keys on Redis (type{" "}
+                <span className="italic">String/Bitmap</span>).
+              </p>
+            </div>
           </div>
 
-          {/* Bottoni affiancati: Salva + Testa */}
+          {/* Action Buttons: Save + Test */}
           <div className="flex items-center gap-3 pt-2">
             <button
               type="submit"
@@ -158,13 +205,18 @@ export function RedisTab({ settings }: { settings: AppSettings }) {
               className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium text-white transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
               style={{ background: "var(--admin-accent)" }}
               onMouseEnter={(e) =>
-                !isSaving && (e.currentTarget.style.background = "var(--admin-accent-hover)")
+                !isSaving &&
+                (e.currentTarget.style.background = "var(--admin-accent-hover)")
               }
               onMouseLeave={(e) =>
                 (e.currentTarget.style.background = "var(--admin-accent)")
               }>
-              {isSaving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
-              {isSaving ? "Salvataggio…" : "Salva credenziali"}
+              {isSaving ? (
+                <Loader2 size={15} className="animate-spin" />
+              ) : (
+                <Save size={15} />
+              )}
+              {isSaving ? "Saving…" : "Save credentials"}
             </button>
 
             <button
@@ -179,13 +231,18 @@ export function RedisTab({ settings }: { settings: AppSettings }) {
               }}
               onMouseEnter={(e) =>
                 !isTesting &&
-                (e.currentTarget.style.background = "var(--admin-sidebar-item-hover-bg)")
+                (e.currentTarget.style.background =
+                  "var(--admin-sidebar-item-hover-bg)")
               }
               onMouseLeave={(e) =>
                 (e.currentTarget.style.background = "var(--admin-hover-bg)")
               }>
-              {isTesting ? <Loader2 size={15} className="animate-spin" /> : <Wifi size={15} />}
-              {isTesting ? "Test in corso..." : "Testa connessione"}
+              {isTesting ? (
+                <Loader2 size={15} className="animate-spin" />
+              ) : (
+                <Wifi size={15} />
+              )}
+              {isTesting ? "Testing..." : "Test connection"}
             </button>
           </div>
         </form>

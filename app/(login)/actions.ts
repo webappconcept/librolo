@@ -1,7 +1,8 @@
+// /app/(login)/actions.ts
+
 "use server";
 
 import { isDomainBlacklisted, isIpBlacklisted } from "@/lib/auth/blacklist";
-import { addEmailToBloom, checkEmailAvailability, ensureBloomFilter } from "@/lib/bloom/email-filter";
 import {
   validatedAction,
   validatedActionWithUser,
@@ -9,7 +10,15 @@ import {
 import { createVerificationCode } from "@/lib/auth/otp";
 import { checkRateLimit, recordLoginAttempt } from "@/lib/auth/rate-limit";
 import { comparePasswords, hashPassword, setSession } from "@/lib/auth/session";
+import {
+  addEmailToBloom,
+  addUsernameToBloom,
+  checkEmailAvailability,
+  checkUsernameAvailability,
+  ensureBloomFilter,
+} from "@/lib/bloom/bloom-filter";
 import { db } from "@/lib/db/drizzle";
+import { getConsentVersions } from "@/lib/db/pages-queries";
 import { getUser } from "@/lib/db/queries";
 import {
   activityLogs,
@@ -19,7 +28,6 @@ import {
   type NewActivityLog,
 } from "@/lib/db/schema";
 import { getAppSettings } from "@/lib/db/settings-queries";
-import { getConsentVersions } from "@/lib/db/pages-queries";
 import { sendSignupVerificationEmail } from "@/lib/email/templates/signup-verification";
 import { eq, sql } from "drizzle-orm";
 import { cookies, headers } from "next/headers";
@@ -128,10 +136,7 @@ const signUpSchema = z
       .string()
       .min(3, "Username minimo 3 caratteri")
       .max(50, "Username massimo 50 caratteri")
-      .regex(
-        /^[a-zA-Z0-9_]+$/,
-        "Solo lettere, numeri e underscore (_)",
-      ),
+      .regex(/^[a-zA-Z0-9_]+$/, "Solo lettere, numeri e underscore (_)"),
     email: z.string().email("Email non valida"),
     password: z
       .string()
@@ -201,7 +206,8 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
     return { error: "Questo username è già in uso.", email, password };
   }
 
-  const { termsVersion, privacyVersion, marketingVersion } = await getConsentVersions();
+  const { termsVersion, privacyVersion, marketingVersion } =
+    await getConsentVersions();
 
   const passwordHash = await hashPassword(password);
   const defaultRole = settings.default_role || "member";
@@ -218,7 +224,8 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
       acceptedPrivacyAt: now,
       acceptedPrivacyVersion: privacyVersion,
       acceptedMarketingAt: data.acceptMarketing === "on" ? now : null,
-      acceptedMarketingVersion: data.acceptMarketing === "on" ? marketingVersion : null,
+      acceptedMarketingVersion:
+        data.acceptMarketing === "on" ? marketingVersion : null,
     })
     .returning();
 
@@ -238,6 +245,7 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
   });
 
   await addEmailToBloom(createdUser.email);
+  await addUsernameToBloom(username);
 
   const code = await createVerificationCode(createdUser.id);
 
@@ -285,6 +293,23 @@ export async function checkEmailAction(email: string) {
     available: result.available,
     checkedViaDb: result.checkedViaDb,
     error: result.available ? "" : "Questa email è già stata registrata",
+  };
+}
+
+/**
+ * Server Action: controlla se lo username è disponibile.
+ */
+export async function checkUsernameAction(
+  username: string,
+): Promise<{ available: boolean; error?: string }> {
+  if (!username || username.length < 3) {
+    return { available: false };
+  }
+
+  const result = await checkUsernameAvailability(username);
+  return {
+    available: result.available,
+    error: result.available ? undefined : "Questo username è già in uso.",
   };
 }
 
@@ -374,7 +399,10 @@ export const deleteAccount = validatedActionWithUser(
 
     const isPasswordValid = await comparePasswords(password, user.passwordHash);
     if (!isPasswordValid) {
-      return { password, error: "Incorrect password. Account deletion failed." };
+      return {
+        password,
+        error: "Incorrect password. Account deletion failed.",
+      };
     }
 
     await logActivity(user.id, ActivityType.DELETE_ACCOUNT);
@@ -407,7 +435,10 @@ export const updateAccount = validatedActionWithUser(
     const { firstName, lastName, email } = data;
 
     await Promise.all([
-      db.update(users).set({ email, updatedAt: new Date() }).where(eq(users.id, user.id)),
+      db
+        .update(users)
+        .set({ email, updatedAt: new Date() })
+        .where(eq(users.id, user.id)),
       db
         .insert(userProfiles)
         .values({ userId: user.id, firstName, lastName })

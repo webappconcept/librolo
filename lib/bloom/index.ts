@@ -1,7 +1,10 @@
 export {
-  checkEmailAvailability,
-  addEmailToBloom,
   addEmailsBulkToBloom,
-  ensureBloomFilter,
-} from './email-filter'
-export type { BloomEmailCheckResult } from './types'
+  addEmailToBloom,
+  addUsernameToBloom,
+  checkEmailAvailability,
+  checkUsernameAvailability,
+  ensureBloomFilter
+} from "./bloom-filter";
+export type { BloomEmailCheckResult } from "./types";
+
