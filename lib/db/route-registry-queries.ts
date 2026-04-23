@@ -67,10 +67,6 @@ export async function getPrivateRoutes(): Promise<RouteRegistry[]> {
   return getRoutesByVisibility("private");
 }
 
-export async function getAuthOnlyRoutes(): Promise<RouteRegistry[]> {
-  return getRoutesByVisibility("auth-only");
-}
-
 export async function getRouteByPathname(
   pathname: string,
 ): Promise<RouteRegistry | undefined> {
@@ -107,7 +103,6 @@ export async function updateRoute(
   id: string,
   data: Partial<Omit<NewRouteRegistry, "id" | "createdAt" | "updatedAt">>,
 ): Promise<RouteRegistry | undefined> {
-  // Carica il record per verificare se è una system route
   const [existing] = await db
     .select()
     .from(routeRegistry)
@@ -117,7 +112,6 @@ export async function updateRoute(
 
   let payload = { ...data, updatedAt: new Date() };
 
-  // Rimuove i campi protetti per le system routes
   if (existing.isSystemRoute) {
     for (const field of SYSTEM_ROUTE_PROTECTED_FIELDS) {
       delete (payload as Record<string, unknown>)[field];
@@ -158,6 +152,5 @@ export async function toggleRouteActive(
   id: string,
   isActive: boolean,
 ): Promise<RouteRegistry | undefined> {
-  // toggleRouteActive usa updateRoute, che rispetta già le protezioni
   return updateRoute(id, { isActive });
 }
