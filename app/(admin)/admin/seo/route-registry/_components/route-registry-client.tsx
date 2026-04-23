@@ -158,7 +158,9 @@ export default function RouteRegistryClient({
   const [formState, formAction, isPending] = useActionState(
     async (prev: unknown, fd: FormData) => {
       const res = await upsertAction(prev, fd);
-      if (res.success) window.location.reload();
+      if (res.success) {
+        setMode(null);
+      }
       return res;
     },
     {},
