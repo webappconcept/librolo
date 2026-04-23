@@ -1,33 +1,61 @@
 /**
- * @deprecated lib/routes.ts
+ * lib/routes.ts
  *
- * Questo file è mantenuto SOLO come fallback statico nel middleware (proxy.ts).
- * La fonte di verità è ora la tabella `route_registry` su DB.
- * Gestione route: Admin → SEO → Route Registry (/admin/route-registry)
+ * Fonte di verità per le route UI (nav, menu, footer) e per il
+ * kernel di sicurezza del proxy.
  *
- * NAV_ITEMS, USER_MENU_ITEMS e FOOTER_LINKS sono ancora usati dai componenti
- * di navigazione frontend fino a quando non verranno migrati a lettura da DB.
- * Non aggiungere nuove route qui.
+ * ─── ROUTING AUTH / VISIBILITY ────────────────────────────────────────
+ * La logica public / private / admin / auth-only è gestita
+ * esclusivamente dalla tabella `route_registry` su DB.
+ * Proxy.ts legge il DB via getActiveRoutes() e usa queste costanti
+ * SOLO come kernel di sicurezza per le route di sistema che non
+ * possono dipendere dalla disponibilità del DB.
+ *
+ * ─── SISTEMA vs EDITORIALE ────────────────────────────────────────────
+ * Le route di sistema (isSystemRoute = true nel DB) compaiono in
+ * /admin/route-registry ma i campi pathname e visibility non sono
+ * modificabili dall'admin. Solo label, meta tags e impostazioni
+ * editoriali sono editabili.
  */
 
-// Fallback statico per proxy.ts — NON modificare
-export const PUBLIC_ROUTES = [
-  "/",
-  "/sign-in",
-  "/sign-up",
+// ---------------------------------------------------------------------------
+// KERNEL DI SICUREZZA — usato da proxy.ts
+// Queste route sono gestite con logica hardcoded nel proxy PRIMA della
+// lettura DB, per garantire che autenticazione e onboarding funzionino
+// anche in caso di DB irraggiungibile o registry vuoto.
+// ---------------------------------------------------------------------------
+
+/**
+ * Route di autenticazione: accessibili solo a utenti NON autenticati.
+ * Se l'utente è loggato viene rediretto a /.
+ * Corrispondono ai record con visibility = "auth-only" e isSystemRoute = true nel DB.
+ */
+export const SYSTEM_AUTH_ROUTES = ["/sign-in", "/sign-up"] as const;
+
+/**
+ * Route di sistema sempre pubbliche, bypass totale del DB registry.
+ * Non richiedono sessione, non vengono mai bloccate dal proxy.
+ * Corrispondono ai record con visibility = "public" e isSystemRoute = true nel DB.
+ */
+export const SYSTEM_ALWAYS_PUBLIC = [
+  "/verify-email",
   "/forgot-password",
   "/reset-password",
-  "/verify-email",
-  "/admin/sign-in",
-];
+] as const;
 
-export const AUTH_ROUTES = ["/sign-in", "/sign-up"];
+/**
+ * Costante singola per la route di login admin.
+ * Separata per evitare magic strings in proxy.ts e nei guard.
+ */
+export const ADMIN_SIGNIN_ROUTE = "/admin/sign-in" as const;
 
-export const ADMIN_SIGNIN_ROUTE = "/admin/sign-in";
+// ---------------------------------------------------------------------------
+// NAVIGAZIONE FRONTEND — usati dai componenti UI
+// Migrazione pianificata: in futuro verranno letti dal DB via
+ // getNavRoutes() / getFooterRoutes() per permettere personalizzazione
+// dall'admin senza deploy.
+// ---------------------------------------------------------------------------
 
-export const ADMIN_ROUTES = ["/admin"];
-
-// Navigazione frontend — ancora in uso, migrazione pianificata
 export const NAV_ITEMS = [
   { href: "/", label: "Home", icon: "Home" },
   { href: "/esplora", label: "Esplora", icon: "Search" },

@@ -1,41 +1,32 @@
 // proxy.ts
 import { signToken, verifyToken } from "@/lib/auth/session";
 import { getRedirectByFromPath } from "@/lib/db/redirects-queries";
-import {
-  getActiveRoutes,
-} from "@/lib/db/route-registry-queries";
+import { getActiveRoutes } from "@/lib/db/route-registry-queries";
 import type { RouteVisibility } from "@/lib/db/schema";
 import {
-  ADMIN_ROUTES,
   ADMIN_SIGNIN_ROUTE,
-  AUTH_ROUTES,
-  PUBLIC_ROUTES,
+  SYSTEM_AUTH_ROUTES,
+  SYSTEM_ALWAYS_PUBLIC,
 } from "@/lib/routes";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
 // ---------------------------------------------------------------------------
-// Route sempre pubbliche, bypassano il DB route_registry
-// (come /admin/sign-in che ha il suo check dedicato)
+// Helpers
 // ---------------------------------------------------------------------------
-const ALWAYS_PUBLIC = [
-  "/verify-email",
-  "/forgot-password",
-  "/reset-password",
-];
 
-// ---------------------------------------------------------------------------
-// Helpers per confronto pathname → array di prefissi
-// ---------------------------------------------------------------------------
-function matchesPrefix(pathname: string, routes: string[]): boolean {
+function matchesPrefix(pathname: string, routes: readonly string[]): boolean {
   return routes.some(
     (r) => pathname === r || pathname.startsWith(r + "/"),
   );
 }
 
 /**
- * Carica le route dal DB registry e le suddivide per visibilità.
- * Se il DB non risponde o è vuoto, usa le costanti statiche di fallback.
+ * Carica le route dal DB e le suddivide per visibilità.
+ * NON ha più un fallback a liste statiche: le route di sistema
+ * sono gestite dal kernel hardcoded sopra, il resto viene dal DB.
+ * Se il DB non risponde, le route non-system degradano silenziosamente
+ * (utente non autenticato non accede a route private).
  */
 async function resolveRoutes(): Promise<{
   publicRoutes: string[];
@@ -43,45 +34,34 @@ async function resolveRoutes(): Promise<{
   adminRoutes: string[];
   privateRoutes: string[];
 }> {
-  // Fallback statico garantito anche se il DB è irraggiungibile
-  const fallback = {
-    publicRoutes: PUBLIC_ROUTES,
-    authRoutes: AUTH_ROUTES,
-    adminRoutes: ADMIN_ROUTES,
-    privateRoutes: [
-      "/dashboard",
-      "/profilo",
-      "/account",
-      "/libreria",
-      "/esplora",
-      "/assistenza",
-      "/segnala",
-    ],
+  const empty = {
+    publicRoutes: [],
+    authRoutes: [],
+    adminRoutes: [],
+    privateRoutes: [],
   };
 
   try {
     const rows = await getActiveRoutes();
-    if (!rows || rows.length === 0) return fallback;
+    if (!rows || rows.length === 0) return empty;
 
     const byVisibility = (v: RouteVisibility) =>
       rows.filter((r) => r.visibility === v).map((r) => r.pathname);
 
-    const publicRoutes  = byVisibility("public");
-    const authRoutes    = byVisibility("auth-only");
-    const adminRoutes   = byVisibility("admin");
-    const privateRoutes = byVisibility("private");
-
     return {
-      publicRoutes:  publicRoutes.length  > 0 ? publicRoutes  : fallback.publicRoutes,
-      authRoutes:    authRoutes.length    > 0 ? authRoutes    : fallback.authRoutes,
-      adminRoutes:   adminRoutes.length   > 0 ? adminRoutes   : fallback.adminRoutes,
-      privateRoutes: privateRoutes.length > 0 ? privateRoutes : fallback.privateRoutes,
+      publicRoutes:  byVisibility("public"),
+      authRoutes:    byVisibility("auth-only"),
+      adminRoutes:   byVisibility("admin"),
+      privateRoutes: byVisibility("private"),
     };
   } catch {
-    // DB non risponde → degradazione silenziosa con fallback statico
-    return fallback;
+    return empty;
   }
 }
+
+// ---------------------------------------------------------------------------
+// Proxy principale
+// ---------------------------------------------------------------------------
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -90,17 +70,33 @@ export async function proxy(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-pathname", pathname);
 
-  // --- ROUTE SEMPRE PUBBLICHE (bypass DB) ---
-  // /verify-email, /forgot-password, /reset-password non devono dipendere
-  // dal route_registry su DB. Se mancano dal registry causerebbero 404 nero.
-  if (matchesPrefix(pathname, ALWAYS_PUBLIC)) {
+  // --- [1] KERNEL: SYSTEM_ALWAYS_PUBLIC ---
+  // /verify-email, /forgot-password, /reset-password
+  // Bypass totale DB — queste route devono funzionare sempre.
+  if (matchesPrefix(pathname, SYSTEM_ALWAYS_PUBLIC)) {
     return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
-  // --- REDIRECT DA DB (301/302/307/308) ---
-  // Eseguito prima di qualsiasi check auth, così i redirect funzionano
-  // per tutti gli utenti indipendentemente dallo stato di login.
-  // Skippiamo asset statici, API routes e route admin per evitare overhead inutile.
+  // --- [2] KERNEL: ADMIN SIGN-IN ---
+  // Sempre accessibile, nessun redirect automatico post-login qui
+  // per evitare loop con requireAdminPage().
+  if (pathname === ADMIN_SIGNIN_ROUTE) {
+    return NextResponse.next({ request: { headers: requestHeaders } });
+  }
+
+  // --- [3] KERNEL: SYSTEM_AUTH_ROUTES (/sign-in, /sign-up) ---
+  // Gestite con logica hardcoded: accessibili solo a utenti non loggati.
+  // Non dipendono dal DB per funzionare correttamente.
+  if (matchesPrefix(pathname, SYSTEM_AUTH_ROUTES)) {
+    const isLoggedIn = !!sessionCookie;
+    if (isLoggedIn) {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+    return NextResponse.next({ request: { headers: requestHeaders } });
+  }
+
+  // --- [4] REDIRECT DA DB (301/302/307/308) ---
+  // Prima di qualsiasi check auth, così i redirect funzionano per tutti.
   const isStaticOrApi =
     pathname.startsWith("/_next/") ||
     pathname.startsWith("/api/") ||
@@ -116,53 +112,42 @@ export async function proxy(request: NextRequest) {
         });
       }
     } catch {
-      // Se il DB non risponde non blocchiamo la request — degradiamo silenziosamente
+      // DB non risponde — degrada silenziosamente
     }
   }
 
-  // --- RISOLVI ROUTE DAL REGISTRY (con fallback statico) ---
+  // --- [5] ROUTE DAL DB REGISTRY ---
   const { publicRoutes, authRoutes, adminRoutes, privateRoutes } =
     await resolveRoutes();
 
   const isPublicRoute  = matchesPrefix(pathname, publicRoutes);
   const isAuthRoute    = matchesPrefix(pathname, authRoutes);
-  const isAdminRoute   = matchesPrefix(pathname, adminRoutes);
-  const isAdminSignIn  = pathname === ADMIN_SIGNIN_ROUTE;
+  const isAdminRoute   = matchesPrefix(pathname, adminRoutes) ||
+                         pathname === "/admin" ||
+                         pathname.startsWith("/admin/");
   const isPrivateRoute = matchesPrefix(pathname, privateRoutes);
 
-  // --- ADMIN SIGN-IN: sempre accessibile ---
-  // NON facciamo redirect verso /admin anche se la sessione è valida:
-  // non possiamo sapere qui se l'utente ha davvero admin:access (no DB sull'edge).
-  // Il redirect post-login è compito della server action di login.
-  // Se reindirizzassimo qui creeremmo un loop quando requireAdminPage() nega l'accesso
-  // e manda a /admin/sign-in, che ci rimanda a /admin, che rimanda a /admin/sign-in...
-  if (isAdminSignIn) {
-    return NextResponse.next({ request: { headers: requestHeaders } });
-  }
+  const isLoggedIn = !!sessionCookie;
 
+  // Route pubbliche — lascia passare senza check sessione
   if (isPublicRoute && !isAuthRoute) {
     return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
-  const isLoggedIn = !!sessionCookie;
-
-  // Utente loggato su /sign-in o /sign-up → home
-  if (isAuthRoute && isLoggedIn) {
-    return NextResponse.redirect(new URL("/", request.url));
-  }
-
-  // Utente non loggato su /sign-in o /sign-up → lascia passare
-  if (isAuthRoute && !isLoggedIn) {
+  // Route auth-only da DB (es. onboarding, pagine future solo guest)
+  if (isAuthRoute) {
+    if (isLoggedIn) {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
     return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
-  // --- ROUTE ADMIN ---
-  // Il proxy verifica SOLO che esista una sessione valida e non scaduta.
-  // La verifica RBAC reale (isAdmin flag o permesso admin:access via ruolo)
-  // avviene nel Server Component tramite requireAdminPage() in lib/rbac/guards.ts.
+  // --- [6] ROUTE ADMIN ---
+  // Proxy verifica solo sessione valida e non scaduta.
+  // RBAC reale avviene nel Server Component via requireAdminPage().
   if (isAdminRoute) {
     if (!isLoggedIn) {
-      const url = new URL("/admin/sign-in", request.url);
+      const url = new URL(ADMIN_SIGNIN_ROUTE, request.url);
       url.searchParams.set("from", pathname);
       return NextResponse.redirect(url);
     }
@@ -170,22 +155,21 @@ export async function proxy(request: NextRequest) {
       const parsed = await verifyToken(sessionCookie!.value);
       const notExpired = new Date(parsed.expires) > new Date();
       if (!notExpired) {
-        const url = new URL("/admin/sign-in", request.url);
+        const url = new URL(ADMIN_SIGNIN_ROUTE, request.url);
         url.searchParams.set("from", pathname);
         return NextResponse.redirect(url);
       }
-      // Sessione valida → passa al Server Component che farà il check RBAC
     } catch {
-      return NextResponse.redirect(new URL("/admin/sign-in", request.url));
+      return NextResponse.redirect(new URL(ADMIN_SIGNIN_ROUTE, request.url));
     }
   }
 
-  // --- ROUTE PRIVATE CONOSCIUTE: richiede login ---
+  // --- [7] ROUTE PRIVATE ---
   if (isPrivateRoute && !isLoggedIn) {
     return NextResponse.redirect(new URL("/sign-in", request.url));
   }
 
-  // --- REFRESH SESSION ---
+  // --- [8] REFRESH SESSION ---
   let res = NextResponse.next({ request: { headers: requestHeaders } });
 
   if (sessionCookie && request.method === "GET") {
