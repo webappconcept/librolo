@@ -27,12 +27,9 @@ async function SeoContent() {
 
   const appName = settings.app_name?.trim() ?? "";
 
-  // Route editoriali dal registry (esclude admin e system, già filtrate
-  // da isSystemRoute in route-registry/page, ma getActiveRoutes le include
-  // ancora — qui le teniamo per costruire la lista SEO completa)
-  const registryPaths = registryRoutes
-    .filter((r) => r.visibility !== "admin")
-    .map((r) => r.pathname);
+  // Route editoriali dal registry (solo public e private — le route di sistema
+  // non appaiono più nel DB, sono gestite hardcoded in lib/routes.ts)
+  const registryPaths = registryRoutes.map((r) => r.pathname);
 
   // Route di sistema hardcoded: pathname reali del sito non presenti
   // nel route_registry dal punto di vista editoriale, ma per cui
