@@ -38,13 +38,6 @@ const passwordRules = [
   },
 ];
 
-/** Fallback usato lato client nel caso systemPageSlugs non sia passato */
-const DEFAULT_SYSTEM_SLUGS: Record<string, string> = {
-  terms: "termini-e-condizioni",
-  privacy: "privacy-policy",
-  marketing: "marketing-comunicazioni",
-};
-
 export function Login({
   mode = "signin",
   registrationsEnabled = true,
@@ -54,12 +47,9 @@ export function Login({
   mode?: "signin" | "signup";
   registrationsEnabled?: boolean;
   isMaintenance?: boolean;
-  /** Slug delle pagine di sistema letti dal DB dal Server Component padre.
-   *  Chiavi attese: "terms", "privacy", "marketing".
-   *  Se non forniti viene usato il fallback con gli slug di default. */
-  systemPageSlugs?: Record<string, string>;
+  systemPageSlugs: Record<string, string>;
 }) {
-  const slugs = { ...DEFAULT_SYSTEM_SLUGS, ...systemPageSlugs };
+  const slugs = systemPageSlugs;
 
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect");
