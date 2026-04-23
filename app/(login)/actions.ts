@@ -207,7 +207,7 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
 
   if (!createdUser) {
     return {
-      error: "Failed to create user. Please try again.",
+      error: "Impossibile creare l'account. Riprova.",
       email,
       password,
     };
@@ -223,7 +223,16 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
   await addEmailToBloom(createdUser.email);
 
   const code = await createVerificationCode(createdUser.id);
-  await sendSignupVerificationEmail(createdUser.email, code, firstName);
+
+  // L'invio email non deve bloccare la registrazione:
+  // se Resend non è configurato o c'è un errore di rete, l'utente
+  // arriva comunque a /verify-email dove può richiedere un nuovo codice.
+  try {
+    await sendSignupVerificationEmail(createdUser.email, code, firstName);
+  } catch (emailErr) {
+    console.error("[signUp] sendSignupVerificationEmail failed:", emailErr);
+  }
+
   await logActivity(createdUser.id, ActivityType.SIGN_UP);
 
   (await cookies()).set("pending_verification_user_id", createdUser.id, {
