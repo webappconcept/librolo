@@ -8,7 +8,12 @@ import { Check, Loader2, X } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useActionState, useState } from "react";
-import { checkEmailAction, signIn, signUp } from "./actions";
+import {
+  checkEmailAction,
+  checkUsernameAction,
+  signIn,
+  signUp,
+} from "./actions";
 
 const passwordRules = [
   {
@@ -68,6 +73,8 @@ export function Login({
   const [emailError, setEmailError] = useState("");
   const [emailAvailable, setEmailAvailable] = useState(false);
   const [checkingEmail, setCheckingEmail] = useState(false);
+  const [usernameAvailable, setUsernameAvailable] = useState(false);
+  const [checkingUsername, setCheckingUsername] = useState(false);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [confirmError, setConfirmError] = useState("");
@@ -119,20 +126,36 @@ export function Login({
     setConfirmError(value === password ? "" : "Le password non coincidono");
   };
 
-  const validateUsername = (value: string) => {
+  const validateUsername = async (value: string) => {
     if (!value) {
       setUsernameError("");
+      setUsernameAvailable(false);
       return;
     }
     if (value.length < 3) {
       setUsernameError("Minimo 3 caratteri");
+      setUsernameAvailable(false);
       return;
     }
     if (!/^[a-zA-Z0-9_]+$/.test(value)) {
       setUsernameError("Solo lettere, numeri e underscore (_)");
+      setUsernameAvailable(false);
       return;
     }
-    setUsernameError("");
+
+    // formato ok → chiama il server
+    setCheckingUsername(true);
+    setUsernameAvailable(false);
+    try {
+      const result = await checkUsernameAction(value);
+      setUsernameError(result.error ?? "");
+      setUsernameAvailable(Boolean(result.available));
+    } catch {
+      setUsernameError("Impossibile verificare lo username in questo momento");
+      setUsernameAvailable(false);
+    } finally {
+      setCheckingUsername(false);
+    }
   };
 
   return (
@@ -247,20 +270,32 @@ export function Login({
                         setUsername(e.target.value);
                         validateUsername(e.target.value);
                       }}
+                      onBlur={(e) => {
+                        void validateUsername(e.target.value);
+                      }}
                       aria-invalid={!!usernameError}
                       className="flex-1 rounded-none border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                     />
                   </div>
+                  {checkingUsername && (
+                    <p className="text-xs flex items-center gap-1 text-brand-text-muted">
+                      <Loader2 className="h-3 w-3 animate-spin" /> Verifica
+                      username in corso...
+                    </p>
+                  )}
                   {usernameError && (
                     <p className="text-xs flex items-center gap-1 text-brand-destructive">
                       <X className="h-3 w-3" /> {usernameError}
                     </p>
                   )}
-                  {username && !usernameError && (
-                    <p className="text-xs flex items-center gap-1 text-brand-accent-hover">
-                      <Check className="h-3 w-3" /> Username disponibile
-                    </p>
-                  )}
+                  {username &&
+                    !usernameError &&
+                    usernameAvailable &&
+                    !checkingUsername && (
+                      <p className="text-xs flex items-center gap-1 text-brand-accent-hover">
+                        <Check className="h-3 w-3" /> Username disponibile
+                      </p>
+                    )}
                 </div>
               )}
 
@@ -294,7 +329,8 @@ export function Login({
                 />
                 {checkingEmail && (
                   <p className="text-xs flex items-center gap-1 text-brand-text-muted">
-                    <Loader2 className="h-3 w-3 animate-spin" /> Verifica email in corso...
+                    <Loader2 className="h-3 w-3 animate-spin" /> Verifica email
+                    in corso...
                   </p>
                 )}
                 {emailError && (
@@ -302,11 +338,15 @@ export function Login({
                     <X className="h-3 w-3" /> {emailError}
                   </p>
                 )}
-                {mode === "signup" && email && !emailError && emailAvailable && !checkingEmail && (
-                  <p className="text-xs flex items-center gap-1 text-brand-accent-hover">
-                    <Check className="h-3 w-3" /> Email disponibile
-                  </p>
-                )}
+                {mode === "signup" &&
+                  email &&
+                  !emailError &&
+                  emailAvailable &&
+                  !checkingEmail && (
+                    <p className="text-xs flex items-center gap-1 text-brand-accent-hover">
+                      <Check className="h-3 w-3" /> Email disponibile
+                    </p>
+                  )}
               </div>
 
               <div className="space-y-1.5">
@@ -437,8 +477,8 @@ export function Login({
                         target="_blank"
                         className="font-medium text-brand-primary underline underline-offset-2 hover:text-brand-primary-hover">
                         Termini e Condizioni
-                      </Link>
-                      {" "}d&apos;uso
+                      </Link>{" "}
+                      d&apos;uso
                     </span>
                   </label>
 
@@ -474,7 +514,9 @@ export function Login({
                       <span className="font-medium text-brand-text-faint uppercase text-[10px] tracking-wide mr-1">
                         Opzionale
                       </span>
-                      Acconsento a ricevere comunicazioni promozionali e aggiornamenti via email. Puoi revocare il consenso in qualsiasi momento.
+                      Acconsento a ricevere comunicazioni promozionali e
+                      aggiornamenti via email. Puoi revocare il consenso in
+                      qualsiasi momento.
                     </span>
                   </label>
                 </div>
@@ -492,6 +534,7 @@ export function Login({
                 disabled={
                   pending ||
                   checkingEmail ||
+                  checkingUsername ||
                   !!emailError ||
                   (mode === "signup" && (!acceptTerms || !acceptPrivacy))
                 }
