@@ -15,6 +15,16 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
 // ---------------------------------------------------------------------------
+// Route sempre pubbliche, bypassano il DB route_registry
+// (come /admin/sign-in che ha il suo check dedicato)
+// ---------------------------------------------------------------------------
+const ALWAYS_PUBLIC = [
+  "/verify-email",
+  "/forgot-password",
+  "/reset-password",
+];
+
+// ---------------------------------------------------------------------------
 // Helpers per confronto pathname → array di prefissi
 // ---------------------------------------------------------------------------
 function matchesPrefix(pathname: string, routes: string[]): boolean {
@@ -79,6 +89,13 @@ export async function proxy(request: NextRequest) {
 
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-pathname", pathname);
+
+  // --- ROUTE SEMPRE PUBBLICHE (bypass DB) ---
+  // /verify-email, /forgot-password, /reset-password non devono dipendere
+  // dal route_registry su DB. Se mancano dal registry causerebbero 404 nero.
+  if (matchesPrefix(pathname, ALWAYS_PUBLIC)) {
+    return NextResponse.next({ request: { headers: requestHeaders } });
+  }
 
   // --- REDIRECT DA DB (301/302/307/308) ---
   // Eseguito prima di qualsiasi check auth, così i redirect funzionano
