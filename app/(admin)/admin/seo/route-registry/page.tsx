@@ -11,7 +11,12 @@ import RouteRegistryClient from "./_components/route-registry-client";
 export const metadata: Metadata = { title: "Route Registry" };
 
 export default async function RouteRegistryPage() {
-  const rows = await getAllRoutes();
+  const allRows = await getAllRoutes();
+
+  // Le route di sistema sono gestite dal kernel del proxy e non
+  // devono essere modificabili dall'admin. Le nascondiamo dalla lista.
+  const rows = allRows.filter((r) => !r.isSystemRoute);
+
   return (
     <RouteRegistryClient
       rows={rows}
