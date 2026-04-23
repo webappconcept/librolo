@@ -12,8 +12,6 @@ const BLOOM_KEY_USERNAMES = "bloom:usernames";
 const BLOOM_M = 200_000; // bit array size
 const BLOOM_K = 7; // number of hash functions
 
-type RedisKey = typeof BLOOM_KEY_EMAILS | typeof BLOOM_KEY_USERNAMES;
-
 // ─── Redis REST client ────────────────────────────────────────────────────
 function getRedisConfig() {
   const url = process.env.UPSTASH_REDIS_REST_URL;
@@ -180,34 +178,6 @@ export async function checkEmailAvailability(
   }
 }
 
-/**
- * Funzione generica per controllare la disponibilità
- */
-async function checkAvailability(
-  value: string,
-  key: RedisKey, // "bloom:emails" | "bloom:usernames"
-  dbCheck: (val: string) => Promise<boolean>,
-): Promise<BloomEmailCheckResult> {
-  const normalized = value.trim().toLowerCase();
-  const positions = getBitPositions(normalized);
-  const commands = positions.map((pos) => ["GETBIT", key, pos]);
-  const results = (await redisPipeline(commands)) as number[];
-
-  const possiblyPresent = results.every((bit) => bit === 1);
-
-  if (!possiblyPresent) {
-    return { available: true, checkedViaDb: false };
-  }
-
-  // Verifica database per eliminare i falsi positivi
-  const isAvailable = await dbCheck(normalized);
-
-  return {
-    available: isAvailable,
-    checkedViaDb: true,
-  };
-}
-
 // ─── API PER USERNAME ───────────────────────────────────────────────────────
 
 export async function addUsernameToBloom(username: string): Promise<void> {
@@ -222,13 +192,40 @@ export async function addUsernameToBloom(username: string): Promise<void> {
   await redisPipeline(commands);
 }
 
-export async function checkUsernameAvailability(username: string) {
-  return checkAvailability(username, BLOOM_KEY_USERNAMES, async (val) => {
+export async function checkUsernameAvailability(
+  username: string,
+): Promise<BloomEmailCheckResult> {
+  const normalized = username.trim().toLowerCase();
+
+  try {
+    const positions = getBitPositions(normalized);
+    const commands = positions.map((pos) => [
+      "GETBIT",
+      BLOOM_KEY_USERNAMES,
+      pos,
+    ]);
+    const results = (await redisPipeline(commands)) as number[];
+    const possiblyPresent = results.every((bit) => bit === 1);
+
+    if (!possiblyPresent) {
+      return { available: true, checkedViaDb: false };
+    }
+
     const existing = await db
       .select({ id: userProfiles.id })
       .from(userProfiles)
-      .where(eq(userProfiles.username, val)) // ← userProfiles, non users
+      .where(eq(userProfiles.username, normalized))
       .limit(1);
-    return existing.length === 0;
-  });
+
+    return { available: existing.length === 0, checkedViaDb: true };
+  } catch (err) {
+    console.error("[bloom] Redis unavailable, falling back to DB:", err);
+    const existing = await db
+      .select({ id: userProfiles.id })
+      .from(userProfiles)
+      .where(eq(userProfiles.username, normalized))
+      .limit(1);
+
+    return { available: existing.length === 0, checkedViaDb: true };
+  }
 }
