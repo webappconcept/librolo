@@ -20,7 +20,7 @@ const schema = z.object({
     .min(1, "Pathname is mandatory")
     .regex(/^\//, { message: "Pathname must starts with /" }),
   label: z.string().min(1, "Label is mandatory").max(150, "Max 150 characters"),
-  visibility: z.enum(["public", "private", "admin", "auth-only"], {
+  visibility: z.enum(["public", "private"], {
     error: "Visibility not valid",
   }),
   isActive: z.string().optional(),

@@ -48,23 +48,11 @@ const VIS_META: Record<
     bg: "color-mix(in srgb, #22c55e 10%, var(--admin-card-bg))",
     border: "color-mix(in srgb, #22c55e 25%, transparent)",
   },
-  "auth-only": {
-    label: "auth-only",
-    color: "#3b82f6",
-    bg: "color-mix(in srgb, #3b82f6 10%, var(--admin-card-bg))",
-    border: "color-mix(in srgb, #3b82f6 25%, transparent)",
-  },
   private: {
     label: "private",
     color: "#f59e0b",
     bg: "color-mix(in srgb, #f59e0b 10%, var(--admin-card-bg))",
     border: "color-mix(in srgb, #f59e0b 25%, transparent)",
-  },
-  admin: {
-    label: "admin",
-    color: "#8b5cf6",
-    bg: "color-mix(in srgb, #8b5cf6 10%, var(--admin-card-bg))",
-    border: "color-mix(in srgb, #8b5cf6 25%, transparent)",
   },
 };
 
@@ -329,9 +317,7 @@ export default function RouteRegistryClient({
             count={rows.length}
             onClick={() => setVisFilter("all")}
           />
-          {(
-            ["public", "auth-only", "private", "admin"] as RouteVisibility[]
-          ).map((v) => (
+          {(["public", "private"] as RouteVisibility[]).map((v) => (
             <FilterPill
               key={v}
               vis={v}
@@ -405,11 +391,7 @@ export default function RouteRegistryClient({
                   defaultValue={editRow?.visibility ?? "public"}
                   style={{ ...inputStyle, fontFamily: "inherit" }}>
                   <option value="public">public — accessibile a tutti</option>
-                  <option value="auth-only">
-                    auth-only — solo pagine auth
-                  </option>
                   <option value="private">private — richiede login</option>
-                  <option value="admin">admin — solo amministratori</option>
                 </select>
               </div>
 

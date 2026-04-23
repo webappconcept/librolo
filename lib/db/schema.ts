@@ -1,3 +1,4 @@
+import { relations } from "drizzle-orm";
 import {
   boolean,
   integer,
@@ -9,7 +10,6 @@ import {
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -174,20 +174,16 @@ export const templateFields = pgTable("template_fields", {
   sortOrder: integer("sort_order").notNull().default(0),
 });
 
-export const pageTemplatesRelations = relations(
-  pageTemplates,
-  ({ many }) => ({ fields: many(templateFields) }),
-);
+export const pageTemplatesRelations = relations(pageTemplates, ({ many }) => ({
+  fields: many(templateFields),
+}));
 
-export const templateFieldsRelations = relations(
-  templateFields,
-  ({ one }) => ({
-    template: one(pageTemplates, {
-      fields: [templateFields.templateId],
-      references: [pageTemplates.id],
-    }),
+export const templateFieldsRelations = relations(templateFields, ({ one }) => ({
+  template: one(pageTemplates, {
+    fields: [templateFields.templateId],
+    references: [pageTemplates.id],
   }),
-);
+}));
 
 // System keys per le pagine di sistema legate ai consensi del form di registrazione
 export const SYSTEM_PAGE_KEYS = ["terms", "privacy", "marketing"] as const;
@@ -210,8 +206,12 @@ export const pages = pgTable("pages", {
   sortOrder: integer("sort_order").notNull().default(0),
   // Campi per le pagine di sistema (privacy, termini, marketing)
   isSystem: boolean("is_system").notNull().default(false),
-  systemKey: varchar("system_key", { length: 50 }).$type<SystemPageKey | null>(),
-  contentVersion: varchar("content_version", { length: 20 }).notNull().default("1-2026-04"),
+  systemKey: varchar("system_key", {
+    length: 50,
+  }).$type<SystemPageKey | null>(),
+  contentVersion: varchar("content_version", { length: 20 })
+    .notNull()
+    .default("1-2026-04"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -323,12 +323,7 @@ export const seoPages = pgTable("seo_pages", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export const routeVisibility = [
-  "public",
-  "private",
-  "admin",
-  "auth-only",
-] as const;
+export const routeVisibility = ["public", "private"] as const;
 export type RouteVisibility = (typeof routeVisibility)[number];
 
 export const routeRegistry = pgTable("route_registry", {
@@ -337,7 +332,8 @@ export const routeRegistry = pgTable("route_registry", {
   label: varchar("label", { length: 150 }).notNull(),
   visibility: varchar("visibility", { length: 20 })
     .notNull()
-    .default("public").$type<RouteVisibility>(),
+    .default("public")
+    .$type<RouteVisibility>(),
   isActive: boolean("is_active").notNull().default(true),
   isSystemRoute: boolean("is_system_route").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),

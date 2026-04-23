@@ -5,8 +5,8 @@ import { getActiveRoutes } from "@/lib/db/route-registry-queries";
 import type { RouteVisibility } from "@/lib/db/schema";
 import {
   ADMIN_SIGNIN_ROUTE,
-  SYSTEM_AUTH_ROUTES,
   SYSTEM_ALWAYS_PUBLIC,
+  SYSTEM_AUTH_ROUTES,
 } from "@/lib/routes";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
@@ -16,9 +16,7 @@ import { NextResponse } from "next/server";
 // ---------------------------------------------------------------------------
 
 function matchesPrefix(pathname: string, routes: readonly string[]): boolean {
-  return routes.some(
-    (r) => pathname === r || pathname.startsWith(r + "/"),
-  );
+  return routes.some((r) => pathname === r || pathname.startsWith(r + "/"));
 }
 
 /**
@@ -30,14 +28,10 @@ function matchesPrefix(pathname: string, routes: readonly string[]): boolean {
  */
 async function resolveRoutes(): Promise<{
   publicRoutes: string[];
-  authRoutes: string[];
-  adminRoutes: string[];
   privateRoutes: string[];
 }> {
   const empty = {
     publicRoutes: [],
-    authRoutes: [],
-    adminRoutes: [],
     privateRoutes: [],
   };
 
@@ -49,9 +43,7 @@ async function resolveRoutes(): Promise<{
       rows.filter((r) => r.visibility === v).map((r) => r.pathname);
 
     return {
-      publicRoutes:  byVisibility("public"),
-      authRoutes:    byVisibility("auth-only"),
-      adminRoutes:   byVisibility("admin"),
+      publicRoutes: byVisibility("public"),
       privateRoutes: byVisibility("private"),
     };
   } catch {
@@ -117,28 +109,16 @@ export async function proxy(request: NextRequest) {
   }
 
   // --- [5] ROUTE DAL DB REGISTRY ---
-  const { publicRoutes, authRoutes, adminRoutes, privateRoutes } =
-    await resolveRoutes();
+  const { publicRoutes, privateRoutes } = await resolveRoutes();
 
-  const isPublicRoute  = matchesPrefix(pathname, publicRoutes);
-  const isAuthRoute    = matchesPrefix(pathname, authRoutes);
-  const isAdminRoute   = matchesPrefix(pathname, adminRoutes) ||
-                         pathname === "/admin" ||
-                         pathname.startsWith("/admin/");
+  const isPublicRoute = matchesPrefix(pathname, publicRoutes);
+  const isAdminRoute = pathname === "/admin" || pathname.startsWith("/admin/");
   const isPrivateRoute = matchesPrefix(pathname, privateRoutes);
 
   const isLoggedIn = !!sessionCookie;
 
   // Route pubbliche — lascia passare senza check sessione
-  if (isPublicRoute && !isAuthRoute) {
-    return NextResponse.next({ request: { headers: requestHeaders } });
-  }
-
-  // Route auth-only da DB (es. onboarding, pagine future solo guest)
-  if (isAuthRoute) {
-    if (isLoggedIn) {
-      return NextResponse.redirect(new URL("/", request.url));
-    }
+  if (isPublicRoute) {
     return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
