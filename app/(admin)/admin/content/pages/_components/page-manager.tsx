@@ -38,6 +38,8 @@ interface DeleteTarget {
   descendants: number;
 }
 
+type PagesTab = "user" | "system";
+
 // ─── Helpers ────────────────────────────────────────────────────────────────
 function parseStyleConfig(
   raw: string | null | undefined,
@@ -360,7 +362,6 @@ function PageRow({
   const tplName = templates.find((t) => t.id === page.templateId)?.name;
   const isPendingToggle = pendingToggleId === page.id;
   const indent = depth * 20;
-  // Pagina di sistema: non eliminabile
   const isSystem = Boolean((page as Page & { isSystem?: boolean }).isSystem);
 
   const needsPagination = allChildren.length > PAGE_SIZE;
@@ -464,7 +465,6 @@ function PageRow({
             <p className="text-sm font-medium truncate" style={{ color: "var(--admin-text)" }}>
               {page.title}
             </p>
-            {/* Badge pagina di sistema */}
             {isSystem && (
               <Tooltip label="Pagina di sistema — non eliminabile" side="top">
                 <span
@@ -514,7 +514,6 @@ function PageRow({
         </span>
 
         <div className="flex items-center gap-0.5 shrink-0" onClick={stopRow}>
-          {/* Modifica */}
           <Tooltip label="Modifica pagina" side="top">
             <button
               onClick={() => onEdit(page.id)}
@@ -532,7 +531,6 @@ function PageRow({
             </button>
           </Tooltip>
 
-          {/* Vedi online */}
           {isPublished && frontUrl && (
             <Tooltip label="Vedi online" side="top">
               <a
@@ -553,7 +551,6 @@ function PageRow({
             </Tooltip>
           )}
 
-          {/* Anteprima bozza */}
           {!isPublished && (
             <Tooltip label="Anteprima bozza" side="top">
               <a
@@ -576,26 +573,27 @@ function PageRow({
             </Tooltip>
           )}
 
-          {/* Nuova pagina figlia */}
-          <Tooltip label="Nuova pagina figlia" side="top">
-            <button
-              onClick={() => onNewChild(page.id)}
-              className="p-1.5 rounded-lg transition-colors"
-              style={{ color: "var(--admin-text-faint)" }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background =
-                  "color-mix(in srgb, var(--admin-accent) 10%, var(--admin-card-bg))";
-                e.currentTarget.style.color = "var(--admin-accent)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "transparent";
-                e.currentTarget.style.color = "var(--admin-text-faint)";
-              }}>
-              <GitFork size={13} />
-            </button>
-          </Tooltip>
+          {/* Nuova figlia — solo per pagine non di sistema */}
+          {!isSystem && (
+            <Tooltip label="Nuova pagina figlia" side="top">
+              <button
+                onClick={() => onNewChild(page.id)}
+                className="p-1.5 rounded-lg transition-colors"
+                style={{ color: "var(--admin-text-faint)" }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background =
+                    "color-mix(in srgb, var(--admin-accent) 10%, var(--admin-card-bg))";
+                  e.currentTarget.style.color = "var(--admin-accent)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "transparent";
+                  e.currentTarget.style.color = "var(--admin-text-faint)";
+                }}>
+                <GitFork size={13} />
+              </button>
+            </Tooltip>
+          )}
 
-          {/* Pubblica / Depubblica */}
           <Tooltip label={isPublished ? "Depubblica" : "Pubblica"} side="top">
             <button
               onClick={() => onToggleStatus(page.id, page.status)}
@@ -633,7 +631,6 @@ function PageRow({
             </button>
           </Tooltip>
 
-          {/* Elimina — nascosto per pagine di sistema */}
           {!isSystem && (
             <Tooltip label="Elimina pagina" side="top">
               <button
@@ -662,7 +659,6 @@ function PageRow({
         </div>
       </div>
 
-      {/* Figli espansi */}
       {(isExpanded || searchActive) && (
         <div style={{ marginLeft: `${indent + 20}px` }}>
           <div className="space-y-1.5 mt-1.5">
@@ -703,6 +699,141 @@ function PageRow({
   );
 }
 
+// ─── PageTreeView ─────────────────────────────────────────────────────────────
+/** Renders a filtered subset of pages as a tree, with its own search bar. */
+function PageTreeView({
+  allPagesInTab,
+  templates,
+  expandedIds,
+  toggleExpand,
+  pendingToggleId,
+  appDomain,
+  onEdit,
+  onDeleteRequest,
+  onNewChild,
+  onToggleStatus,
+  emptyLabel,
+  emptyHint,
+  showNewButton,
+  onNewPage,
+}: {
+  allPagesInTab: Page[];
+  templates: TemplateWithFields[];
+  expandedIds: Set<number>;
+  toggleExpand: (id: number) => void;
+  pendingToggleId: number | null;
+  appDomain: string;
+  onEdit: (id: number) => void;
+  onDeleteRequest: (target: DeleteTarget) => void;
+  onNewChild: (id: number) => void;
+  onToggleStatus: (id: number, status: string) => void;
+  emptyLabel: string;
+  emptyHint?: string;
+  showNewButton: boolean;
+  onNewPage: () => void;
+}) {
+  const [search, setSearch] = useState("");
+  const searchActive = search.trim().length > 0;
+
+  const visiblePages: Page[] = searchActive
+    ? (() => {
+        const q = search.toLowerCase();
+        const matched = new Set(
+          allPagesInTab
+            .filter((p) => p.title.toLowerCase().includes(q) || p.slug.includes(q))
+            .map((p) => p.id),
+        );
+        const toShow = new Set(matched);
+        for (const page of allPagesInTab) {
+          if (!matched.has(page.id)) continue;
+          let cur: Page | undefined = page;
+          while (cur?.parentId) {
+            toShow.add(cur.parentId);
+            cur = allPagesInTab.find((p) => p.id === cur!.parentId);
+          }
+        }
+        return allPagesInTab.filter((p) => toShow.has(p.id));
+      })()
+    : allPagesInTab;
+
+  const visibleIds = new Set(visiblePages.map((p) => p.id));
+  const rootPages = visiblePages.filter(
+    (p) => !p.parentId || !visibleIds.has(p.parentId),
+  );
+
+  return (
+    <>
+      {/* Toolbar */}
+      <div className="flex items-center gap-3 mb-4">
+        <div className="relative flex-1">
+          <Search
+            size={14}
+            className="absolute left-3 top-1/2 -translate-y-1/2"
+            style={{ color: "var(--admin-text-faint)" }}
+          />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Cerca pagina..."
+            className="w-full pl-8 pr-3 py-2 text-sm rounded-lg focus:outline-none transition-colors"
+            style={{
+              background: "var(--admin-page-bg)",
+              border: "1px solid var(--admin-input-border)",
+              color: "var(--admin-text)",
+            }}
+          />
+        </div>
+        {showNewButton && (
+          <button
+            onClick={onNewPage}
+            className="flex items-center gap-2 px-4 py-2 text-sm text-white rounded-lg font-medium transition-colors"
+            style={{ background: "var(--admin-accent)" }}
+            onMouseEnter={(e) => (e.currentTarget.style.filter = "brightness(0.9)")}
+            onMouseLeave={(e) => (e.currentTarget.style.filter = "none")}>
+            <Plus size={15} /> Nuova pagina
+          </button>
+        )}
+      </div>
+
+      {/* Tree */}
+      {rootPages.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <FileText size={36} className="mb-3" style={{ color: "var(--admin-text-faint)" }} />
+          <p className="text-sm font-medium" style={{ color: "var(--admin-text-muted)" }}>
+            {searchActive ? "Nessuna pagina trovata" : emptyLabel}
+          </p>
+          {!searchActive && emptyHint && (
+            <p className="text-xs mt-1" style={{ color: "var(--admin-text-faint)" }}>
+              {emptyHint}
+            </p>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-1.5">
+          {rootPages.map((page) => (
+            <PageRow
+              key={page.id}
+              page={page}
+              allPages={visiblePages}
+              templates={templates}
+              depth={0}
+              expandedIds={expandedIds}
+              toggleExpand={toggleExpand}
+              onEdit={onEdit}
+              onDeleteRequest={onDeleteRequest}
+              onNewChild={onNewChild}
+              onToggleStatus={onToggleStatus}
+              pendingToggleId={pendingToggleId}
+              searchActive={searchActive}
+              appDomain={appDomain}
+            />
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
 // ─── PageManager ──────────────────────────────────────────────────────────────
 export default function PageManager({
   initialPages,
@@ -714,7 +845,7 @@ export default function PageManager({
   appDomain: string;
 }) {
   const router = useRouter();
-  const [search, setSearch] = useState("");
+  const [activeTab, setActiveTab] = useState<PagesTab>("user");
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
   const [pendingToggleId, setPendingToggleId] = useState<number | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
@@ -724,33 +855,12 @@ export default function PageManager({
   const [pickerParent, setPickerParent] = useState<Page | null>(null);
   const [pickerOptions, setPickerOptions] = useState<TemplateWithFields[]>([]);
 
-  const searchActive = search.trim().length > 0;
+  // Split pages into the two groups
+  const userPages = initialPages.filter((p) => !p.isSystem);
+  const systemPages = initialPages.filter((p) => p.isSystem);
 
-  const visiblePages: Page[] = searchActive
-    ? (() => {
-        const q = search.toLowerCase();
-        const matched = new Set(
-          initialPages
-            .filter((p) => p.title.toLowerCase().includes(q) || p.slug.includes(q))
-            .map((p) => p.id),
-        );
-        const toShow = new Set(matched);
-        for (const page of initialPages) {
-          if (!matched.has(page.id)) continue;
-          let cur: Page | undefined = page;
-          while (cur?.parentId) {
-            toShow.add(cur.parentId);
-            cur = initialPages.find((p) => p.id === cur!.parentId);
-          }
-        }
-        return initialPages.filter((p) => toShow.has(p.id));
-      })()
-    : initialPages;
-
-  const visibleIds = new Set(visiblePages.map((p) => p.id));
-  const rootPages = visiblePages.filter(
-    (p) => !p.parentId || !visibleIds.has(p.parentId),
-  );
+  const userCount = userPages.length;
+  const systemCount = systemPages.length;
 
   function toggleExpand(id: number) {
     setExpandedIds((prev) => {
@@ -845,86 +955,135 @@ export default function PageManager({
     );
   }
 
+  const tabBase: React.CSSProperties = {
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+    paddingInline: "14px",
+    paddingBlock: "7px",
+    fontSize: "13px",
+    fontWeight: 500,
+    borderRadius: "8px",
+    border: "1px solid transparent",
+    cursor: "pointer",
+    transition: "all 160ms ease",
+    background: "transparent",
+  };
+
+  const tabActive: React.CSSProperties = {
+    background: "color-mix(in srgb, var(--admin-accent) 12%, var(--admin-card-bg))",
+    borderColor: "color-mix(in srgb, var(--admin-accent) 30%, transparent)",
+    color: "var(--admin-accent)",
+  };
+
+  const tabInactive: React.CSSProperties = {
+    color: "var(--admin-text-muted)",
+  };
+
   return (
     <>
-      <div className="flex items-center gap-3 mb-4">
-        <div className="relative flex-1">
-          <Search
-            size={14}
-            className="absolute left-3 top-1/2 -translate-y-1/2"
-            style={{ color: "var(--admin-text-faint)" }}
-          />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Cerca pagina..."
-            className="w-full pl-8 pr-3 py-2 text-sm rounded-lg focus:outline-none transition-colors"
-            style={{
-              background: "var(--admin-page-bg)",
-              border: "1px solid var(--admin-input-border)",
-              color: "var(--admin-text)",
-            }}
-          />
-        </div>
-        {expandedIds.size > 0 && !searchActive && (
-          <button
-            onClick={() => setExpandedIds(new Set())}
-            className="text-xs px-3 py-2 rounded-lg transition-colors"
-            style={{
-              color: "var(--admin-text-muted)",
-              border: "1px solid var(--admin-card-border)",
-              background: "var(--admin-card-bg)",
-            }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.borderColor = "var(--admin-input-border)")
-            }
-            onMouseLeave={(e) =>
-              (e.currentTarget.style.borderColor = "var(--admin-card-border)")
-            }>
-            Comprimi tutto
-          </button>
-        )}
+      {/* Tab bar */}
+      <div
+        className="flex items-center gap-1 mb-5 p-1 rounded-xl"
+        style={{
+          background: "var(--admin-page-bg)",
+          border: "1px solid var(--admin-card-border)",
+          width: "fit-content",
+        }}>
         <button
-          onClick={() => router.push(`${getAdminPath("content-pages")}/new`)}
-          className="flex items-center gap-2 px-4 py-2 text-sm text-white rounded-lg font-medium transition-colors"
-          style={{ background: "var(--admin-accent)" }}
-          onMouseEnter={(e) => (e.currentTarget.style.filter = "brightness(0.9)")}
-          onMouseLeave={(e) => (e.currentTarget.style.filter = "none")}>
-          <Plus size={15} /> Nuova pagina
+          type="button"
+          onClick={() => { setActiveTab("user"); setExpandedIds(new Set()); }}
+          style={activeTab === "user" ? { ...tabBase, ...tabActive } : { ...tabBase, ...tabInactive }}
+          onMouseEnter={(e) => { if (activeTab !== "user") e.currentTarget.style.color = "var(--admin-text)"; }}
+          onMouseLeave={(e) => { if (activeTab !== "user") e.currentTarget.style.color = "var(--admin-text-muted)"; }}>
+          <FileText size={13} />
+          Pagine
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              minWidth: "18px",
+              height: "18px",
+              padding: "0 5px",
+              borderRadius: "9999px",
+              fontSize: "11px",
+              fontWeight: 600,
+              background: activeTab === "user"
+                ? "color-mix(in srgb, var(--admin-accent) 20%, var(--admin-card-bg))"
+                : "color-mix(in srgb, var(--admin-text-faint) 18%, var(--admin-page-bg))",
+              color: activeTab === "user" ? "var(--admin-accent)" : "var(--admin-text-faint)",
+            }}>
+            {userCount}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => { setActiveTab("system"); setExpandedIds(new Set()); }}
+          style={activeTab === "system" ? { ...tabBase, ...tabActive } : { ...tabBase, ...tabInactive }}
+          onMouseEnter={(e) => { if (activeTab !== "system") e.currentTarget.style.color = "var(--admin-text)"; }}
+          onMouseLeave={(e) => { if (activeTab !== "system") e.currentTarget.style.color = "var(--admin-text-muted)"; }}>
+          <Lock size={13} />
+          Sistema
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              minWidth: "18px",
+              height: "18px",
+              padding: "0 5px",
+              borderRadius: "9999px",
+              fontSize: "11px",
+              fontWeight: 600,
+              background: activeTab === "system"
+                ? "color-mix(in srgb, var(--admin-accent) 20%, var(--admin-card-bg))"
+                : "color-mix(in srgb, var(--admin-text-faint) 18%, var(--admin-page-bg))",
+              color: activeTab === "system" ? "var(--admin-accent)" : "var(--admin-text-faint)",
+            }}>
+            {systemCount}
+          </span>
         </button>
       </div>
 
-      {rootPages.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <FileText size={36} className="mb-3" style={{ color: "var(--admin-text-faint)" }} />
-          <p className="text-sm font-medium" style={{ color: "var(--admin-text-muted)" }}>
-            {searchActive ? "Nessuna pagina trovata" : "Nessuna pagina creata"}
-          </p>
-          <p className="text-xs mt-1" style={{ color: "var(--admin-text-faint)" }}>
-            {!searchActive && 'Clicca "Nuova pagina" per iniziare.'}
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-1.5">
-          {rootPages.map((page) => (
-            <PageRow
-              key={page.id}
-              page={page}
-              allPages={visiblePages}
-              templates={templates}
-              depth={0}
-              expandedIds={expandedIds}
-              toggleExpand={toggleExpand}
-              onEdit={(id) => router.push(`${getAdminPath("content-pages")}/${id}/edit`)}
-              onDeleteRequest={setDeleteTarget}
-              onNewChild={handleNewChild}
-              onToggleStatus={handleToggleStatus}
-              pendingToggleId={pendingToggleId}
-              searchActive={searchActive}
-              appDomain={appDomain}
-            />
-          ))}
-        </div>
+      {/* Tab content */}
+      {activeTab === "user" && (
+        <PageTreeView
+          allPagesInTab={userPages}
+          templates={templates}
+          expandedIds={expandedIds}
+          toggleExpand={toggleExpand}
+          pendingToggleId={pendingToggleId}
+          appDomain={appDomain}
+          onEdit={(id) => router.push(`${getAdminPath("content-pages")}/${id}/edit`)}
+          onDeleteRequest={setDeleteTarget}
+          onNewChild={handleNewChild}
+          onToggleStatus={handleToggleStatus}
+          emptyLabel="Nessuna pagina creata"
+          emptyHint='Clicca "Nuova pagina" per iniziare.'
+          showNewButton={true}
+          onNewPage={() => router.push(`${getAdminPath("content-pages")}/new`)}
+        />
+      )}
+
+      {activeTab === "system" && (
+        <PageTreeView
+          allPagesInTab={systemPages}
+          templates={templates}
+          expandedIds={expandedIds}
+          toggleExpand={toggleExpand}
+          pendingToggleId={pendingToggleId}
+          appDomain={appDomain}
+          onEdit={(id) => router.push(`${getAdminPath("content-pages")}/${id}/edit`)}
+          onDeleteRequest={setDeleteTarget}
+          onNewChild={handleNewChild}
+          onToggleStatus={handleToggleStatus}
+          emptyLabel="Nessuna pagina di sistema"
+          emptyHint="Le pagine di sistema vengono create automaticamente dal setup."
+          showNewButton={false}
+          onNewPage={() => {}}
+        />
       )}
 
       {pickerParent && (
