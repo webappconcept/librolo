@@ -47,7 +47,7 @@ export function Login({
   mode?: "signin" | "signup";
   registrationsEnabled?: boolean;
   isMaintenance?: boolean;
-  systemPageSlugs: Record<string, string>;
+  systemPageSlugs?: Record<string, string>;
 }) {
   const slugs = systemPageSlugs;
 
@@ -463,7 +463,7 @@ export function Login({
                     <span className="text-xs text-brand-text-muted leading-relaxed">
                       Ho letto e accetto i{" "}
                       <Link
-                        href={`/${slugs.terms}`}
+                        href={`/${slugs?.terms}`}
                         target="_blank"
                         className="font-medium text-brand-primary underline underline-offset-2 hover:text-brand-primary-hover">
                         Termini e Condizioni
@@ -484,7 +484,7 @@ export function Login({
                     <span className="text-xs text-brand-text-muted leading-relaxed">
                       Ho letto e accetto la{" "}
                       <Link
-                        href={`/${slugs.privacy}`}
+                        href={`/${slugs?.privacy}`}
                         target="_blank"
                         className="font-medium text-brand-primary underline underline-offset-2 hover:text-brand-primary-hover">
                         Privacy Policy
@@ -501,12 +501,14 @@ export function Login({
                       className="mt-0.5 h-4 w-4 shrink-0 rounded border-brand-border accent-brand-accent cursor-pointer"
                     />
                     <span className="text-xs text-brand-text-muted leading-relaxed">
-                      <span className="font-medium text-brand-text-faint uppercase text-[10px] tracking-wide mr-1">
-                        Opzionale
-                      </span>
-                      Acconsento a ricevere comunicazioni promozionali e
-                      aggiornamenti via email. Puoi revocare il consenso in
-                      qualsiasi momento.
+                      Acconsento a ricevere{" "}
+                      <Link
+                        href={`/${slugs?.marketing}`}
+                        target="_blank"
+                        className="font-medium text-brand-primary underline underline-offset-2 hover:text-brand-primary-hover">
+                        comunicazioni promozionali
+                      </Link>{" "}
+                      e aggiornamenti via email.
                     </span>
                   </label>
                 </div>
