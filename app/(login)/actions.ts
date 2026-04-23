@@ -39,8 +39,12 @@ async function logActivity(
   await db.insert(activityLogs).values(newActivity);
 }
 
+// ---------------------------------------------------------------------------
+// signIn
+// ---------------------------------------------------------------------------
+
 const signInSchema = z.object({
-  email: z.email().min(3).max(255),
+  email: z.string().email().min(3).max(255),
   password: z.string().min(8).max(30),
 });
 
@@ -112,6 +116,10 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
   redirect(foundUser.role === "admin" ? "/admin" : "/");
 });
 
+// ---------------------------------------------------------------------------
+// signUp
+// ---------------------------------------------------------------------------
+
 const signUpSchema = z
   .object({
     firstName: z.string().min(1, "Il nome è obbligatorio").max(100),
@@ -124,7 +132,7 @@ const signUpSchema = z
         /^[a-zA-Z0-9_]+$/,
         "Solo lettere, numeri e underscore (_)",
       ),
-    email: z.email(),
+    email: z.string().email("Email non valida"),
     password: z
       .string()
       .min(8, "La password deve contenere almeno 8 caratteri")
@@ -132,13 +140,23 @@ const signUpSchema = z
       .regex(/[A-Z]/, "La password deve contenere almeno una lettera maiuscola")
       .regex(/[0-9]/, "La password deve contenere almeno un numero"),
     confirmPassword: z.string().min(8).max(30),
-    acceptTerms: z.literal("on", "Devi accettare i Termini e Condizioni per procedere"),
-    acceptPrivacy: z.literal("on", "Devi accettare la Privacy Policy per procedere"),
-    acceptMarketing: z.literal("on").optional(),
+    // Zod v4: z.literal() non accetta un secondo argomento per il messaggio d'errore.
+    // Usiamo .refine() per il messaggio custom sui consensi obbligatori.
+    acceptTerms: z.string(),
+    acceptPrivacy: z.string(),
+    acceptMarketing: z.string().optional(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Le password non sono uguali",
     path: ["confirmPassword"],
+  })
+  .refine((data) => data.acceptTerms === "on", {
+    message: "Devi accettare i Termini e Condizioni per procedere",
+    path: ["acceptTerms"],
+  })
+  .refine((data) => data.acceptPrivacy === "on", {
+    message: "Devi accettare la Privacy Policy per procedere",
+    path: ["acceptPrivacy"],
   });
 
 export const signUp = validatedAction(signUpSchema, async (data) => {
@@ -183,7 +201,6 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
     return { error: "Questo username è già in uso.", email, password };
   }
 
-  // Versioni consensi lette dinamicamente dal DB (pagine di sistema CMS)
   const { termsVersion, privacyVersion, marketingVersion } = await getConsentVersions();
 
   const passwordHash = await hashPassword(password);
@@ -246,6 +263,10 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
   redirect("/verify-email");
 });
 
+// ---------------------------------------------------------------------------
+// checkEmailAction
+// ---------------------------------------------------------------------------
+
 export async function checkEmailAction(email: string) {
   const normalizedEmail = email.trim().toLowerCase();
 
@@ -267,12 +288,20 @@ export async function checkEmailAction(email: string) {
   };
 }
 
+// ---------------------------------------------------------------------------
+// signOut
+// ---------------------------------------------------------------------------
+
 export async function signOut() {
   const user = await getUser();
   if (user) await logActivity(user.id, ActivityType.SIGN_OUT);
   (await cookies()).delete("session");
   redirect("/sign-in");
 }
+
+// ---------------------------------------------------------------------------
+// updatePassword
+// ---------------------------------------------------------------------------
 
 const updatePasswordSchema = z.object({
   currentPassword: z.string().min(8).max(100),
@@ -330,6 +359,10 @@ export const updatePassword = validatedActionWithUser(
   },
 );
 
+// ---------------------------------------------------------------------------
+// deleteAccount
+// ---------------------------------------------------------------------------
+
 const deleteAccountSchema = z.object({
   password: z.string().min(8).max(100),
 });
@@ -358,10 +391,14 @@ export const deleteAccount = validatedActionWithUser(
   },
 );
 
+// ---------------------------------------------------------------------------
+// updateAccount
+// ---------------------------------------------------------------------------
+
 const updateAccountSchema = z.object({
   firstName: z.string().min(1, "Il nome è richiesto").max(100),
   lastName: z.string().min(1, "Il cognome è richiesto").max(100),
-  email: z.email("Email non valida"),
+  email: z.string().email("Email non valida"),
 });
 
 export const updateAccount = validatedActionWithUser(
