@@ -241,7 +241,9 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
 
   const code = await createVerificationCode(createdUser.id);
 
-  // Email non deve bloccare la registrazione
+  // L'invio email non deve bloccare la registrazione:
+  // se Resend non è configurato o c'è un errore di rete, l'utente
+  // arriva comunque a /verify-email dove può richiedere un nuovo codice.
   try {
     await sendSignupVerificationEmail(createdUser.email, code, firstName);
   } catch (emailErr) {
