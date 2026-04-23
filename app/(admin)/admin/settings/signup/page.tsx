@@ -13,6 +13,7 @@ export default async function SettingsSignInPage() {
     db.select().from(roles).orderBy(asc(roles.sortOrder)),
     db
       .select({
+        id: pages.id,           // necessario per il link /admin/content/pages/{id}/edit
         systemKey: pages.systemKey,
         contentVersion: pages.contentVersion,
         slug: pages.slug,

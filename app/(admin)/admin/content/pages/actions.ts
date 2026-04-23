@@ -36,6 +36,8 @@ const schema = z.object({
   customFields: z.string().optional(),
   pageType: z.string().optional(),
   sortOrder: z.string().optional(),
+  // Necessario per il versioning automatico delle pagine di sistema
+  isSystem: z.string().optional(),
 });
 
 export async function upsertPageAction(
@@ -61,6 +63,7 @@ export async function upsertPageAction(
     customFields: formData.get("customFields") || undefined,
     pageType: formData.get("pageType") || undefined,
     sortOrder: formData.get("sortOrder") || undefined,
+    isSystem: formData.get("isSystem") || undefined,
   };
 
   const parsed = schema.safeParse(raw);
@@ -78,6 +81,7 @@ export async function upsertPageAction(
     customFields,
     pageType,
     sortOrder,
+    isSystem,
     ...data
   } = parsed.data;
   const isCreating = !id;
@@ -113,6 +117,8 @@ export async function upsertPageAction(
       customFields: JSON.stringify(parsedCustomFields),
       pageType: pageType ?? "page",
       sortOrder: sortOrder ? Number(sortOrder) : 0,
+      // Passa isSystem a upsertPage così il versioning automatico funziona
+      isSystem: isSystem === "1" || isSystem === "true",
     });
 
     if (slugChanged) {
