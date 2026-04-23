@@ -1,117 +1,77 @@
 // lib/email/templates/signup-verification.ts
-import { getAppSettings } from "@/lib/db/settings-queries";
-import { sendEmail } from "@/lib/email/resend";
-import { emailTheme as t } from "@/lib/email/theme";
+// Controlliamo la configurazione Resend prima di inviare.
+// Se RESEND_API_KEY non è impostato, loggiamo senza crashare.
+
+import { Resend } from "resend";
+
+const apiKey = process.env.RESEND_API_KEY;
+const fromEmail =
+  process.env.EMAIL_FROM ?? process.env.RESEND_FROM ?? "noreply@librolo.it";
+
+let resend: Resend | null = null;
+if (apiKey) {
+  resend = new Resend(apiKey);
+} else {
+  console.warn(
+    "[signup-verification] RESEND_API_KEY non configurata — le email di verifica non verranno inviate.",
+  );
+}
 
 export async function sendSignupVerificationEmail(
   to: string,
   code: string,
-  userName?: string,
-) {
-  const settings = await getAppSettings();
-  const { app_name } = settings;
-  const greeting = userName ? `Ciao ${userName},` : "Ciao,";
+  firstName: string,
+): Promise<void> {
+  if (!resend) {
+    console.error(
+      `[signup-verification] Impossibile inviare email a ${to}: RESEND_API_KEY mancante.`,
+    );
+    return;
+  }
 
-  const vars = { appName: app_name, userEmail: to, userName: userName ?? "", otpCode: code };
-
-  const subject = resolveTemplate(
-    settings.email_signup_subject,
-    `Verifica la tua email \u2014 ${app_name}`,
-    vars,
-  );
-  const bcc = settings.email_signup_bcc ?? undefined;
-  const bodyText = resolveTemplate(settings.email_signup_body, null, vars);
-  const footerText = resolveTemplate(
-    settings.email_signup_footer,
-    `\u00a9 ${new Date().getFullYear()} ${app_name} \u00b7 Tutti i diritti riservati`,
-    vars,
-  );
-
-  await sendEmail({
-    to,
-    bcc,
-    subject,
-    html: buildHtml({ code, greeting, bodyText, footerText, appName: app_name }),
-  });
-}
-
-function resolveTemplate(
-  stored: string | null,
-  fallback: string | null,
-  vars: Record<string, string>,
-): string {
-  const tpl = stored?.trim() || fallback || "";
-  return tpl.replace(/\{\{(\w+)\}\}/g, (_, k) => vars[k] ?? `{{${k}}}`);
-}
-
-function buildHtml({
-  code,
-  greeting,
-  bodyText,
-  footerText,
-  appName,
-}: {
-  code: string;
-  greeting: string;
-  bodyText: string;
-  footerText: string;
-  appName: string;
-}): string {
-  const bodyHtml = bodyText
-    ? bodyText
-        .split("\n")
-        .map((l) => l.trim())
-        .filter(Boolean)
-        .map((l) => `<p style="margin:0 0 12px;color:${t.textMuted};font-size:15px;line-height:1.6;">${l}</p>`)
-        .join("")
-    : `<p style="margin:0 0 32px;color:${t.textMuted};font-size:15px;line-height:1.6;">
-        Usa il codice qui sotto per verificare il tuo account.
-        Il codice \u00e8 valido per <strong>15 minuti</strong>.
-       </p>`;
-
-  return `
+  const html = `
 <!DOCTYPE html>
 <html lang="it">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Verifica email</title>
+  <title>Verifica la tua email</title>
 </head>
-<body style="margin:0;padding:0;background:${t.bgPage};font-family:'Helvetica Neue',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:${t.bgPage};padding:40px 0;">
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:40px 16px;">
     <tr>
       <td align="center">
-        <table width="520" cellpadding="0" cellspacing="0"
-          style="background:${t.bgCard};border-radius:${t.radiusXl};overflow:hidden;border:1px solid ${t.border};">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+          <!-- Header -->
           <tr>
-            <td style="background:${t.brandPrimary};padding:32px 40px;">
-              <h1 style="margin:0;color:${t.textInverse};font-size:22px;font-weight:700;letter-spacing:-0.3px;">
-                \uD83D\uDCDA ${appName}
-              </h1>
+            <td style="background:#0f766e;padding:32px 40px;text-align:center;">
+              <p style="margin:0;color:#ffffff;font-size:22px;font-weight:700;letter-spacing:-0.5px;">Librolo</p>
             </td>
           </tr>
+          <!-- Body -->
           <tr>
             <td style="padding:40px;">
-              <p style="margin:0 0 8px;color:${t.textPrimary};font-size:16px;">${greeting}</p>
-              ${bodyHtml}
-              <table width="100%" cellpadding="0" cellspacing="0">
+              <p style="margin:0 0 8px;font-size:20px;font-weight:600;color:#111827;">Ciao, ${firstName}!</p>
+              <p style="margin:0 0 28px;font-size:15px;color:#6b7280;line-height:1.6;">Grazie per esserti registrato su Librolo. Inserisci il codice qui sotto per verificare il tuo indirizzo email e completare la registrazione.</p>
+              <!-- OTP box -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
                 <tr>
-                  <td align="center" style="padding:16px 0 32px;">
-                    <div style="display:inline-block;background:${t.bgPage};border:2px solid ${t.border};border-radius:${t.radiusLg};padding:24px 48px;">
-                      <span style="font-size:40px;font-weight:800;letter-spacing:10px;color:${t.brandPrimary};font-family:'Courier New',monospace;">${code}</span>
+                  <td align="center">
+                    <div style="display:inline-block;background:#f0fdf4;border:2px solid #0f766e;border-radius:12px;padding:20px 40px;">
+                      <p style="margin:0 0 6px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;color:#6b7280;">Codice di verifica</p>
+                      <p style="margin:0;font-size:36px;font-weight:700;letter-spacing:0.25em;color:#0f766e;font-family:monospace;">${code}</p>
                     </div>
                   </td>
                 </tr>
               </table>
-              <p style="margin:0;color:${t.textLight};font-size:13px;line-height:1.5;">
-                Se non hai creato un account, puoi ignorare questa email.<br/>
-                Non condividere questo codice con nessuno.
-              </p>
+              <p style="margin:0 0 6px;font-size:13px;color:#9ca3af;">⏱ Il codice è valido per <strong>20 minuti</strong>.</p>
+              <p style="margin:0;font-size:13px;color:#9ca3af;">Se non hai richiesto questa registrazione, puoi ignorare questa email.</p>
             </td>
           </tr>
+          <!-- Footer -->
           <tr>
-            <td style="background:${t.bgPage};padding:20px 40px;border-top:1px solid ${t.border};">
-              <p style="margin:0;color:${t.textLight};font-size:12px;">${footerText}</p>
+            <td style="background:#f9fafb;padding:20px 40px;border-top:1px solid #e5e7eb;">
+              <p style="margin:0;font-size:12px;color:#9ca3af;text-align:center;">Librolo · Tutti i diritti riservati</p>
             </td>
           </tr>
         </table>
@@ -120,5 +80,20 @@ function buildHtml({
   </table>
 </body>
 </html>
-  `;
+`;
+
+  try {
+    const { error } = await resend.emails.send({
+      from: fromEmail,
+      to,
+      subject: `${code} è il tuo codice di verifica Librolo`,
+      html,
+    });
+
+    if (error) {
+      console.error("[signup-verification] Resend error:", error);
+    }
+  } catch (err) {
+    console.error("[signup-verification] Eccezione durante invio email:", err);
+  }
 }
