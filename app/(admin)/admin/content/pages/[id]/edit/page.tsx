@@ -41,8 +41,6 @@ export default async function EditPagePage({
   const seo = await getSeoPage(`/${page.slug}`);
 
   // --- Calcola templateLocked server-side ---
-  // Una pagina figlia ha templateLocked = true se il template del padre
-  // dichiara esattamente 1 template figlio consentito (allowedChildTemplateIds).
   let templateLocked = false;
   if (page.parentId) {
     const parentPage = pages.find((p) => p.id === page.parentId);
@@ -50,7 +48,6 @@ export default async function EditPagePage({
       const parentTemplate = await getTemplateById(parentPage.templateId);
       if (parentTemplate) {
         const allowed = getAllowedChildTemplateIds(parentTemplate.styleConfig);
-        // Se c'è esattamente 1 template consentito, il template è imposto
         if (allowed.length === 1) {
           templateLocked = true;
         }
@@ -68,6 +65,8 @@ export default async function EditPagePage({
         domain={settings?.app_domain ?? ""}
         appName={settings?.app_name ?? ""}
         templateLocked={templateLocked}
+        isSystem={page.isSystem ?? false}
+        pageType={page.pageType ?? "page"}
       />
     </div>
   );

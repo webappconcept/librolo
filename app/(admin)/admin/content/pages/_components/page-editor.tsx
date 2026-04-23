@@ -691,6 +691,8 @@ export default function PageEditor({
   initialParentId = null,
   initialTemplateId = null,
   templateLocked = false,
+  isSystem = false,
+  pageType = "page",
 }: {
   page?: Page | null;
   seo?: SeoPage | null;
@@ -701,6 +703,8 @@ export default function PageEditor({
   initialParentId?: number | null;
   initialTemplateId?: number | null;
   templateLocked?: boolean;
+  isSystem?: boolean;
+  pageType?: string;
 }) {
   const router = useRouter();
   const isEdit = !!page;
@@ -867,6 +871,9 @@ export default function PageEditor({
           name="customFields"
           value={JSON.stringify(customFields)}
         />
+        {/* isSystem e pageType: necessari per il versioning automatico */}
+        <input type="hidden" name="isSystem" value={isSystem ? "1" : "0"} />
+        <input type="hidden" name="pageType" value={pageType} />
 
         <EditorPageHeader
           breadcrumbs={[
