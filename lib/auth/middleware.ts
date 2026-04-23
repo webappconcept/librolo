@@ -1,5 +1,6 @@
 import { getUser } from "@/lib/db/queries";
 import { User } from "@/lib/db/schema";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { z } from "zod";
 
 /**
@@ -28,7 +29,16 @@ export function validatedAction<S extends z.ZodType<any, any>, T>(
       return { error: result.error.issues[0].message };
     }
 
-    return action(result.data, formData);
+    try {
+      return await action(result.data, formData);
+    } catch (err) {
+      // NEXT_REDIRECT non è un errore reale: è il meccanismo interno
+      // con cui Next.js 15+ esegue i redirect dalle Server Actions.
+      // Deve essere rilanciato, non catturato, altrimenti il redirect
+      // viene inghiottito e l'utente resta sulla stessa pagina.
+      if (isRedirectError(err)) throw err;
+      throw err;
+    }
   };
 }
 
@@ -53,6 +63,11 @@ export function validatedActionWithUser<S extends z.ZodType<any, any>, T>(
       return { error: result.error.issues[0].message };
     }
 
-    return action(result.data, formData, user);
+    try {
+      return await action(result.data, formData, user);
+    } catch (err) {
+      if (isRedirectError(err)) throw err;
+      throw err;
+    }
   };
 }
