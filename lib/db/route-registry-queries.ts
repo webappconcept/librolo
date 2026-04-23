@@ -1,7 +1,11 @@
 import { db } from "@/lib/db/drizzle";
+import type {
+  NewRouteRegistry,
+  RouteRegistry,
+  RouteVisibility,
+} from "@/lib/db/schema";
 import { routeRegistry } from "@/lib/db/schema";
-import type { RouteRegistry, NewRouteRegistry, RouteVisibility } from "@/lib/db/schema";
-import { eq, asc } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 
 // ---------------------------------------------------------------------------
 // Cache in-memory (TTL 60s)
@@ -26,8 +30,12 @@ export function invalidateRouteRegistryCache() {
 // Tutti gli altri campi (label, isActive, ecc.) rimangono editabili.
 // ---------------------------------------------------------------------------
 
-export const SYSTEM_ROUTE_PROTECTED_FIELDS = ["pathname", "visibility"] as const;
-export type SystemRouteProtectedField = (typeof SYSTEM_ROUTE_PROTECTED_FIELDS)[number];
+export const SYSTEM_ROUTE_PROTECTED_FIELDS = [
+  "pathname",
+  "visibility",
+] as const;
+export type SystemRouteProtectedField =
+  (typeof SYSTEM_ROUTE_PROTECTED_FIELDS)[number];
 
 // ---------------------------------------------------------------------------
 // Read
@@ -46,10 +54,7 @@ export async function getActiveRoutes(): Promise<RouteRegistry[]> {
 }
 
 export async function getAllRoutes(): Promise<RouteRegistry[]> {
-  return db
-    .select()
-    .from(routeRegistry)
-    .orderBy(asc(routeRegistry.pathname));
+  return db.select().from(routeRegistry).orderBy(asc(routeRegistry.pathname));
 }
 
 export async function getRoutesByVisibility(
@@ -67,10 +72,6 @@ export async function getPrivateRoutes(): Promise<RouteRegistry[]> {
   return getRoutesByVisibility("private");
 }
 
-export async function getAuthOnlyRoutes(): Promise<RouteRegistry[]> {
-  return getRoutesByVisibility("auth-only");
-}
-
 export async function getRouteByPathname(
   pathname: string,
 ): Promise<RouteRegistry | undefined> {
@@ -85,10 +86,7 @@ export async function getRouteByPathname(
 export async function createRoute(
   data: Omit<NewRouteRegistry, "id" | "createdAt" | "updatedAt">,
 ): Promise<RouteRegistry> {
-  const [row] = await db
-    .insert(routeRegistry)
-    .values(data)
-    .returning();
+  const [row] = await db.insert(routeRegistry).values(data).returning();
   invalidateRouteRegistryCache();
   return row;
 }
