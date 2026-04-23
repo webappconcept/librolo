@@ -38,6 +38,10 @@ const labelStyle: React.CSSProperties = {
   marginBottom: "0.375rem",
 };
 
+/**
+ * Solo public e private — le route di sistema (auth-only, admin)
+ * sono gestite dal kernel del proxy e non appaiono in questo registry.
+ */
 const VIS_META: Record<
   RouteVisibility,
   { label: string; color: string; bg: string; border: string }
@@ -48,23 +52,11 @@ const VIS_META: Record<
     bg: "color-mix(in srgb, #22c55e 10%, var(--admin-card-bg))",
     border: "color-mix(in srgb, #22c55e 25%, transparent)",
   },
-  "auth-only": {
-    label: "auth-only",
-    color: "#3b82f6",
-    bg: "color-mix(in srgb, #3b82f6 10%, var(--admin-card-bg))",
-    border: "color-mix(in srgb, #3b82f6 25%, transparent)",
-  },
   private: {
     label: "private",
     color: "#f59e0b",
     bg: "color-mix(in srgb, #f59e0b 10%, var(--admin-card-bg))",
     border: "color-mix(in srgb, #f59e0b 25%, transparent)",
-  },
-  admin: {
-    label: "admin",
-    color: "#8b5cf6",
-    bg: "color-mix(in srgb, #8b5cf6 10%, var(--admin-card-bg))",
-    border: "color-mix(in srgb, #8b5cf6 25%, transparent)",
   },
 };
 
@@ -305,17 +297,17 @@ export default function RouteRegistryClient({
             className="space-y-1 text-sm"
             style={{ color: "var(--admin-text-muted)" }}>
             <p style={{ color: "var(--admin-text)" }} className="font-medium">
-              How to use Route
+              Come usare il Route Registry
             </p>
             <p>
-              This section dynamically manages the page metadata. All routes
-              listed here are accessible from the SEO / Meta Tags section, where
-              you can set the meta tags for system pages or for new pages
-              managed directly through files.
+              Registra qui le route gestite tramite file Next.js (non CMS) per
+              cui vuoi gestire i meta tag SEO. Le route <strong>public</strong>{" "}
+              sono accessibili a tutti; le route <strong>private</strong>{" "}
+              richiedono il login.
             </p>
             <p>
-              All other routes are instead managed in the Content section, where
-              you can create pages with HTML content.
+              Le pagine create nella sezione Contenuti appaiono automaticamente
+              nel pannello SEO senza bisogno di registrarle qui.
             </p>
           </div>
         </div>
@@ -329,9 +321,7 @@ export default function RouteRegistryClient({
             count={rows.length}
             onClick={() => setVisFilter("all")}
           />
-          {(
-            ["public", "auth-only", "private", "admin"] as RouteVisibility[]
-          ).map((v) => (
+          {(["public", "private"] as RouteVisibility[]).map((v) => (
             <FilterPill
               key={v}
               vis={v}
@@ -355,8 +345,8 @@ export default function RouteRegistryClient({
               className="text-sm font-semibold"
               style={{ color: "var(--admin-text)" }}>
               {mode.type === "new"
-                ? "New route"
-                : `Edit — ${editRow?.pathname}`}
+                ? "Nuova route"
+                : `Modifica — ${editRow?.pathname}`}
             </p>
             <button type="button" onClick={() => setMode(null)}>
               <X size={16} style={{ color: "var(--admin-text-muted)" }} />
@@ -372,7 +362,7 @@ export default function RouteRegistryClient({
                 <input
                   name="pathname"
                   defaultValue={editRow?.pathname ?? ""}
-                  placeholder="/example"
+                  placeholder="/esempio"
                   required
                   style={{ ...inputStyle, fontFamily: "monospace" }}
                 />
@@ -382,7 +372,7 @@ export default function RouteRegistryClient({
                     color: "var(--admin-text-faint)",
                     marginTop: "0.25rem",
                   }}>
-                  Must start with /
+                  Deve iniziare con /
                 </p>
               </div>
               <div>
@@ -405,11 +395,7 @@ export default function RouteRegistryClient({
                   defaultValue={editRow?.visibility ?? "public"}
                   style={{ ...inputStyle, fontFamily: "inherit" }}>
                   <option value="public">public — accessibile a tutti</option>
-                  <option value="auth-only">
-                    auth-only — solo pagine auth
-                  </option>
                   <option value="private">private — richiede login</option>
-                  <option value="admin">admin — solo amministratori</option>
                 </select>
               </div>
 
@@ -453,7 +439,7 @@ export default function RouteRegistryClient({
                   color: "var(--admin-text-muted)",
                   border: "1px solid var(--admin-card-border)",
                 }}>
-                Cancel
+                Annulla
               </button>
               <button
                 type="submit"
@@ -513,7 +499,7 @@ export default function RouteRegistryClient({
               onClick={() => setVisFilter("all")}
               className="mt-3 text-xs underline"
               style={{ color: "var(--admin-accent)" }}>
-              Show All
+              Mostra tutte
             </button>
           )}
         </div>
@@ -533,8 +519,8 @@ export default function RouteRegistryClient({
               background: "var(--admin-page-bg)",
             }}>
             <span>Pathname / Label</span>
-            <span>Visibility</span>
-            <span>State</span>
+            <span>Visibilità</span>
+            <span>Stato</span>
             <span />
           </div>
 
@@ -574,11 +560,7 @@ export default function RouteRegistryClient({
                   </div>
                   {isSystem && (
                     <span
-                      title={
-                        isHome
-                          ? "Home / is protected, can't be deleted or deactivated"
-                          : "System route: can be deactivated but not deleted"
-                      }
+                      title="Route di sistema: non eliminabile"
                       className="flex-shrink-0"
                       style={{ color: "var(--admin-text-faint)" }}>
                       <Lock size={11} />
@@ -592,10 +574,10 @@ export default function RouteRegistryClient({
                   type="button"
                   title={
                     isHome
-                      ? "Home can't be deactivated"
+                      ? "La home non può essere disattivata"
                       : row.isActive
-                        ? "Deactivate"
-                        : "Activate"
+                        ? "Disattiva"
+                        : "Attiva"
                   }
                   disabled={isHome || isToggling}
                   onClick={() => handleToggle(row)}
@@ -638,7 +620,7 @@ export default function RouteRegistryClient({
                   <button
                     type="button"
                     title={
-                      isSystem ? "System routes can't de ldeleted" : "Delete"
+                      isSystem ? "Le route di sistema non possono essere eliminate" : "Elimina"
                     }
                     disabled={isSystem || isDeleting}
                     onClick={() =>

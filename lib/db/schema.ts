@@ -208,7 +208,6 @@ export const pages = pgTable("pages", {
   customFields: text("custom_fields").default("{}"),
   pageType: varchar("page_type", { length: 50 }).notNull().default("page"),
   sortOrder: integer("sort_order").notNull().default(0),
-  // Campi per le pagine di sistema (privacy, termini, marketing)
   isSystem: boolean("is_system").notNull().default(false),
   systemKey: varchar("system_key", { length: 50 }).$type<SystemPageKey | null>(),
   contentVersion: varchar("content_version", { length: 20 }).notNull().default("1-2026-04"),
@@ -323,12 +322,15 @@ export const seoPages = pgTable("seo_pages", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export const routeVisibility = [
-  "public",
-  "private",
-  "admin",
-  "auth-only",
-] as const;
+/**
+ * Visibilità delle route editoriali.
+ * - public:  accessibile a tutti, anche non loggati
+ * - private: accessibile solo agli utenti autenticati
+ *
+ * Le route di sistema (auth-only, admin) sono gestite dal kernel
+ * hardcoded in proxy.ts e non compaiono in questo registry.
+ */
+export const routeVisibility = ["public", "private"] as const;
 export type RouteVisibility = (typeof routeVisibility)[number];
 
 export const routeRegistry = pgTable("route_registry", {
