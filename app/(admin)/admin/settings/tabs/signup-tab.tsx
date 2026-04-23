@@ -9,6 +9,7 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { saveUsersSettings, type ActionState } from "../actions";
 
 type SystemPageInfo = {
+  id: number;            // aggiunto per costruire il link corretto
   systemKey: string | null;
   contentVersion: string;
   slug: string;
@@ -71,7 +72,7 @@ function SignUpTabInner({
 }
 
 // ---------------------------------------------------------------------------
-// Registration Panel (invariato)
+// Registration Panel
 // ---------------------------------------------------------------------------
 function RegistrationPanel({
   settings,
@@ -253,7 +254,7 @@ function RegistrationPanel({
 }
 
 // ---------------------------------------------------------------------------
-// Consent Versions Panel (nuovo)
+// Consent Versions Panel
 // ---------------------------------------------------------------------------
 function ConsentVersionsPanel({ systemPages }: { systemPages: SystemPageInfo[] }) {
   const ordered = ["terms", "privacy", "marketing"];
@@ -338,8 +339,9 @@ function ConsentVersionsPanel({ systemPages }: { systemPages: SystemPageInfo[] }
                       }}>
                       v{page.contentVersion}
                     </span>
+                    {/* Link corretto: usa l'id della pagina → /admin/content/pages/{id}/edit */}
                     <a
-                      href={`/admin/content/pages/${page.slug}`}
+                      href={`/admin/content/pages/${page.id}/edit`}
                       className="inline-flex items-center gap-1 text-[11px] transition-colors"
                       style={{ color: "var(--admin-text-muted)" }}
                       onMouseEnter={(e) =>
