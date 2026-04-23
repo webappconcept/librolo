@@ -13,7 +13,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 
 const HOME_PATH = "/";
 
@@ -148,6 +148,11 @@ export default function RouteRegistryClient({
   toggleActiveAction,
 }: Props) {
   const [rows, setRows] = useState<RouteRegistry[]>(initialRows);
+
+  useEffect(() => {
+    setRows(initialRows);
+  }, [initialRows]);
+
   const [mode, setMode] = useState<FormMode | null>(null);
   const [visFilter, setVisFilter] = useState<RouteVisibility | "all">("all");
   const [deletingId, setDeletingId] = useState<string | null>(null);
