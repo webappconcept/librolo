@@ -52,7 +52,7 @@ async function logActivity(
 // ---------------------------------------------------------------------------
 
 const signInSchema = z.object({
-  email: z.string().email().min(3).max(255),
+  email: z.email().min(3).max(255),
   password: z.string().min(8).max(30),
 });
 
@@ -137,7 +137,7 @@ const signUpSchema = z
       .min(3, "Username minimo 3 caratteri")
       .max(50, "Username massimo 50 caratteri")
       .regex(/^[a-zA-Z0-9_]+$/, "Solo lettere, numeri e underscore (_)"),
-    email: z.string().email("Email non valida"),
+    email: z.email("Email non valida"),
     password: z
       .string()
       .min(8, "La password deve contenere almeno 8 caratteri")

@@ -149,27 +149,35 @@ export async function checkEmailAvailability(
   email: string,
 ): Promise<BloomEmailCheckResult> {
   const normalized = normalizeEmail(email);
-  const positions = getBitPositions(normalized);
-  const commands = positions.map((pos) => ["GETBIT", BLOOM_KEY_EMAILS, pos]);
-  const results = (await redisPipeline(commands)) as number[];
 
-  const possiblyPresent = results.every((bit) => bit === 1);
+  try {
+    const positions = getBitPositions(normalized);
+    const commands = positions.map((pos) => ["GETBIT", BLOOM_KEY_EMAILS, pos]);
+    const results = (await redisPipeline(commands)) as number[];
+    const possiblyPresent = results.every((bit) => bit === 1);
 
-  if (!possiblyPresent) {
-    return { available: true, checkedViaDb: false };
+    if (!possiblyPresent) {
+      return { available: true, checkedViaDb: false };
+    }
+
+    const existing = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.email, normalized))
+      .limit(1);
+
+    return { available: existing.length === 0, checkedViaDb: true };
+  } catch (err) {
+    // Redis non raggiungibile → fallback diretto al DB
+    console.error("[bloom] Redis unavailable, falling back to DB:", err);
+    const existing = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.email, normalized))
+      .limit(1);
+
+    return { available: existing.length === 0, checkedViaDb: true };
   }
-
-  // False positive check via DB
-  const existing = await db
-    .select({ id: users.id })
-    .from(users)
-    .where(eq(users.email, normalized))
-    .limit(1);
-
-  return {
-    available: existing.length === 0,
-    checkedViaDb: true,
-  };
 }
 
 /**
