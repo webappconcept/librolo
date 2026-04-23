@@ -1,5 +1,6 @@
 import { db } from "@/lib/db/drizzle";
 import { userProfiles, users } from "@/lib/db/schema";
+import { getAppSettings } from "@/lib/db/settings-queries";
 import { eq } from "drizzle-orm";
 import type { BloomEmailCheckResult } from "./types";
 
@@ -13,12 +14,15 @@ const BLOOM_M = 200_000; // bit array size
 const BLOOM_K = 7; // number of hash functions
 
 // ─── Redis REST client ────────────────────────────────────────────────────
-function getRedisConfig() {
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+async function getRedisConfig() {
+  // Prima prova il DB (configurazione admin)
+  const settings = await getAppSettings();
+  const url = settings.upstash_redis_rest_url;
+  const token = settings.upstash_redis_rest_token;
+
   if (!url || !token) {
     throw new Error(
-      "Missing UPSTASH_REDIS_REST_URL or UPSTASH_REDIS_REST_TOKEN",
+      "Missing Upstash Redis credentials. Configure them in Admin → Redis or set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN in .env",
     );
   }
   return { url, token };
@@ -27,7 +31,7 @@ function getRedisConfig() {
 async function redisCommand<T = unknown>(
   command: (string | number)[],
 ): Promise<T> {
-  const { url, token } = getRedisConfig();
+  const { url, token } = await getRedisConfig();
   const res = await fetch(url, {
     method: "POST",
     headers: {
@@ -48,7 +52,7 @@ async function redisCommand<T = unknown>(
 async function redisPipeline(
   commands: (string | number)[][],
 ): Promise<unknown[]> {
-  const { url, token } = getRedisConfig();
+  const { url, token } = await getRedisConfig();
   const res = await fetch(`${url}/pipeline`, {
     method: "POST",
     headers: {
