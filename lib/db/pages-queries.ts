@@ -73,6 +73,38 @@ export async function getPageWithTemplate(
 }
 
 // ---------------------------------------------------------------------------
+// Slug delle pagine di sistema — usato dal form di signup
+// ---------------------------------------------------------------------------
+
+/**
+ * Restituisce uno slug per ogni systemKey presente nel DB.
+ * Se una pagina di sistema non esiste ancora, fornisce un fallback sensato.
+ *
+ * Esempio di ritorno:
+ *   { terms: "termini-e-condizioni", privacy: "privacy-policy", marketing: "marketing-comunicazioni" }
+ */
+export async function getSystemPageSlugs(): Promise<Record<string, string>> {
+  const systemPages = await db
+    .select({ systemKey: pages.systemKey, slug: pages.slug })
+    .from(pages)
+    .where(eq(pages.isSystem, true));
+
+  const fallbacks: Record<string, string> = {
+    terms: "termini-e-condizioni",
+    privacy: "privacy-policy",
+    marketing: "marketing-comunicazioni",
+  };
+
+  const fromDb = Object.fromEntries(
+    systemPages
+      .filter((p) => p.systemKey !== null)
+      .map((p) => [p.systemKey!, p.slug]),
+  );
+
+  return { ...fallbacks, ...fromDb };
+}
+
+// ---------------------------------------------------------------------------
 // Versioning del contenuto per pagine di sistema
 // ---------------------------------------------------------------------------
 
