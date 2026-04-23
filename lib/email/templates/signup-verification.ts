@@ -1,33 +1,13 @@
 // lib/email/templates/signup-verification.ts
-// Controlliamo la configurazione Resend prima di inviare.
-// Se RESEND_API_KEY non è impostato, loggiamo senza crashare.
-
-import { Resend } from "resend";
-
-const apiKey = process.env.RESEND_API_KEY;
-const fromEmail =
-  process.env.EMAIL_FROM ?? process.env.RESEND_FROM ?? "noreply@librolo.it";
-
-let resend: Resend | null = null;
-if (apiKey) {
-  resend = new Resend(apiKey);
-} else {
-  console.warn(
-    "[signup-verification] RESEND_API_KEY non configurata — le email di verifica non verranno inviate.",
-  );
-}
+import { sendEmail } from "@/lib/email/resend";
 
 export async function sendSignupVerificationEmail(
   to: string,
   code: string,
-  firstName: string,
+  firstName?: string,
 ): Promise<void> {
-  if (!resend) {
-    console.error(
-      `[signup-verification] Impossibile inviare email a ${to}: RESEND_API_KEY mancante.`,
-    );
-    return;
-  }
+  const displayName = firstName ?? "";
+  const greeting = displayName ? `Ciao, ${displayName}!` : "Ciao!";
 
   const html = `
 <!DOCTYPE html>
@@ -51,7 +31,7 @@ export async function sendSignupVerificationEmail(
           <!-- Body -->
           <tr>
             <td style="padding:40px;">
-              <p style="margin:0 0 8px;font-size:20px;font-weight:600;color:#111827;">Ciao, ${firstName}!</p>
+              <p style="margin:0 0 8px;font-size:20px;font-weight:600;color:#111827;">${greeting}</p>
               <p style="margin:0 0 28px;font-size:15px;color:#6b7280;line-height:1.6;">Grazie per esserti registrato su Librolo. Inserisci il codice qui sotto per verificare il tuo indirizzo email e completare la registrazione.</p>
               <!-- OTP box -->
               <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
@@ -64,14 +44,14 @@ export async function sendSignupVerificationEmail(
                   </td>
                 </tr>
               </table>
-              <p style="margin:0 0 6px;font-size:13px;color:#9ca3af;">⏱ Il codice è valido per <strong>20 minuti</strong>.</p>
+              <p style="margin:0 0 6px;font-size:13px;color:#9ca3af;">&#9201; Il codice &egrave; valido per <strong>20 minuti</strong>.</p>
               <p style="margin:0;font-size:13px;color:#9ca3af;">Se non hai richiesto questa registrazione, puoi ignorare questa email.</p>
             </td>
           </tr>
           <!-- Footer -->
           <tr>
             <td style="background:#f9fafb;padding:20px 40px;border-top:1px solid #e5e7eb;">
-              <p style="margin:0;font-size:12px;color:#9ca3af;text-align:center;">Librolo · Tutti i diritti riservati</p>
+              <p style="margin:0;font-size:12px;color:#9ca3af;text-align:center;">Librolo &middot; Tutti i diritti riservati</p>
             </td>
           </tr>
         </table>
@@ -82,18 +62,13 @@ export async function sendSignupVerificationEmail(
 </html>
 `;
 
-  try {
-    const { error } = await resend.emails.send({
-      from: fromEmail,
-      to,
-      subject: `${code} è il tuo codice di verifica Librolo`,
-      html,
-    });
+  const { error } = await sendEmail({
+    to,
+    subject: `${code} è il tuo codice di verifica Librolo`,
+    html,
+  });
 
-    if (error) {
-      console.error("[signup-verification] Resend error:", error);
-    }
-  } catch (err) {
-    console.error("[signup-verification] Eccezione durante invio email:", err);
+  if (error) {
+    console.error("[signup-verification] Resend error:", error);
   }
 }

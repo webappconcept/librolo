@@ -5,7 +5,7 @@ import { validatedAction } from "@/lib/auth/middleware";
 import { createVerificationCode, verifyOtpCode } from "@/lib/auth/otp";
 import { setSession } from "@/lib/auth/session";
 import { db } from "@/lib/db/drizzle";
-import { users } from "@/lib/db/schema";
+import { users, userProfiles } from "@/lib/db/schema";
 import { sendSignupVerificationEmail } from "@/lib/email/templates/signup-verification";
 import { eq } from "drizzle-orm";
 import { cookies } from "next/headers";
@@ -62,18 +62,26 @@ export const resendVerificationEmail = validatedAction(
       return { error: "Sessione scaduta. Registrati di nuovo." };
     }
 
-    const [user] = await db
-      .select()
+    const [row] = await db
+      .select({
+        email: users.email,
+        firstName: userProfiles.firstName,
+      })
       .from(users)
+      .leftJoin(userProfiles, eq(userProfiles.userId, users.id))
       .where(eq(users.id, userId))
       .limit(1);
 
-    if (!user) {
+    if (!row) {
       return { error: "Utente non trovato." };
     }
 
-    const code = await createVerificationCode(user.id);
-    await sendSignupVerificationEmail(user.email, code);
+    const code = await createVerificationCode(userId);
+    await sendSignupVerificationEmail(
+      row.email,
+      code,
+      row.firstName ?? undefined,
+    );
 
     return { success: "Codice inviato! Controlla la tua email." };
   },
