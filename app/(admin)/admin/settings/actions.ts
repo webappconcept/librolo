@@ -1,10 +1,11 @@
 "use server";
 
 import { getAdminPath } from "@/lib/admin-nav";
+import { invalidateBlockedUsernamesCache } from "@/lib/auth/blocked-usernames";
 import { invalidateDisposableDomainsCache } from "@/lib/auth/disposable-domains";
 import { db } from "@/lib/db/drizzle";
 import type { SiteSnippet } from "@/lib/db/schema";
-import { disposableDomains, siteSnippets } from "@/lib/db/schema";
+import { blockedUsernames, disposableDomains, siteSnippets } from "@/lib/db/schema";
 import { updateAppSetting } from "@/lib/db/settings-queries";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -50,7 +51,6 @@ export async function saveModeSettings(
       formData.get("maintenance_mode") as string,
     );
     revalidatePath(getAdminPath("settings-mode"));
-
     return {
       success: "Impostazioni comportamento salvate.",
       timestamp: Date.now(),
@@ -228,6 +228,10 @@ export async function testRedisConnection(
   }
 }
 
+// ---------------------------------------------------------------------------
+// Blocked Domains
+// ---------------------------------------------------------------------------
+
 export async function addDisposableDomainAction(
   domain: string,
 ): Promise<ActionState> {
@@ -276,6 +280,71 @@ export async function bulkImportDisposableDomainsAction(
     revalidatePath(getAdminPath("security-blocked-domains"));
     return {
       success: `${values.length} domini importati con successo.`,
+      timestamp: Date.now(),
+    };
+  } catch {
+    return {
+      error: "Errore durante l'importazione bulk.",
+      timestamp: Date.now(),
+    };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Blocked Usernames
+// ---------------------------------------------------------------------------
+
+export async function addBlockedUsernameAction(
+  username: string,
+): Promise<ActionState> {
+  try {
+    const clean = username.trim().toLowerCase();
+    if (!clean)
+      return { error: "Username non valido.", timestamp: Date.now() };
+    await db
+      .insert(blockedUsernames)
+      .values({ username: clean })
+      .onConflictDoNothing();
+    invalidateBlockedUsernamesCache();
+    revalidatePath(getAdminPath("security-blocked-usernames"));
+    return { success: `"${clean}" aggiunto.`, timestamp: Date.now() };
+  } catch {
+    return { error: "Errore durante l'aggiunta.", timestamp: Date.now() };
+  }
+}
+
+export async function removeBlockedUsernameAction(
+  username: string,
+): Promise<ActionState> {
+  try {
+    await db
+      .delete(blockedUsernames)
+      .where(
+        eq(blockedUsernames.username, username.trim().toLowerCase()),
+      );
+    invalidateBlockedUsernamesCache();
+    revalidatePath(getAdminPath("security-blocked-usernames"));
+    return { success: `"${username}" rimosso.`, timestamp: Date.now() };
+  } catch {
+    return { error: "Errore durante la rimozione.", timestamp: Date.now() };
+  }
+}
+
+export async function bulkImportBlockedUsernamesAction(
+  usernames: string[],
+): Promise<ActionState> {
+  try {
+    if (usernames.length === 0)
+      return { error: "Nessun username da importare.", timestamp: Date.now() };
+    const values = usernames
+      .map((u) => u.trim().toLowerCase())
+      .filter(Boolean)
+      .map((username) => ({ username }));
+    await db.insert(blockedUsernames).values(values).onConflictDoNothing();
+    invalidateBlockedUsernamesCache();
+    revalidatePath(getAdminPath("security-blocked-usernames"));
+    return {
+      success: `${values.length} username importati con successo.`,
       timestamp: Date.now(),
     };
   } catch {

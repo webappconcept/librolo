@@ -2,7 +2,7 @@
 
 "use server";
 
-import { isDomainBlacklisted, isIpBlacklisted } from "@/lib/auth/blacklist";
+import { isDomainBlacklisted, isIpBlacklisted, isUsernameBlacklisted } from "@/lib/auth/blacklist";
 import {
   validatedAction,
   validatedActionWithUser,
@@ -189,12 +189,23 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
   }
 
   if (await isDomainBlacklisted(email)) {
-    return { error: "Questo dominio email non è accettato.", email, password };
+    return {
+      error:
+        "Non accettiamo registrazioni con questo provider email. Usa un indirizzo Gmail, Outlook o il tuo dominio aziendale.",
+      email,
+      password,
+    };
+  }
+
+  if (await isUsernameBlacklisted(username)) {
+    return {
+      error: "Questo username non è disponibile. Scegli un altro username.",
+      email,
+      password,
+    };
   }
 
   // ── Check ottimistici pre-insert (Bloom + DB) ───────────────────────────
-  // Riducono i round-trip nel caso normale ma NON sono il gate atomico finale.
-  // La protezione definitiva è il vincolo UNIQUE del DB gestito nel catch sotto.
   await ensureBloomFilter();
   const emailAvailability = await checkEmailAvailability(email);
   if (!emailAvailability.available) {
@@ -248,8 +259,6 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
 
     createdUser = inserted;
   } catch (err: unknown) {
-    // Race condition su email: un altro utente ha completato la registrazione
-    // con la stessa email nell'intervallo tra il check Bloom e questo INSERT.
     if (isUniqueConstraintError(err)) {
       return {
         error:
@@ -269,11 +278,7 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
       username,
     });
   } catch (err: unknown) {
-    // Race condition su username: un altro utente ha scelto lo stesso username
-    // nell'intervallo tra il check DB pre-insert e questo INSERT.
     if (isUniqueConstraintError(err)) {
-      // Rollback manuale: elimina l'utente appena creato per non lasciare
-      // un record orfano nella tabella users senza profilo.
       await db.delete(users).where(eq(users.id, createdUser.id));
       return {
         error:
@@ -291,9 +296,6 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
 
   const code = await createVerificationCode(createdUser.id);
 
-  // L'invio email non deve bloccare la registrazione:
-  // se Resend non è configurato o c'è un errore di rete, l'utente
-  // arriva comunque a /verify-email dove può richiedere un nuovo codice.
   try {
     await sendSignupVerificationEmail(createdUser.email, code, firstName);
   } catch (emailErr) {
@@ -338,14 +340,20 @@ export async function checkEmailAction(email: string) {
   };
 }
 
-/**
- * Server Action: controlla se lo username è disponibile.
- */
+// ---------------------------------------------------------------------------
+// checkUsernameAction
+// ---------------------------------------------------------------------------
+
 export async function checkUsernameAction(
   username: string,
 ): Promise<{ available: boolean; error?: string }> {
   if (!username || username.length < 3) {
     return { available: false };
+  }
+
+  // Controlla prima la blacklist (cache in-memory, nessun costo aggiuntivo)
+  if (await isUsernameBlacklisted(username)) {
+    return { available: false, error: "Questo username non è disponibile." };
   }
 
   const result = await checkUsernameAvailability(username);

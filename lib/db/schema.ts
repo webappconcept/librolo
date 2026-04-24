@@ -185,7 +185,6 @@ export const templateFieldsRelations = relations(templateFields, ({ one }) => ({
   }),
 }));
 
-// System keys per le pagine di sistema legate ai consensi del form di registrazione
 export const SYSTEM_PAGE_KEYS = ["terms", "privacy", "marketing"] as const;
 export type SystemPageKey = (typeof SYSTEM_PAGE_KEYS)[number];
 
@@ -204,7 +203,6 @@ export const pages = pgTable("pages", {
   customFields: text("custom_fields").default("{}"),
   pageType: varchar("page_type", { length: 50 }).notNull().default("page"),
   sortOrder: integer("sort_order").notNull().default(0),
-  // Campi per le pagine di sistema (privacy, termini, marketing)
   isSystem: boolean("is_system").notNull().default(false),
   systemKey: varchar("system_key", {
     length: 50,
@@ -346,7 +344,14 @@ export const disposableDomains = pgTable("disposable_domains", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+export const blockedUsernames = pgTable("blocked_usernames", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  username: varchar("username", { length: 50 }).notNull().unique(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export type DisposableDomain = typeof disposableDomains.$inferSelect;
+export type BlockedUsername = typeof blockedUsernames.$inferSelect;
 
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
