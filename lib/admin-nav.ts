@@ -3,7 +3,7 @@
  */
 
 export interface NavChild {
-  key: string; // Aggiunta key obbligatoria per i figli
+  key: string;
   href: string;
   label: string;
   icon: string;
@@ -111,7 +111,7 @@ export const ADMIN_NAV: NavItem[] = [
     label: "Security",
     icon: "Lock",
     permission: "admin:security",
-    childrenMaxHeight: "180px",
+    childrenMaxHeight: "220px",
     children: [
       {
         key: "security-bruteforce",
@@ -132,6 +132,13 @@ export const ADMIN_NAV: NavItem[] = [
         href: "/admin/security/blocked-domains",
         label: "Domini Bloccati",
         icon: "Globe",
+        permission: "admin:security",
+      },
+      {
+        key: "security-blocked-usernames",
+        href: "/admin/security/blocked-usernames",
+        label: "Username Bloccati",
+        icon: "UserX",
         permission: "admin:security",
       },
     ],
@@ -304,26 +311,16 @@ export const ADMIN_NAV: NavItem[] = [
   },
 ];
 
-/**
- * Trova l'HREF nel registro di navigazione in base alla sua chiave univoca.
- * Scansiona ricorsivamente i link principali e i figli.
- */
 export function getAdminPath(key: string): string {
   for (const item of ADMIN_NAV) {
-    // Caso 1: È un link principale (es. dashboard, analytics)
     if (item.key === key && item.href) {
       return item.href;
     }
-
-    // Caso 2: È un gruppo con figli (es. seo, settings)
     if (item.children) {
       const child = item.children.find((c) => c.key === key);
       if (child) return child.href;
     }
   }
-
-  // Fallback se la chiave non esiste: restituisce la dashboard
-  // Utile per evitare crash se si sbaglia a scrivere una key in sviluppo
   console.warn(`[getAdminPath] Key "${key}" not found in ADMIN_NAV registry.`);
   return "/admin";
 }

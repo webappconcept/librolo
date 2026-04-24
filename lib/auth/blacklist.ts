@@ -1,14 +1,20 @@
 import { db } from "@/lib/db/drizzle";
 import { ipBlacklist } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import { isBlockedUsername } from "./blocked-usernames";
 import { isDisposableDomain } from "./disposable-domains";
 
-// Query al DB tramite cache in-memory (vedi disposable-domains.ts)
+// Cache in-memory via disposable-domains.ts
 export async function isDomainBlacklisted(email: string): Promise<boolean> {
   return isDisposableDomain(email);
 }
 
-// Asincrono — DB
+// Cache in-memory via blocked-usernames.ts
+export async function isUsernameBlacklisted(username: string): Promise<boolean> {
+  return isBlockedUsername(username);
+}
+
+// Asincrono — DB diretto (lista IP generalmente piccola)
 export async function isIpBlacklisted(ip: string): Promise<boolean> {
   const result = await db
     .select()
