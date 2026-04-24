@@ -10,38 +10,48 @@ import {
   removeBlockedUsernameAction,
 } from "@/app/(admin)/admin/settings/actions";
 
+type Entry = { username: string; isPattern: boolean };
+
 export function BlockedUsernamesClient({
-  initialUsernames,
+  initialEntries,
 }: {
-  initialUsernames: string[];
+  initialEntries: Entry[];
 }) {
-  const [usernames, setUsernames] = useState<string[]>(initialUsernames);
+  const [entries, setEntries] = useState<Entry[]>(initialEntries);
   const [search, setSearch] = useState("");
   const [newUsername, setNewUsername] = useState("");
+  const [isPattern, setIsPattern] = useState(false);
   const [bulk, setBulk] = useState("");
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [isPending, startTransition] = useTransition();
   const [isBulkPending, startBulkTransition] = useTransition();
 
   const filtered = search
-    ? usernames.filter((u) => u.includes(search.toLowerCase().trim()))
-    : usernames;
+    ? entries.filter((e) => e.username.includes(search.toLowerCase().trim()))
+    : entries;
 
   function showToast(message: string, type: "success" | "error") {
     setToast({ message, type });
   }
 
+  function buildRaw(value: string, pattern: boolean): string {
+    const clean = value.trim().toLowerCase();
+    if (!pattern) return clean;
+    if (clean.startsWith("*") || clean.endsWith("*")) return clean;
+    return `*${clean}*`;
+  }
+
   function handleAdd() {
-    const username = newUsername.trim().toLowerCase();
-    if (!username) return;
-    if (usernames.includes(username)) {
-      showToast(`"${username}" è già in lista.`, "error");
+    const raw = buildRaw(newUsername, isPattern);
+    if (!raw || raw === "*" || raw === "**") return;
+    if (entries.some((e) => e.username === raw)) {
+      showToast(`"${raw}" è già in lista.`, "error");
       return;
     }
     startTransition(async () => {
-      const res = await addBlockedUsernameAction(username);
+      const res = await addBlockedUsernameAction(raw);
       if ("success" in res) {
-        setUsernames((prev) => [username, ...prev].sort());
+        setEntries((prev) => [{ username: raw, isPattern }, ...prev].sort((a, b) => a.username.localeCompare(b.username)));
         setNewUsername("");
         showToast((res as { success: string }).success, "success");
       } else if ("error" in res) {
@@ -54,7 +64,7 @@ export function BlockedUsernamesClient({
     startTransition(async () => {
       const res = await removeBlockedUsernameAction(username);
       if ("success" in res) {
-        setUsernames((prev) => prev.filter((u) => u !== username));
+        setEntries((prev) => prev.filter((e) => e.username !== username));
         showToast((res as { success: string }).success, "success");
       } else if ("error" in res) {
         showToast((res as { error: string }).error, "error");
@@ -66,15 +76,19 @@ export function BlockedUsernamesClient({
     const lines = bulk
       .split("\n")
       .map((l) => l.trim().toLowerCase())
-      .filter((l) => l.length > 0 && !usernames.includes(l));
+      .filter((l) => l.length > 0 && !entries.some((e) => e.username === l));
     if (lines.length === 0) {
-      showToast("Nessun nuovo username da importare.", "error");
+      showToast("Nessuna nuova voce da importare.", "error");
       return;
     }
     startBulkTransition(async () => {
       const res = await bulkImportBlockedUsernamesAction(lines);
       if ("success" in res) {
-        setUsernames((prev) => [...prev, ...lines].sort());
+        const newEntries: Entry[] = lines.map((u) => ({
+          username: u,
+          isPattern: u.startsWith("*") || u.endsWith("*"),
+        }));
+        setEntries((prev) => [...prev, ...newEntries].sort((a, b) => a.username.localeCompare(b.username)));
         setBulk("");
         showToast((res as { success: string }).success, "success");
       } else if ("error" in res) {
@@ -82,6 +96,17 @@ export function BlockedUsernamesClient({
       }
     });
   }
+
+  const patternBadgeStyle: React.CSSProperties = {
+    fontSize: "10px",
+    fontWeight: 600,
+    padding: "1px 5px",
+    borderRadius: "4px",
+    background: "color-mix(in srgb, var(--admin-accent) 14%, transparent)",
+    color: "var(--admin-accent)",
+    border: "1px solid color-mix(in srgb, var(--admin-accent) 30%, transparent)",
+    letterSpacing: "0.02em",
+  };
 
   return (
     <>
@@ -95,16 +120,44 @@ export function BlockedUsernamesClient({
         {/* Aggiunta singola */}
         <div>
           <h3 className="text-sm font-semibold mb-3" style={{ color: "var(--admin-text)" }}>
-            Aggiungi username
+            Aggiungi voce
           </h3>
+
+          {/* Toggle pattern */}
+          <div className="flex items-center gap-2 mb-3">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={isPattern}
+              onClick={() => setIsPattern((v) => !v)}
+              className="relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none"
+              style={{
+                background: isPattern ? "var(--admin-accent)" : "var(--admin-input-border)",
+              }}
+            >
+              <span
+                className="inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform"
+                style={{ transform: isPattern ? "translateX(18px)" : "translateX(2px)" }}
+              />
+            </button>
+            <span className="text-xs" style={{ color: "var(--admin-text-muted)" }}>
+              Pattern wildcard
+            </span>
+            {isPattern && (
+              <span className="text-xs" style={{ color: "var(--admin-text-faint)" }}>
+                — scrivi <code className="font-mono">admin</code> → salva come <code className="font-mono">*admin*</code>
+              </span>
+            )}
+          </div>
+
           <div className="flex gap-2 max-w-md">
             <input
               type="text"
               value={newUsername}
               onChange={(e) => setNewUsername(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAdd())}
-              placeholder="es. amministratore"
-              className="flex-1 px-3 py-2 text-sm rounded-lg focus:outline-none"
+              placeholder={isPattern ? "es. admin  →  *admin*" : "es. amministratore"}
+              className="flex-1 px-3 py-2 text-sm rounded-lg focus:outline-none font-mono"
               style={{
                 background: "var(--admin-page-bg)",
                 border: "1px solid var(--admin-input-border)",
@@ -128,6 +181,14 @@ export function BlockedUsernamesClient({
               Aggiungi
             </button>
           </div>
+
+          {isPattern && (
+            <p className="mt-2 text-[11px]" style={{ color: "var(--admin-text-faint)" }}>
+              <code className="font-mono">*parola*</code> contiene &nbsp;·&nbsp;
+              <code className="font-mono">parola*</code> inizia con &nbsp;·&nbsp;
+              <code className="font-mono">*parola</code> finisce con
+            </p>
+          )}
         </div>
 
         <div style={{ borderTop: "1px solid var(--admin-card-border)" }} />
@@ -138,13 +199,13 @@ export function BlockedUsernamesClient({
             Import bulk
           </h3>
           <p className="text-[11px] mb-3" style={{ color: "var(--admin-text-faint)" }}>
-            Un username per riga. I duplicati vengono ignorati.
+            Una voce per riga. I duplicati vengono ignorati. Usa <code className="font-mono">*parola*</code> per i pattern.
           </p>
           <textarea
             value={bulk}
             onChange={(e) => setBulk(e.target.value)}
             rows={5}
-            placeholder={"admin\nroot\nsuperuser\nmoderatore"}
+            placeholder={"admin\n*amministrat*\nroot\n*superuser*"}
             className="w-full max-w-md px-3 py-2 text-sm rounded-lg focus:outline-none resize-y font-mono"
             style={{
               background: "var(--admin-page-bg)",
@@ -176,9 +237,9 @@ export function BlockedUsernamesClient({
                 : `Importa ${
                     bulk
                       .split("\n")
-                      .filter((l) => l.trim() && !usernames.includes(l.trim().toLowerCase()))
+                      .filter((l) => l.trim() && !entries.some((e) => e.username === l.trim().toLowerCase()))
                       .length
-                  } username`}
+                  } voci`}
             </button>
           </div>
         </div>
@@ -189,9 +250,9 @@ export function BlockedUsernamesClient({
         <div>
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold" style={{ color: "var(--admin-text)" }}>
-              Username bloccati{" "}
+              Voci bloccate{" "}
               <span className="font-normal text-xs" style={{ color: "var(--admin-text-muted)" }}>
-                ({usernames.length})
+                ({entries.length})
               </span>
             </h3>
             <div className="relative">
@@ -220,7 +281,7 @@ export function BlockedUsernamesClient({
             <p className="text-sm py-4 text-center" style={{ color: "var(--admin-text-faint)" }}>
               {search
                 ? `Nessun risultato per "${search}"`
-                : "Nessun username bloccato."}
+                : "Nessuna voce bloccata."}
             </p>
           ) : (
             <div
@@ -228,9 +289,9 @@ export function BlockedUsernamesClient({
               style={{ border: "1px solid var(--admin-card-border)" }}
             >
               <div className="overflow-y-auto" style={{ maxHeight: "320px" }}>
-                {filtered.map((username, i) => (
+                {filtered.map((entry, i) => (
                   <div
-                    key={username}
+                    key={entry.username}
                     className="flex items-center justify-between px-4 py-2.5 text-sm"
                     style={{
                       background:
@@ -243,15 +304,20 @@ export function BlockedUsernamesClient({
                           : "none",
                     }}
                   >
-                    <span
-                      className="font-mono text-xs"
-                      style={{ color: "var(--admin-text)" }}
-                    >
-                      {username}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="font-mono text-xs"
+                        style={{ color: "var(--admin-text)" }}
+                      >
+                        {entry.username}
+                      </span>
+                      {entry.isPattern && (
+                        <span style={patternBadgeStyle}>pattern</span>
+                      )}
+                    </div>
                     <button
                       type="button"
-                      onClick={() => handleRemove(username)}
+                      onClick={() => handleRemove(entry.username)}
                       disabled={isPending}
                       className="p-1 rounded transition-colors disabled:opacity-40"
                       title="Rimuovi"

@@ -12,19 +12,35 @@ import { updateAppSetting } from "@/lib/db/settings-queries";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
-// Regex identica al form sign-up (signUpSchema)
 const USERNAME_REGEX = /^[a-zA-Z0-9_]+$/;
 const USERNAME_MIN = 3;
 const USERNAME_MAX = 50;
 
-function validateUsernameFormat(username: string): string | null {
-  if (username.length < USERNAME_MIN)
-    return `Username troppo corto (min ${USERNAME_MIN} caratteri).`;
-  if (username.length > USERNAME_MAX)
-    return `Username troppo lungo (max ${USERNAME_MAX} caratteri).`;
-  if (!USERNAME_REGEX.test(username))
-    return "Solo lettere, numeri e underscore (_).";
-  return null;
+/**
+ * Valida il core di un entry (con o senza wildcard).
+ * Per i pattern, il core è la stringa senza * agli estremi.
+ */
+function validateBlockedEntry(raw: string): { error: string | null; isPattern: boolean } {
+  const startsWild = raw.startsWith("*");
+  const endsWild = raw.endsWith("*");
+  const isPattern = startsWild || endsWild;
+  const core = raw.replace(/^\*|\*$/g, "");
+
+  if (core.length < 1) return { error: "Pattern troppo corto.", isPattern };
+  if (core.length > USERNAME_MAX - 1) return { error: `Core troppo lungo (max ${USERNAME_MAX - 1} car).`, isPattern };
+  if (!USERNAME_REGEX.test(core)) {
+    return {
+      error: isPattern
+        ? "Solo lettere, numeri e _ nel pattern (gli * solo agli estremi)."
+        : "Solo lettere, numeri e underscore (_).",
+      isPattern,
+    };
+  }
+  if (!isPattern && core.length < USERNAME_MIN) {
+    return { error: `Username troppo corto (min ${USERNAME_MIN} caratteri).`, isPattern };
+  }
+
+  return { error: null, isPattern };
 }
 
 export type ActionState =
@@ -315,32 +331,27 @@ export async function addBlockedUsernameAction(
   username: string,
 ): Promise<ActionState> {
   try {
-    const clean = username.trim().toLowerCase();
-    if (!clean)
-      return { error: "Username non valido.", timestamp: Date.now() };
+    const raw = username.trim().toLowerCase();
+    if (!raw) return { error: "Username non valido.", timestamp: Date.now() };
 
-    const formatError = validateUsernameFormat(clean);
-    if (formatError) return { error: formatError, timestamp: Date.now() };
+    const { error, isPattern } = validateBlockedEntry(raw);
+    if (error) return { error, timestamp: Date.now() };
 
     const admin = await getUser();
     const createdBy = admin?.id ?? null;
 
     await db
       .insert(blockedUsernames)
-      .values({ username: clean, createdBy })
+      .values({ username: raw, isPattern, createdBy })
       .onConflictDoNothing();
 
-    // Opzione B: sincronizza il Bloom filter al momento dell'aggiunta admin
-    // così checkUsernameAvailability intercetterà l'username già al prossimo check
-    try {
-      await addUsernameToBloom(clean);
-    } catch {
-      // Il Bloom sync non è critico: il DB è la fonte di verità
+    if (!isPattern) {
+      try { await addUsernameToBloom(raw); } catch { /* non critico */ }
     }
 
     invalidateBlockedUsernamesCache();
     revalidatePath(getAdminPath("security-blocked-usernames"));
-    return { success: `"${clean}" aggiunto.`, timestamp: Date.now() };
+    return { success: `"${raw}" aggiunto${isPattern ? " come pattern" : ""}.`, timestamp: Date.now() };
   } catch {
     return { error: "Errore durante l'aggiunta.", timestamp: Date.now() };
   }
@@ -352,9 +363,7 @@ export async function removeBlockedUsernameAction(
   try {
     await db
       .delete(blockedUsernames)
-      .where(
-        eq(blockedUsernames.username, username.trim().toLowerCase()),
-      );
+      .where(eq(blockedUsernames.username, username.trim().toLowerCase()));
     invalidateBlockedUsernamesCache();
     revalidatePath(getAdminPath("security-blocked-usernames"));
     return { success: `"${username}" rimosso.`, timestamp: Date.now() };
@@ -373,17 +382,17 @@ export async function bulkImportBlockedUsernamesAction(
     const admin = await getUser();
     const createdBy = admin?.id ?? null;
 
-    const valid: string[] = [];
+    const valid: { username: string; isPattern: boolean; createdBy: string | null }[] = [];
     const invalid: string[] = [];
 
     for (const u of usernames) {
-      const clean = u.trim().toLowerCase();
-      if (!clean) continue;
-      const err = validateUsernameFormat(clean);
-      if (err) {
-        invalid.push(clean);
+      const raw = u.trim().toLowerCase();
+      if (!raw) continue;
+      const { error, isPattern } = validateBlockedEntry(raw);
+      if (error) {
+        invalid.push(raw);
       } else {
-        valid.push(clean);
+        valid.push({ username: raw, isPattern, createdBy });
       }
     }
 
@@ -395,14 +404,13 @@ export async function bulkImportBlockedUsernamesAction(
         timestamp: Date.now(),
       };
 
-    const values = valid.map((username) => ({ username, createdBy }));
-    await db.insert(blockedUsernames).values(values).onConflictDoNothing();
+    await db.insert(blockedUsernames).values(valid).onConflictDoNothing();
 
-    // Bloom sync bulk per tutti gli username validi (opzione B)
-    try {
-      await Promise.all(valid.map((u) => addUsernameToBloom(u)));
-    } catch {
-      // Non critico
+    const exactOnes = valid.filter((v) => !v.isPattern).map((v) => v.username);
+    if (exactOnes.length > 0) {
+      try {
+        await Promise.all(exactOnes.map((u) => addUsernameToBloom(u)));
+      } catch { /* non critico */ }
     }
 
     invalidateBlockedUsernamesCache();
@@ -410,15 +418,11 @@ export async function bulkImportBlockedUsernamesAction(
 
     const msg =
       invalid.length > 0
-        ? `${valid.length} username importati. ${invalid.length} ignorati (formato non valido).`
-        : `${valid.length} username importati con successo.`;
-
+        ? `${valid.length} voci importate. ${invalid.length} ignorate (formato non valido).`
+        : `${valid.length} voci importate con successo.`;
     return { success: msg, timestamp: Date.now() };
   } catch {
-    return {
-      error: "Errore durante l'importazione bulk.",
-      timestamp: Date.now(),
-    };
+    return { error: "Errore durante l'importazione bulk.", timestamp: Date.now() };
   }
 }
 

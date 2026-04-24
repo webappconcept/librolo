@@ -14,10 +14,14 @@ export const metadata: Metadata = {
 
 async function BlockedUsernamesContent() {
   const rows = await db
-    .select({ username: blockedUsernames.username })
+    .select({
+      username: blockedUsernames.username,
+      isPattern: blockedUsernames.isPattern,
+    })
     .from(blockedUsernames)
     .orderBy(asc(blockedUsernames.username));
-  return <BlockedUsernamesClient initialUsernames={rows.map((r) => r.username)} />;
+
+  return <BlockedUsernamesClient initialEntries={rows} />;
 }
 
 export default async function AdminBlockedUsernamesPage() {
@@ -42,7 +46,7 @@ export default async function AdminBlockedUsernamesPage() {
             <span>Username Bloccati</span>
           </h2>
           <p className="text-sm mt-0.5" style={{ color: "var(--admin-text-faint)" }}>
-            Gestisci gli username riservati che non possono essere usati in fase di registrazione.
+            Gestisci gli username riservati e i pattern che non possono essere usati in fase di registrazione.
           </p>
         </div>
       </div>
