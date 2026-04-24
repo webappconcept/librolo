@@ -189,7 +189,11 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
   }
 
   if (await isDomainBlacklisted(email)) {
-    return { error: "Questo dominio email non è accettato.", email, password };
+    return {
+      error: "Non accettiamo registrazioni con questo provider email.",
+      email,
+      password,
+    };
   }
 
   // ── Check ottimistici pre-insert (Bloom + DB) ───────────────────────────
