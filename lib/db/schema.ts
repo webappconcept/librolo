@@ -347,6 +347,7 @@ export const disposableDomains = pgTable("disposable_domains", {
 export const blockedUsernames = pgTable("blocked_usernames", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   username: varchar("username", { length: 50 }).notNull().unique(),
+  isPattern: boolean("is_pattern").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   createdBy: uuid("created_by").references(() => users.id, {
     onDelete: "set null",

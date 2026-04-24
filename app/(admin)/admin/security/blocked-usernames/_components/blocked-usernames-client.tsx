@@ -10,30 +10,45 @@ import {
   removeBlockedUsernameAction,
 } from "@/app/(admin)/admin/settings/actions";
 
+type Entry = { username: string; isPattern: boolean };
+
 export function BlockedUsernamesClient({
-  initialUsernames,
+  initialEntries,
 }: {
-  initialUsernames: string[];
+  initialEntries: Entry[];
 }) {
-  const [usernames, setUsernames] = useState<string[]>(initialUsernames);
+  const [entries, setEntries] = useState<Entry[]>(initialEntries);
   const [search, setSearch] = useState("");
   const [newUsername, setNewUsername] = useState("");
+  const [patternMode, setPatternMode] = useState(false);
   const [bulk, setBulk] = useState("");
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [isPending, startTransition] = useTransition();
   const [isBulkPending, startBulkTransition] = useTransition();
 
+  const usernames = entries.map((e) => e.username);
+
   const filtered = search
-    ? usernames.filter((u) => u.includes(search.toLowerCase().trim()))
-    : usernames;
+    ? entries.filter((e) => e.username.includes(search.toLowerCase().trim()))
+    : entries;
 
   function showToast(message: string, type: "success" | "error") {
     setToast({ message, type });
   }
 
+  function buildEntry(raw: string): string {
+    const core = raw.trim().toLowerCase();
+    if (!patternMode) return core;
+    // Aggiungi asterischi solo se non già presenti
+    const hasLeading = core.startsWith("*");
+    const hasTrailing = core.endsWith("*");
+    if (hasLeading || hasTrailing) return core;
+    return `*${core}*`;
+  }
+
   function handleAdd() {
-    const username = newUsername.trim().toLowerCase();
-    if (!username) return;
+    const username = buildEntry(newUsername);
+    if (!username || username === "*" || username === "**") return;
     if (usernames.includes(username)) {
       showToast(`"${username}" è già in lista.`, "error");
       return;
@@ -41,7 +56,8 @@ export function BlockedUsernamesClient({
     startTransition(async () => {
       const res = await addBlockedUsernameAction(username);
       if ("success" in res) {
-        setUsernames((prev) => [username, ...prev].sort());
+        const isPattern = username.startsWith("*") || username.endsWith("*");
+        setEntries((prev) => [{ username, isPattern }, ...prev].sort((a, b) => a.username.localeCompare(b.username)));
         setNewUsername("");
         showToast((res as { success: string }).success, "success");
       } else if ("error" in res) {
@@ -54,7 +70,7 @@ export function BlockedUsernamesClient({
     startTransition(async () => {
       const res = await removeBlockedUsernameAction(username);
       if ("success" in res) {
-        setUsernames((prev) => prev.filter((u) => u !== username));
+        setEntries((prev) => prev.filter((e) => e.username !== username));
         showToast((res as { success: string }).success, "success");
       } else if ("error" in res) {
         showToast((res as { error: string }).error, "error");
@@ -74,7 +90,11 @@ export function BlockedUsernamesClient({
     startBulkTransition(async () => {
       const res = await bulkImportBlockedUsernamesAction(lines);
       if ("success" in res) {
-        setUsernames((prev) => [...prev, ...lines].sort());
+        const newEntries: Entry[] = lines.map((u) => ({
+          username: u,
+          isPattern: u.startsWith("*") || u.endsWith("*"),
+        }));
+        setEntries((prev) => [...prev, ...newEntries].sort((a, b) => a.username.localeCompare(b.username)));
         setBulk("");
         showToast((res as { success: string }).success, "success");
       } else if ("error" in res) {
@@ -82,6 +102,11 @@ export function BlockedUsernamesClient({
       }
     });
   }
+
+  const bulkNewCount = bulk
+    .split("\n")
+    .filter((l) => l.trim() && !usernames.includes(l.trim().toLowerCase()))
+    .length;
 
   return (
     <>
@@ -97,13 +122,54 @@ export function BlockedUsernamesClient({
           <h3 className="text-sm font-semibold mb-3" style={{ color: "var(--admin-text)" }}>
             Aggiungi username
           </h3>
+
+          {/* Toggle modalità pattern */}
+          <div className="flex items-center gap-2 mb-3">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={patternMode}
+              onClick={() => setPatternMode((v) => !v)}
+              className="relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none"
+              style={{
+                background: patternMode ? "var(--admin-accent)" : "var(--admin-input-border)",
+              }}
+            >
+              <span
+                className="inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform"
+                style={{ transform: patternMode ? "translateX(18px)" : "translateX(2px)" }}
+              />
+            </button>
+            <span className="text-xs" style={{ color: "var(--admin-text-muted)" }}>
+              Modalità pattern
+            </span>
+            {patternMode && (
+              <span
+                className="text-[10px] px-1.5 py-0.5 rounded font-mono"
+                style={{
+                  background: "color-mix(in srgb, var(--admin-accent) 12%, var(--admin-card-bg))",
+                  color: "var(--admin-accent)",
+                  border: "1px solid color-mix(in srgb, var(--admin-accent) 25%, transparent)",
+                }}
+              >
+                *parola* aggiunto automaticamente
+              </span>
+            )}
+          </div>
+
+          {patternMode && (
+            <p className="text-[11px] mb-2" style={{ color: "var(--admin-text-faint)" }}>
+              Sintassi: <code>*parola*</code> (contiene) · <code>parola*</code> (inizia con) · <code>*parola</code> (finisce con)
+            </p>
+          )}
+
           <div className="flex gap-2 max-w-md">
             <input
               type="text"
               value={newUsername}
               onChange={(e) => setNewUsername(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAdd())}
-              placeholder="es. amministratore"
+              placeholder={patternMode ? "es. admin (diventerà *admin*)" : "es. amministratore"}
               className="flex-1 px-3 py-2 text-sm rounded-lg focus:outline-none"
               style={{
                 background: "var(--admin-page-bg)",
@@ -138,13 +204,13 @@ export function BlockedUsernamesClient({
             Import bulk
           </h3>
           <p className="text-[11px] mb-3" style={{ color: "var(--admin-text-faint)" }}>
-            Un username per riga. I duplicati vengono ignorati.
+            Un username per riga. Usa <code>*parola*</code> per i pattern. I duplicati vengono ignorati.
           </p>
           <textarea
             value={bulk}
             onChange={(e) => setBulk(e.target.value)}
             rows={5}
-            placeholder={"admin\nroot\nsuperuser\nmoderatore"}
+            placeholder={"admin\nroot\n*superuser*\nmoderatore\n*spam*"}
             className="w-full max-w-md px-3 py-2 text-sm rounded-lg focus:outline-none resize-y font-mono"
             style={{
               background: "var(--admin-page-bg)",
@@ -171,14 +237,7 @@ export function BlockedUsernamesClient({
               ) : (
                 <Upload size={14} />
               )}
-              {isBulkPending
-                ? "Importazione..."
-                : `Importa ${
-                    bulk
-                      .split("\n")
-                      .filter((l) => l.trim() && !usernames.includes(l.trim().toLowerCase()))
-                      .length
-                  } username`}
+              {isBulkPending ? "Importazione..." : `Importa ${bulkNewCount} username`}
             </button>
           </div>
         </div>
@@ -191,7 +250,7 @@ export function BlockedUsernamesClient({
             <h3 className="text-sm font-semibold" style={{ color: "var(--admin-text)" }}>
               Username bloccati{" "}
               <span className="font-normal text-xs" style={{ color: "var(--admin-text-muted)" }}>
-                ({usernames.length})
+                ({entries.length})
               </span>
             </h3>
             <div className="relative">
@@ -228,9 +287,9 @@ export function BlockedUsernamesClient({
               style={{ border: "1px solid var(--admin-card-border)" }}
             >
               <div className="overflow-y-auto" style={{ maxHeight: "320px" }}>
-                {filtered.map((username, i) => (
+                {filtered.map((entry, i) => (
                   <div
-                    key={username}
+                    key={entry.username}
                     className="flex items-center justify-between px-4 py-2.5 text-sm"
                     style={{
                       background:
@@ -243,15 +302,29 @@ export function BlockedUsernamesClient({
                           : "none",
                     }}
                   >
-                    <span
-                      className="font-mono text-xs"
-                      style={{ color: "var(--admin-text)" }}
-                    >
-                      {username}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="font-mono text-xs"
+                        style={{ color: "var(--admin-text)" }}
+                      >
+                        {entry.username}
+                      </span>
+                      {entry.isPattern && (
+                        <span
+                          className="text-[10px] px-1.5 py-0.5 rounded font-mono leading-none"
+                          style={{
+                            background: "color-mix(in srgb, var(--admin-accent) 10%, var(--admin-card-bg))",
+                            color: "var(--admin-accent)",
+                            border: "1px solid color-mix(in srgb, var(--admin-accent) 20%, transparent)",
+                          }}
+                        >
+                          pattern
+                        </span>
+                      )}
+                    </div>
                     <button
                       type="button"
-                      onClick={() => handleRemove(username)}
+                      onClick={() => handleRemove(entry.username)}
                       disabled={isPending}
                       className="p-1 rounded transition-colors disabled:opacity-40"
                       title="Rimuovi"

@@ -17,14 +17,25 @@ const USERNAME_REGEX = /^[a-zA-Z0-9_]+$/;
 const USERNAME_MIN = 3;
 const USERNAME_MAX = 50;
 
-function validateUsernameFormat(username: string): string | null {
-  if (username.length < USERNAME_MIN)
-    return `Username troppo corto (min ${USERNAME_MIN} caratteri).`;
-  if (username.length > USERNAME_MAX)
-    return `Username troppo lungo (max ${USERNAME_MAX} caratteri).`;
-  if (!USERNAME_REGEX.test(username))
-    return "Solo lettere, numeri e underscore (_).";
-  return null;
+/**
+ * Valida il core di un username (senza eventuali asterischi wildcard).
+ * Restituisce { error } se non valido, oppure { isPattern } se valido.
+ */
+function validateBlockedEntry(raw: string): { error: string } | { isPattern: boolean } {
+  const startsWithAsterisk = raw.startsWith("*");
+  const endsWithAsterisk = raw.endsWith("*");
+  const isPattern = startsWithAsterisk || endsWithAsterisk;
+  const core = raw.replace(/^\*/, "").replace(/\*$/, "");
+
+  if (!core) return { error: "Pattern non valido: il core non può essere vuoto." };
+  if (core.length < USERNAME_MIN)
+    return { error: `Core troppo corto (min ${USERNAME_MIN} caratteri).` };
+  if (core.length > USERNAME_MAX)
+    return { error: `Core troppo lungo (max ${USERNAME_MAX} caratteri).` };
+  if (!USERNAME_REGEX.test(core))
+    return { error: "Solo lettere, numeri e underscore (_) nel core." };
+
+  return { isPattern };
 }
 
 export type ActionState =
@@ -319,23 +330,25 @@ export async function addBlockedUsernameAction(
     if (!clean)
       return { error: "Username non valido.", timestamp: Date.now() };
 
-    const formatError = validateUsernameFormat(clean);
-    if (formatError) return { error: formatError, timestamp: Date.now() };
+    const validation = validateBlockedEntry(clean);
+    if ("error" in validation) return { error: validation.error, timestamp: Date.now() };
+    const { isPattern } = validation;
 
     const admin = await getUser();
     const createdBy = admin?.id ?? null;
 
     await db
       .insert(blockedUsernames)
-      .values({ username: clean, createdBy })
+      .values({ username: clean, isPattern, createdBy })
       .onConflictDoNothing();
 
-    // Opzione B: sincronizza il Bloom filter al momento dell'aggiunta admin
-    // così checkUsernameAvailability intercetterà l'username già al prossimo check
-    try {
-      await addUsernameToBloom(clean);
-    } catch {
-      // Il Bloom sync non è critico: il DB è la fonte di verità
+    // Bloom sync solo per voci esatte (i pattern non hanno senso nel bloom)
+    if (!isPattern) {
+      try {
+        await addUsernameToBloom(clean);
+      } catch {
+        // Non critico
+      }
     }
 
     invalidateBlockedUsernamesCache();
@@ -373,17 +386,18 @@ export async function bulkImportBlockedUsernamesAction(
     const admin = await getUser();
     const createdBy = admin?.id ?? null;
 
-    const valid: string[] = [];
+    type ValidEntry = { username: string; isPattern: boolean; createdBy: string | null };
+    const valid: ValidEntry[] = [];
     const invalid: string[] = [];
 
     for (const u of usernames) {
       const clean = u.trim().toLowerCase();
       if (!clean) continue;
-      const err = validateUsernameFormat(clean);
-      if (err) {
+      const result = validateBlockedEntry(clean);
+      if ("error" in result) {
         invalid.push(clean);
       } else {
-        valid.push(clean);
+        valid.push({ username: clean, isPattern: result.isPattern, createdBy });
       }
     }
 
@@ -395,14 +409,16 @@ export async function bulkImportBlockedUsernamesAction(
         timestamp: Date.now(),
       };
 
-    const values = valid.map((username) => ({ username, createdBy }));
-    await db.insert(blockedUsernames).values(values).onConflictDoNothing();
+    await db.insert(blockedUsernames).values(valid).onConflictDoNothing();
 
-    // Bloom sync bulk per tutti gli username validi (opzione B)
-    try {
-      await Promise.all(valid.map((u) => addUsernameToBloom(u)));
-    } catch {
-      // Non critico
+    // Bloom sync solo per voci esatte
+    const exactEntries = valid.filter((e) => !e.isPattern).map((e) => e.username);
+    if (exactEntries.length > 0) {
+      try {
+        await Promise.all(exactEntries.map((u) => addUsernameToBloom(u)));
+      } catch {
+        // Non critico
+      }
     }
 
     invalidateBlockedUsernamesCache();
