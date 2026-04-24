@@ -2,7 +2,11 @@
 
 "use server";
 
-import { isDomainBlacklisted, isIpBlacklisted, isUsernameBlacklisted } from "@/lib/auth/blacklist";
+import {
+  isDomainBlacklisted,
+  isIpBlacklisted,
+  isUsernameBlacklisted,
+} from "@/lib/auth/blacklist";
 import {
   validatedAction,
   validatedActionWithUser,
@@ -190,8 +194,7 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
 
   if (await isDomainBlacklisted(email)) {
     return {
-      error:
-        "Non accettiamo registrazioni con questo provider email. Usa un indirizzo Gmail, Outlook o il tuo dominio aziendale.",
+      error: "Non accettiamo registrazioni con questo provider email.",
       email,
       password,
     };
