@@ -313,11 +313,17 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
   redirect("/verify-email");
 });
 
-// ---------------------------------------------------------------------------
-// checkEmailAction
-// ---------------------------------------------------------------------------
-
 export async function checkEmailAction(email: string) {
+  const headersList = await headers();
+  const ip =
+    headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const { blocked } = await checkRateLimit(email, ip);
+  if (blocked)
+    return {
+      available: false,
+      error: "Troppi tentativi, riprova tra qualche minuto.",
+    };
+
   const normalizedEmail = email.trim().toLowerCase();
 
   if (!normalizedEmail) {
@@ -344,6 +350,16 @@ export async function checkEmailAction(email: string) {
 export async function checkUsernameAction(
   username: string,
 ): Promise<{ available: boolean; error?: string }> {
+  const headersList = await headers();
+  const ip =
+    headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const { blocked } = await checkRateLimit(username, ip);
+  if (blocked)
+    return {
+      available: false,
+      error: "Troppi tentativi, riprova tra qualche minuto.",
+    };
+
   if (!username || username.length < 3) {
     return { available: false };
   }
