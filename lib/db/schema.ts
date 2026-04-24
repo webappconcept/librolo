@@ -160,7 +160,7 @@ export const pageTemplates = pgTable("page_templates", {
 });
 
 export const templateFields = pgTable("template_fields", {
-  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  id: integer("template_id").primaryKey().generatedAlwaysAsIdentity(),
   templateId: integer("template_id")
     .notNull()
     .references(() => pageTemplates.id, { onDelete: "cascade" }),
@@ -348,6 +348,9 @@ export const blockedUsernames = pgTable("blocked_usernames", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   username: varchar("username", { length: 50 }).notNull().unique(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  createdBy: uuid("created_by").references(() => users.id, {
+    onDelete: "set null",
+  }),
 });
 
 export type DisposableDomain = typeof disposableDomains.$inferSelect;

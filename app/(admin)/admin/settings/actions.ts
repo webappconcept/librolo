@@ -3,12 +3,29 @@
 import { getAdminPath } from "@/lib/admin-nav";
 import { invalidateBlockedUsernamesCache } from "@/lib/auth/blocked-usernames";
 import { invalidateDisposableDomainsCache } from "@/lib/auth/disposable-domains";
+import { addUsernameToBloom } from "@/lib/bloom/bloom-filter";
+import { getUser } from "@/lib/db/queries";
 import { db } from "@/lib/db/drizzle";
 import type { SiteSnippet } from "@/lib/db/schema";
 import { blockedUsernames, disposableDomains, siteSnippets } from "@/lib/db/schema";
 import { updateAppSetting } from "@/lib/db/settings-queries";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+
+// Regex identica al form sign-up (signUpSchema)
+const USERNAME_REGEX = /^[a-zA-Z0-9_]+$/;
+const USERNAME_MIN = 3;
+const USERNAME_MAX = 50;
+
+function validateUsernameFormat(username: string): string | null {
+  if (username.length < USERNAME_MIN)
+    return `Username troppo corto (min ${USERNAME_MIN} caratteri).`;
+  if (username.length > USERNAME_MAX)
+    return `Username troppo lungo (max ${USERNAME_MAX} caratteri).`;
+  if (!USERNAME_REGEX.test(username))
+    return "Solo lettere, numeri e underscore (_).";
+  return null;
+}
 
 export type ActionState =
   | {}
@@ -301,10 +318,26 @@ export async function addBlockedUsernameAction(
     const clean = username.trim().toLowerCase();
     if (!clean)
       return { error: "Username non valido.", timestamp: Date.now() };
+
+    const formatError = validateUsernameFormat(clean);
+    if (formatError) return { error: formatError, timestamp: Date.now() };
+
+    const admin = await getUser();
+    const createdBy = admin?.id ?? null;
+
     await db
       .insert(blockedUsernames)
-      .values({ username: clean })
+      .values({ username: clean, createdBy })
       .onConflictDoNothing();
+
+    // Opzione B: sincronizza il Bloom filter al momento dell'aggiunta admin
+    // così checkUsernameAvailability intercetterà l'username già al prossimo check
+    try {
+      await addUsernameToBloom(clean);
+    } catch {
+      // Il Bloom sync non è critico: il DB è la fonte di verità
+    }
+
     invalidateBlockedUsernamesCache();
     revalidatePath(getAdminPath("security-blocked-usernames"));
     return { success: `"${clean}" aggiunto.`, timestamp: Date.now() };
@@ -336,17 +369,51 @@ export async function bulkImportBlockedUsernamesAction(
   try {
     if (usernames.length === 0)
       return { error: "Nessun username da importare.", timestamp: Date.now() };
-    const values = usernames
-      .map((u) => u.trim().toLowerCase())
-      .filter(Boolean)
-      .map((username) => ({ username }));
+
+    const admin = await getUser();
+    const createdBy = admin?.id ?? null;
+
+    const valid: string[] = [];
+    const invalid: string[] = [];
+
+    for (const u of usernames) {
+      const clean = u.trim().toLowerCase();
+      if (!clean) continue;
+      const err = validateUsernameFormat(clean);
+      if (err) {
+        invalid.push(clean);
+      } else {
+        valid.push(clean);
+      }
+    }
+
+    if (valid.length === 0)
+      return {
+        error: `Nessun username valido da importare.${
+          invalid.length > 0 ? ` ${invalid.length} non validi ignorati.` : ""
+        }`,
+        timestamp: Date.now(),
+      };
+
+    const values = valid.map((username) => ({ username, createdBy }));
     await db.insert(blockedUsernames).values(values).onConflictDoNothing();
+
+    // Bloom sync bulk per tutti gli username validi (opzione B)
+    try {
+      await Promise.all(valid.map((u) => addUsernameToBloom(u)));
+    } catch {
+      // Non critico
+    }
+
     invalidateBlockedUsernamesCache();
     revalidatePath(getAdminPath("security-blocked-usernames"));
-    return {
-      success: `${values.length} username importati con successo.`,
-      timestamp: Date.now(),
-    };
+
+    const msg =
+      invalid.length > 0
+        ? `${valid.length} username importati. ${invalid.length} ignorati (formato non valido).`
+        : `${valid.length} username importati con successo.`;
+
+    return { success: msg, timestamp: Date.now() };
   } catch {
     return {
       error: "Errore durante l'importazione bulk.",
