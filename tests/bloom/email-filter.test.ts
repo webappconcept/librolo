@@ -22,6 +22,15 @@ function mockPipelineHttpError(status: number, body: string) {
   });
 }
 
+// Mock getAppSettings — getRedisConfig() lo chiama per leggere le credenziali
+// Upstash dal DB. Nei test restituiamo le stesse credenziali fake usate nel beforeEach.
+vi.mock("@/lib/db/settings-queries", () => ({
+  getAppSettings: vi.fn().mockResolvedValue({
+    upstash_redis_rest_url: "https://fake.upstash.io",
+    upstash_redis_rest_token: "fake-token",
+  }),
+}));
+
 // Mock Drizzle DB
 const mockDbLimit = vi.fn();
 vi.mock("@/lib/db/drizzle", () => ({
@@ -249,11 +258,14 @@ describe("Bloom Filter — Email", () => {
     });
 
     it("throws when env vars are missing", async () => {
-      delete process.env.UPSTASH_REDIS_REST_URL;
-      delete process.env.UPSTASH_REDIS_REST_TOKEN;
+      const { getAppSettings } = await import("@/lib/db/settings-queries");
+      vi.mocked(getAppSettings).mockResolvedValueOnce({
+        upstash_redis_rest_url: "",
+        upstash_redis_rest_token: "",
+      } as Awaited<ReturnType<typeof getAppSettings>>);
 
       await expect(addEmailToBloom("test@example.com")).rejects.toThrow(
-        "Missing UPSTASH_REDIS_REST_URL",
+        "Missing Upstash Redis credentials",
       );
     });
   });

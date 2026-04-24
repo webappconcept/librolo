@@ -8,6 +8,10 @@ import {
   validatedActionWithUser,
 } from "@/lib/auth/middleware";
 import { createVerificationCode } from "@/lib/auth/otp";
+import {
+  isUniqueConstraintError,
+  resolveConflictField,
+} from "@/lib/auth/race-condition";
 import { checkRateLimit, recordLoginAttempt } from "@/lib/auth/rate-limit";
 import { comparePasswords, hashPassword, setSession } from "@/lib/auth/session";
 import {
@@ -145,8 +149,6 @@ const signUpSchema = z
       .regex(/[A-Z]/, "La password deve contenere almeno una lettera maiuscola")
       .regex(/[0-9]/, "La password deve contenere almeno un numero"),
     confirmPassword: z.string().min(8).max(30),
-    // Zod v4: z.literal() non accetta un secondo argomento per il messaggio d'errore.
-    // Usiamo .refine() per il messaggio custom sui consensi obbligatori.
     acceptTerms: z.string(),
     acceptPrivacy: z.string(),
     acceptMarketing: z.string().optional(),
@@ -190,6 +192,9 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
     return { error: "Questo dominio email non è accettato.", email, password };
   }
 
+  // ── Check ottimistici pre-insert (Bloom + DB) ───────────────────────────
+  // Riducono i round-trip nel caso normale ma NON sono il gate atomico finale.
+  // La protezione definitiva è il vincolo UNIQUE del DB gestito nel catch sotto.
   await ensureBloomFilter();
   const emailAvailability = await checkEmailAvailability(email);
   if (!emailAvailability.available) {
@@ -213,37 +218,74 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
   const defaultRole = settings.default_role || "member";
   const now = new Date();
 
-  const [createdUser] = await db
-    .insert(users)
-    .values({
-      email,
-      passwordHash,
-      role: defaultRole,
-      acceptedTermsAt: now,
-      acceptedTermsVersion: termsVersion,
-      acceptedPrivacyAt: now,
-      acceptedPrivacyVersion: privacyVersion,
-      acceptedMarketingAt: data.acceptMarketing === "on" ? now : null,
-      acceptedMarketingVersion:
-        data.acceptMarketing === "on" ? marketingVersion : null,
-    })
-    .returning();
+  // ── INSERT atomico — unico gate reale contro le race condition ──────────
+  let createdUser: typeof users.$inferSelect;
 
-  if (!createdUser) {
-    return {
-      error: "Impossibile creare l'account. Riprova.",
-      email,
-      password,
-    };
+  try {
+    const [inserted] = await db
+      .insert(users)
+      .values({
+        email,
+        passwordHash,
+        role: defaultRole,
+        acceptedTermsAt: now,
+        acceptedTermsVersion: termsVersion,
+        acceptedPrivacyAt: now,
+        acceptedPrivacyVersion: privacyVersion,
+        acceptedMarketingAt: data.acceptMarketing === "on" ? now : null,
+        acceptedMarketingVersion:
+          data.acceptMarketing === "on" ? marketingVersion : null,
+      })
+      .returning();
+
+    if (!inserted) {
+      return {
+        error: "Impossibile creare l'account. Riprova.",
+        email,
+        password,
+      };
+    }
+
+    createdUser = inserted;
+  } catch (err: unknown) {
+    // Race condition su email: un altro utente ha completato la registrazione
+    // con la stessa email nell'intervallo tra il check Bloom e questo INSERT.
+    if (isUniqueConstraintError(err)) {
+      return {
+        error:
+          "Questa email è appena stata registrata da un altro utente. Prova con un'altra.",
+        email,
+        password,
+      };
+    }
+    throw err;
   }
 
-  await db.insert(userProfiles).values({
-    userId: createdUser.id,
-    firstName,
-    lastName,
-    username,
-  });
+  try {
+    await db.insert(userProfiles).values({
+      userId: createdUser.id,
+      firstName,
+      lastName,
+      username,
+    });
+  } catch (err: unknown) {
+    // Race condition su username: un altro utente ha scelto lo stesso username
+    // nell'intervallo tra il check DB pre-insert e questo INSERT.
+    if (isUniqueConstraintError(err)) {
+      // Rollback manuale: elimina l'utente appena creato per non lasciare
+      // un record orfano nella tabella users senza profilo.
+      await db.delete(users).where(eq(users.id, createdUser.id));
+      return {
+        error:
+          "Questo username è appena stato scelto da un altro utente. Scegline un altro.",
+        email,
+        password,
+      };
+    }
+    throw err;
+  }
 
+  // ── Sync Bloom — solo dopo entrambi gli INSERT confermati ───────────────
   await addEmailToBloom(createdUser.email);
   await addUsernameToBloom(username);
 

@@ -1,4 +1,7 @@
 // /app/(auth)/sign-up/actions
+// Questo file delega al modulo principale in app/(login)/actions.ts
+// I check on-blur (email, username) sono esposti qui per compatibilità
+// con il form component di /sign-up.
 import {
   addEmailToBloom,
   addUsernameToBloom,
@@ -11,6 +14,10 @@ import "server-only";
  * Server Action: check if an email is available for registration.
  * Called on-blur from the sign-up form.
  * Returns only { available: boolean } — no sensitive data reaches the client.
+ *
+ * NOTE: questo check è un'ottimizzazione UX via Bloom filter.
+ * Il gate atomico reale è il vincolo UNIQUE nel DB, gestito
+ * in signUp() dentro app/(login)/actions.ts.
  */
 export async function checkEmailAction(
   email: string,
