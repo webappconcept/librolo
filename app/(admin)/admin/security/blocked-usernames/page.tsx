@@ -14,10 +14,10 @@ export const metadata: Metadata = {
 
 async function BlockedUsernamesContent() {
   const rows = await db
-    .select({ username: blockedUsernames.username })
+    .select({ username: blockedUsernames.username, isPattern: blockedUsernames.isPattern })
     .from(blockedUsernames)
     .orderBy(asc(blockedUsernames.username));
-  return <BlockedUsernamesClient initialUsernames={rows.map((r) => r.username)} />;
+  return <BlockedUsernamesClient initialEntries={rows} />;
 }
 
 export default async function AdminBlockedUsernamesPage() {
