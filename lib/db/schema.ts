@@ -4,6 +4,7 @@ import {
   integer,
   pgTable,
   primaryKey,
+  serial,
   text,
   timestamp,
   uniqueIndex,
@@ -59,7 +60,31 @@ export const userSubscriptions = pgTable("user_subscriptions", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-export const usersRelations = relations(users, ({ one }) => ({
+// ---------------------------------------------------------------------------
+// OAuth accounts (Google, future: X, Web3...)
+// ---------------------------------------------------------------------------
+export const oauthAccounts = pgTable(
+  "oauth_accounts",
+  {
+    id:                serial("id").primaryKey(),
+    userId:            uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    provider:          varchar("provider", { length: 32 }).notNull(),
+    providerAccountId: varchar("provider_account_id", { length: 255 }).notNull(),
+    accessToken:       text("access_token"),
+    refreshToken:      text("refresh_token"),
+    expiresAt:         timestamp("expires_at"),
+    scope:             varchar("scope", { length: 500 }),
+    createdAt:         timestamp("created_at").notNull().defaultNow(),
+    updatedAt:         timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("uq_oauth_provider_account").on(t.provider, t.providerAccountId),
+  ],
+);
+
+export const usersRelations = relations(users, ({ one, many }) => ({
   profile: one(userProfiles, {
     fields: [users.id],
     references: [userProfiles.userId],
@@ -67,6 +92,14 @@ export const usersRelations = relations(users, ({ one }) => ({
   subscription: one(userSubscriptions, {
     fields: [users.id],
     references: [userSubscriptions.userId],
+  }),
+  oauthAccounts: many(oauthAccounts),
+}));
+
+export const oauthAccountsRelations = relations(oauthAccounts, ({ one }) => ({
+  user: one(users, {
+    fields: [oauthAccounts.userId],
+    references: [users.id],
   }),
 }));
 
@@ -354,14 +387,21 @@ export const blockedUsernames = pgTable("blocked_usernames", {
   }),
 });
 
-export type DisposableDomain = typeof disposableDomains.$inferSelect;
-export type BlockedUsername = typeof blockedUsernames.$inferSelect;
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
-export type User = typeof users.$inferSelect;
-export type NewUser = typeof users.$inferInsert;
-export type UserProfile = typeof userProfiles.$inferSelect;
-export type NewUserProfile = typeof userProfiles.$inferInsert;
-export type UserSubscription = typeof userSubscriptions.$inferSelect;
+export type OauthAccount    = typeof oauthAccounts.$inferSelect;
+export type NewOauthAccount = typeof oauthAccounts.$inferInsert;
+
+export type DisposableDomain = typeof disposableDomains.$inferSelect;
+export type BlockedUsername  = typeof blockedUsernames.$inferSelect;
+
+export type User                = typeof users.$inferSelect;
+export type NewUser             = typeof users.$inferInsert;
+export type UserProfile         = typeof userProfiles.$inferSelect;
+export type NewUserProfile      = typeof userProfiles.$inferInsert;
+export type UserSubscription    = typeof userSubscriptions.$inferSelect;
 export type NewUserSubscription = typeof userSubscriptions.$inferInsert;
 
 export type UserWithProfile = User & {
@@ -375,29 +415,29 @@ export type UserWithProfile = User & {
   subscriptionStatus: string | null;
 };
 
-export type Role = typeof roles.$inferSelect;
-export type NewRole = typeof roles.$inferInsert;
-export type Permission = typeof permissions.$inferSelect;
-export type NewPermission = typeof permissions.$inferInsert;
-export type RolePermission = typeof rolePermissions.$inferSelect;
-export type UserPermission = typeof userPermissions.$inferSelect;
-export type ActivityLog = typeof activityLogs.$inferSelect;
-export type NewActivityLog = typeof activityLogs.$inferInsert;
-export type EmailVerification = typeof emailVerifications.$inferSelect;
+export type Role            = typeof roles.$inferSelect;
+export type NewRole         = typeof roles.$inferInsert;
+export type Permission      = typeof permissions.$inferSelect;
+export type NewPermission   = typeof permissions.$inferInsert;
+export type RolePermission  = typeof rolePermissions.$inferSelect;
+export type UserPermission  = typeof userPermissions.$inferSelect;
+export type ActivityLog     = typeof activityLogs.$inferSelect;
+export type NewActivityLog  = typeof activityLogs.$inferInsert;
+export type EmailVerification  = typeof emailVerifications.$inferSelect;
 export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
-export type SeoPage = typeof seoPages.$inferSelect;
-export type NewSeoPage = typeof seoPages.$inferInsert;
-export type Page = typeof pages.$inferSelect;
-export type NewPage = typeof pages.$inferInsert;
-export type PageTemplate = typeof pageTemplates.$inferSelect;
+export type SeoPage         = typeof seoPages.$inferSelect;
+export type NewSeoPage      = typeof seoPages.$inferInsert;
+export type Page            = typeof pages.$inferSelect;
+export type NewPage         = typeof pages.$inferInsert;
+export type PageTemplate    = typeof pageTemplates.$inferSelect;
 export type NewPageTemplate = typeof pageTemplates.$inferInsert;
-export type TemplateField = typeof templateFields.$inferSelect;
+export type TemplateField   = typeof templateFields.$inferSelect;
 export type NewTemplateField = typeof templateFields.$inferInsert;
-export type Redirect = typeof redirects.$inferSelect;
-export type NewRedirect = typeof redirects.$inferInsert;
-export type SiteSnippet = typeof siteSnippets.$inferSelect;
-export type NewSiteSnippet = typeof siteSnippets.$inferInsert;
-export type RouteRegistry = typeof routeRegistry.$inferSelect;
+export type Redirect        = typeof redirects.$inferSelect;
+export type NewRedirect     = typeof redirects.$inferInsert;
+export type SiteSnippet     = typeof siteSnippets.$inferSelect;
+export type NewSiteSnippet  = typeof siteSnippets.$inferInsert;
+export type RouteRegistry   = typeof routeRegistry.$inferSelect;
 export type NewRouteRegistry = typeof routeRegistry.$inferInsert;
 
 export interface TemplateStyleConfig {
