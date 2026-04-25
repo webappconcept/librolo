@@ -23,13 +23,19 @@ async function getBruteforceConfig() {
 
 // ---------------------------------------------------------------------------
 // Cleanup asincrono — fire-and-forget, non blocca la request
+// [FIX 4 - LOW] Sostituito catch silenzioso con console.error:
+// un errore di cleanup non blocca la request ma viene ora tracciato
+// nei log del server, rendendo visibile un'eventuale crescita incontrollata
+// della tabella loginAttempts.
 // ---------------------------------------------------------------------------
 function cleanupOldAttempts(): void {
   const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
   void db
     .delete(loginAttempts)
     .where(lt(loginAttempts.attemptedAt, cutoff))
-    .catch(() => {});
+    .catch((err: unknown) => {
+      console.error("[cleanupOldAttempts] failed to delete old login attempts:", err);
+    });
 }
 
 // ---------------------------------------------------------------------------
@@ -271,16 +277,21 @@ export async function getTopOffenders(limit = 50): Promise<BruteforceEntry[]> {
     }));
 }
 
-/** Sblocca un IP: cancella i suoi tentativi falliti nella finestra attiva */
+/**
+ * Sblocca un IP: cancella TUTTI i suoi tentativi falliti (nessun filtro finestra).
+ *
+ * [FIX 5 - LOW] La versione precedente filtrava solo i tentativi dentro la
+ * finestra di rate-limit corrente (es. 15 min). Se la lockout window (es. 30 min)
+ * era più ampia della window di analisi, l'IP rimaneva bloccato perché i record
+ * più vecchi non venivano cancellati. Ora si cancellano tutti i failed attempts
+ * dell'IP, garantendo che lo sblocco manuale da admin sia sempre completo.
+ */
 export async function unblockIp(ip: string): Promise<void> {
-  const cfg = await getBruteforceConfig();
-  const windowStart = new Date(Date.now() - cfg.windowMinutes * 60 * 1000);
   await db
     .delete(loginAttempts)
     .where(
       and(
         eq(loginAttempts.ip, ip),
-        gte(loginAttempts.attemptedAt, windowStart),
         eq(loginAttempts.success, false),
       ),
     );
