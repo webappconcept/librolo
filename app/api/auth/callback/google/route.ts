@@ -4,7 +4,7 @@
 // 1. Verifica state + PKCE (dentro handleGoogleCallback)
 // 2. Chiama findOrCreateOAuthUser → trova/crea utente nel DB
 // 3. Controlla blacklist IP (stessa logica del login password)
-// 4. Crea sessione custom → redirect a /dashboard
+// 4. Crea sessione custom → redirect a / (o /admin per gli admin)
 
 import { isIpBlacklisted } from "@/lib/auth/blacklist";
 import { handleGoogleCallback } from "@/lib/auth/oauth/google";
@@ -71,7 +71,8 @@ export async function GET(req: NextRequest) {
     // Crea la sessione custom (stesso meccanismo del login password)
     await createSession(dbUser.id, dbUser.role);
 
-    return redirect("/dashboard");
+    // Coerente con signIn: admin → /admin, tutti gli altri → home
+    return redirect(dbUser.role === "admin" ? "/admin" : "/");
   } catch (err) {
     console.error("[auth/callback/google] error:", err);
     return redirect("/sign-in?error=oauth_failed");
