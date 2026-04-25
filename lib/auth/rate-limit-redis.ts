@@ -23,7 +23,6 @@ let _cacheExpiry = 0;
 
 async function getRedisConfig(): Promise<{ url: string; token: string }> {
   const now = Date.now();
-  // Cache la config per 60s per evitare un getAppSettings() ad ogni request
   if (_cachedConfig && now < _cacheExpiry) return _cachedConfig;
 
   const settings = await getAppSettings();
@@ -48,7 +47,6 @@ async function redisCmd<T = unknown>(command: (string | number)[]): Promise<T> {
       "Content-Type": "application/json",
     },
     body: JSON.stringify(command),
-    // Timeout aggressivo: se Redis è lento preferiamo il fallback DB
     signal: AbortSignal.timeout(2000),
   });
   if (!res.ok) {
@@ -83,32 +81,45 @@ async function redisPipeline(commands: (string | number)[][]): Promise<unknown[]
 // Key builders
 // ---------------------------------------------------------------------------
 
-const KEY_LOGIN    = (ip: string, email: string) => `rl:login:${ip}:${email}`;
-const KEY_EMAIL    = (email: string)             => `rl:email:${email}`;
-const KEY_SIGNUP   = (ip: string)                => `rl:signup:${ip}`;
-const KEY_BLACKLIST = (ip: string)               => `rl:blacklist:${ip}`;
+const KEY_LOGIN     = (ip: string, email: string) => `rl:login:${ip}:${email}`;
+const KEY_EMAIL     = (email: string)             => `rl:email:${email}`;
+const KEY_SIGNUP    = (ip: string)                => `rl:signup:${ip}`;
+const KEY_BLACKLIST = (ip: string)                => `rl:blacklist:${ip}`;
+
+// ---------------------------------------------------------------------------
+// Tipi
+// ---------------------------------------------------------------------------
+
+export type RedisRateLimitResult =
+  | { blocked: true;  remaining: 0;      lockoutSeconds: number; source: "redis" }
+  | { blocked: false; remaining: number; lockoutSeconds: number; source: "redis" }
+  | { source: "unavailable" };
+
+// Helper che restituisce il tipo corretto senza ambiguità per TypeScript
+function makeResult(
+  blocked: boolean,
+  remaining: number,
+  lockoutSeconds: number,
+): RedisRateLimitResult {
+  if (blocked) {
+    return { blocked: true, remaining: 0, lockoutSeconds, source: "redis" };
+  }
+  return { blocked: false, remaining, lockoutSeconds, source: "redis" };
+}
 
 // ---------------------------------------------------------------------------
 // Blacklist IP — Redis come L1 cache
 // ---------------------------------------------------------------------------
 
-/**
- * Verifica se un IP è in blacklist leggendo da Redis.
- * Ritorna null se Redis non è disponibile (il chiamante fa fallback al DB).
- */
 export async function isIpBlacklistedRedis(ip: string): Promise<boolean | null> {
   try {
     const val = await redisCmd<string | null>(["GET", KEY_BLACKLIST(ip)]);
     return val !== null;
   } catch {
-    return null; // fallback al DB
+    return null;
   }
 }
 
-/**
- * Sincronizza la blacklist DB → Redis.
- * Da chiamare in actionBlacklistIp e actionRemoveFromBlacklist (admin).
- */
 export async function syncIpBlacklistToRedis(
   ip: string,
   blacklisted: boolean,
@@ -120,7 +131,6 @@ export async function syncIpBlacklistToRedis(
       await redisCmd(["DEL", KEY_BLACKLIST(ip)]);
     }
   } catch (err) {
-    // Non bloccante: la blacklist DB è sempre il source of truth
     console.error("[rate-limit-redis] syncIpBlacklistToRedis failed:", err);
   }
 }
@@ -129,21 +139,6 @@ export async function syncIpBlacklistToRedis(
 // Rate limit login (email + IP  +  email globale)
 // ---------------------------------------------------------------------------
 
-export type RedisRateLimitResult =
-  | { blocked: true;  remaining: 0;   lockoutSeconds: number; source: "redis" }
-  | { blocked: false; remaining: number; lockoutSeconds: number; source: "redis" }
-  | { source: "unavailable" };
-
-/**
- * Controlla e incrementa il rate limit per il login.
- *
- * Usa due contatori:
- *   1. rl:login:{ip}:{email}  — soglia maxAttempts     (blocco rapido per coppia)
- *   2. rl:email:{email}       — soglia maxAttempts * 3 (anti IP-rotation)
- *
- * Entrambi i contatori vengono incrementati in un'unica pipeline.
- * Il TTL viene impostato solo al primo incremento (INCR da 0 → 1).
- */
 export async function checkAndIncrLoginRedis(
   email: string,
   ip: string,
@@ -151,45 +146,31 @@ export async function checkAndIncrLoginRedis(
   windowSeconds: number,
 ): Promise<RedisRateLimitResult> {
   try {
-    const keyPair  = KEY_LOGIN(ip, email);
-    const keyEmail = KEY_EMAIL(email);
+    const keyPair         = KEY_LOGIN(ip, email);
+    const keyEmail        = KEY_EMAIL(email);
     const globalThreshold = maxAttempts * 3;
-    const lockoutSeconds = windowSeconds;
 
-    // Pipeline: INCR entrambe le chiavi in un colpo solo
     const [pairCount, emailCount] = (await redisPipeline([
       ["INCR", keyPair],
       ["INCR", keyEmail],
     ])) as [number, number];
 
-    // Imposta TTL solo al primo incremento (chiave appena creata)
     const ttlCmds: (string | number)[][] = [];
     if (pairCount  === 1) ttlCmds.push(["EXPIRE", keyPair,  windowSeconds]);
     if (emailCount === 1) ttlCmds.push(["EXPIRE", keyEmail, windowSeconds]);
     if (ttlCmds.length > 0) await redisPipeline(ttlCmds);
 
-    const blocked =
-      pairCount  >= maxAttempts ||
-      emailCount >= globalThreshold;
-
+    const blocked = pairCount >= maxAttempts || emailCount >= globalThreshold;
     const remaining = blocked
       ? 0
-      : Math.min(
-          maxAttempts    - pairCount,
-          globalThreshold - emailCount,
-        );
+      : Math.min(maxAttempts - pairCount, globalThreshold - emailCount);
 
-    return { blocked, remaining, lockoutSeconds, source: "redis" };
+    return makeResult(blocked, remaining, windowSeconds);
   } catch {
     return { source: "unavailable" };
   }
 }
 
-/**
- * Solo controllo (senza INCR) — usato prima di eseguire operazioni costose
- * (es. comparePasswords) per non incrementare il contatore su richieste
- * già bloccate.
- */
 export async function peekLoginRedis(
   email: string,
   ip: string,
@@ -197,8 +178,8 @@ export async function peekLoginRedis(
   windowSeconds: number,
 ): Promise<RedisRateLimitResult> {
   try {
-    const keyPair  = KEY_LOGIN(ip, email);
-    const keyEmail = KEY_EMAIL(email);
+    const keyPair         = KEY_LOGIN(ip, email);
+    const keyEmail        = KEY_EMAIL(email);
     const globalThreshold = maxAttempts * 3;
 
     const [pairRaw, emailRaw] = (await redisPipeline([
@@ -209,31 +190,19 @@ export async function peekLoginRedis(
     const pairCount  = pairRaw  ? parseInt(pairRaw,  10) : 0;
     const emailCount = emailRaw ? parseInt(emailRaw, 10) : 0;
 
-    const blocked =
-      pairCount  >= maxAttempts ||
-      emailCount >= globalThreshold;
-
+    const blocked = pairCount >= maxAttempts || emailCount >= globalThreshold;
     const remaining = blocked
       ? 0
-      : Math.min(
-          maxAttempts    - pairCount,
-          globalThreshold - emailCount,
-        );
+      : Math.min(maxAttempts - pairCount, globalThreshold - emailCount);
 
-    return { blocked, remaining, lockoutSeconds: windowSeconds, source: "redis" };
+    return makeResult(blocked, remaining, windowSeconds);
   } catch {
     return { source: "unavailable" };
   }
 }
 
-/**
- * Sblocca un IP da Redis: elimina tutte le chiavi rl:login:{ip}:*
- * tramite SCAN + DEL (Upstash supporta SCAN in REST).
- * Chiamare insieme a unblockIp() DB.
- */
 export async function unblockIpRedis(ip: string): Promise<void> {
   try {
-    // SCAN per trovare tutte le chiavi rl:login:{ip}:*
     let cursor = "0";
     const keysToDelete: string[] = [];
 
@@ -245,7 +214,6 @@ export async function unblockIpRedis(ip: string): Promise<void> {
       keysToDelete.push(...result[1]);
     } while (cursor !== "0");
 
-    // Aggiungi anche la chiave blacklist per questo IP
     keysToDelete.push(KEY_BLACKLIST(ip));
 
     if (keysToDelete.length > 0) {
@@ -260,17 +228,13 @@ export async function unblockIpRedis(ip: string): Promise<void> {
 // Rate limit signup per IP
 // ---------------------------------------------------------------------------
 
-/**
- * Controlla e incrementa il rate limit per il signup.
- * Chiave: rl:signup:{ip} — soglia maxAttempts * 2
- */
 export async function checkAndIncrSignupRedis(
   ip: string,
   maxAttempts: number,
   windowSeconds: number,
 ): Promise<RedisRateLimitResult> {
   try {
-    const key = KEY_SIGNUP(ip);
+    const key             = KEY_SIGNUP(ip);
     const signupThreshold = maxAttempts * 2;
 
     const count = (await redisCmd<number>(["INCR", key])) as number;
@@ -281,7 +245,7 @@ export async function checkAndIncrSignupRedis(
     const blocked   = count >= signupThreshold;
     const remaining = Math.max(0, signupThreshold - count);
 
-    return { blocked, remaining, lockoutSeconds: windowSeconds, source: "redis" };
+    return makeResult(blocked, remaining, windowSeconds);
   } catch {
     return { source: "unavailable" };
   }
