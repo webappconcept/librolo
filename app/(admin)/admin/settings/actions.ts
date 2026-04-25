@@ -257,6 +257,88 @@ export async function testRedisConnection(
 }
 
 // ---------------------------------------------------------------------------
+// Google OAuth
+// ---------------------------------------------------------------------------
+
+export async function saveGoogleOAuthSettings(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  try {
+    const clientId     = ((formData.get("google_client_id")     as string) ?? "").trim();
+    const clientSecret = ((formData.get("google_client_secret") as string) ?? "").trim();
+    const redirectUri  = ((formData.get("google_redirect_uri")  as string) ?? "").trim();
+
+    await updateAppSetting("google_client_id",     clientId     || null);
+    await updateAppSetting("google_client_secret", clientSecret || null);
+    await updateAppSetting("google_redirect_uri",  redirectUri  || null);
+
+    revalidatePath(getAdminPath("settings-google"));
+    return { success: "Credenziali Google OAuth salvate.", timestamp: Date.now() };
+  } catch {
+    return { error: "Errore durante il salvataggio.", timestamp: Date.now() };
+  }
+}
+
+export async function testGoogleOAuthSettings(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  try {
+    const clientId     = ((formData.get("google_client_id")     as string | null) ?? "").trim();
+    const clientSecret = ((formData.get("google_client_secret") as string | null) ?? "").trim();
+    const redirectUri  = ((formData.get("google_redirect_uri")  as string | null) ?? "").trim();
+
+    if (!clientId || !clientSecret || !redirectUri) {
+      return {
+        error: "Compila tutti e tre i campi prima di testare.",
+        timestamp: Date.now(),
+      };
+    }
+
+    // Verifica che il redirect URI sia HTTPS (o localhost per dev)
+    const isLocalhost = redirectUri.startsWith("http://localhost") ||
+                        redirectUri.startsWith("http://127.0.0.1");
+    if (!redirectUri.startsWith("https://") && !isLocalhost) {
+      return {
+        error: "Redirect URI deve iniziare con https:// (o http://localhost per dev).",
+        timestamp: Date.now(),
+      };
+    }
+
+    // Verifica che il Client ID abbia il formato Google corretto
+    if (!clientId.endsWith(".apps.googleusercontent.com")) {
+      return {
+        error: "Client ID non valido: deve terminare con .apps.googleusercontent.com",
+        timestamp: Date.now(),
+      };
+    }
+
+    // Verifica liveness: richiede il discovery document di Google
+    const discovery = await fetch(
+      "https://accounts.google.com/.well-known/openid-configuration",
+      { cache: "no-store" },
+    );
+    if (!discovery.ok) {
+      return {
+        error: "Impossibile contattare i server Google. Riprova tra qualche istante.",
+        timestamp: Date.now(),
+      };
+    }
+
+    return {
+      success: "Formato credenziali valido e server Google raggiungibili.",
+      timestamp: Date.now(),
+    };
+  } catch {
+    return {
+      error: "Errore durante la verifica. Controlla la connessione.",
+      timestamp: Date.now(),
+    };
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Blocked Domains
 // ---------------------------------------------------------------------------
 
@@ -342,7 +424,6 @@ export async function addBlockedUsernameAction(
       .values({ username: clean, isPattern, createdBy })
       .onConflictDoNothing();
 
-    // Bloom sync solo per voci esatte (i pattern non hanno senso nel bloom)
     if (!isPattern) {
       try {
         await addUsernameToBloom(clean);
@@ -411,7 +492,6 @@ export async function bulkImportBlockedUsernamesAction(
 
     await db.insert(blockedUsernames).values(valid).onConflictDoNothing();
 
-    // Bloom sync solo per voci esatte
     const exactEntries = valid.filter((e) => !e.isPattern).map((e) => e.username);
     if (exactEntries.length > 0) {
       try {
