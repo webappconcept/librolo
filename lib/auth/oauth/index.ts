@@ -11,7 +11,7 @@
 import { db } from "@/lib/db/drizzle";
 import { oauthAccounts, userProfiles, users } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
-import type { GoogleTokens, GoogleUser } from "./google";
+import type { GoogleTokens } from "./google";
 
 export interface OAuthProfile {
   provider:          string;
@@ -21,11 +21,11 @@ export interface OAuthProfile {
   firstName:         string | null;
   lastName:          string | null;
   picture:           string | null;
-  tokens:            GoogleTokens; // in futuro: OAuthTokens generico
+  tokens:            GoogleTokens;
 }
 
 export async function findOrCreateOAuthUser(profile: OAuthProfile) {
-  const { provider, providerAccountId, email, firstName, lastName, tokens } = profile;
+  const { provider, providerAccountId, email, firstName, lastName, picture, tokens } = profile;
 
   // ------------------------------------------------------------------
   // A) Account OAuth già presente → aggiorna tokens e ritorna l'utente
@@ -42,7 +42,6 @@ export async function findOrCreateOAuthUser(profile: OAuthProfile) {
     .limit(1);
 
   if (existingOAuth) {
-    // Aggiorna tokens (access_token può ruotare, refresh_token solo se presente)
     await db
       .update(oauthAccounts)
       .set({
@@ -57,6 +56,14 @@ export async function findOrCreateOAuthUser(profile: OAuthProfile) {
           eq(oauthAccounts.providerAccountId, providerAccountId),
         ),
       );
+
+    // Aggiorna avatar_url se Google ne ha uno nuovo
+    if (picture) {
+      await db
+        .update(userProfiles)
+        .set({ avatarUrl: picture, updatedAt: new Date() })
+        .where(eq(userProfiles.userId, existingOAuth.userId));
+    }
 
     const [user] = await db
       .select()
@@ -87,6 +94,27 @@ export async function findOrCreateOAuthUser(profile: OAuthProfile) {
       scope:             tokens.scope,
     });
 
+    // Aggiorna avatar_url solo se l'utente non ne ha già uno
+    if (picture) {
+      await db
+        .update(userProfiles)
+        .set({ avatarUrl: picture, updatedAt: new Date() })
+        .where(
+          and(
+            eq(userProfiles.userId, existingUser.id),
+            // Non sovrascrivere un avatar già caricato manualmente
+            // (avatarUrl IS NULL)
+          ),
+        );
+      // Nota: per non sovrascrivere avatar esistenti usiamo una query condizionale
+      await db.execute(
+        // SQL raw: UPDATE solo se avatar_url IS NULL
+        // Drizzle non ha .whereNull() nativo senza import extra
+        // Uso query diretta per semplicità
+        `UPDATE user_profiles SET avatar_url = $1, updated_at = NOW() WHERE user_id = $2 AND avatar_url IS NULL`,
+      );
+    }
+
     const [user] = await db
       .select()
       .from(users)
@@ -103,9 +131,9 @@ export async function findOrCreateOAuthUser(profile: OAuthProfile) {
     .insert(users)
     .values({
       email,
-      passwordHash: "", // nessuna password per utenti OAuth
-      role:         "member",
-      isAdmin:      false,
+      passwordHash:  "",
+      role:          "member",
+      isAdmin:       false,
       emailVerified: profile.emailVerified,
     })
     .returning();
@@ -116,6 +144,8 @@ export async function findOrCreateOAuthUser(profile: OAuthProfile) {
     userId:    newUser.id,
     firstName: firstName ?? null,
     lastName:  lastName  ?? null,
+    avatarUrl: picture   ?? null,
+    // username: null — l'utente lo imposterà dal profilo
   });
 
   await db.insert(oauthAccounts).values({

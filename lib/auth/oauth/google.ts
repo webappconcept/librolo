@@ -2,12 +2,17 @@
 //
 // Flow Google OAuth 2.0 + PKCE (senza dipendenze esterne).
 //
+// Le credenziali vengono lette nell'ordine:
+//   1. app_settings nel DB  (configurabili dall'admin senza rideploy)
+//   2. variabili d'ambiente (fallback per ambienti CI/dev senza DB)
+//
 // Flow:
-//   1. buildGoogleAuthUrl()  → genera state + code_verifier, li salva in cookie,
-//                              ritorna l'URL di redirect verso Google
-//   2. handleGoogleCallback() → verifica state, scambia code → tokens,
+//   1. buildGoogleAuthUrl()   → genera state + code_verifier, li salva in
+//                               cookie httpOnly, ritorna l'URL di redirect
+//   2. handleGoogleCallback() → verifica state + PKCE, scambia code → tokens,
 //                               chiama userinfo, ritorna GoogleUser
 
+import { getAppSettings } from "@/lib/db/settings-queries";
 import { cookies } from "next/headers";
 import crypto from "node:crypto";
 
@@ -18,18 +23,25 @@ import crypto from "node:crypto";
 const GOOGLE_AUTH_URL  = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GOOGLE_USER_URL  = "https://www.googleapis.com/oauth2/v3/userinfo";
-const SCOPES = "openid email profile";
+const SCOPES           = "openid email profile";
 
-function getConfig() {
-  const clientId     = process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  const redirectUri  = process.env.GOOGLE_REDIRECT_URI;
+// ---------------------------------------------------------------------------
+// Config — DB ha priorità, env come fallback
+// ---------------------------------------------------------------------------
+
+async function getConfig() {
+  const settings = await getAppSettings();
+
+  const clientId     = settings.google_client_id     ?? process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = settings.google_client_secret ?? process.env.GOOGLE_CLIENT_SECRET;
+  const redirectUri  = settings.google_redirect_uri  ?? process.env.GOOGLE_REDIRECT_URI;
 
   if (!clientId || !clientSecret || !redirectUri) {
     throw new Error(
-      "[google-oauth] Missing env: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI",
+      "[google-oauth] Credenziali mancanti. Configurale in Admin → Settings → Google OAuth.",
     );
   }
+
   return { clientId, clientSecret, redirectUri };
 }
 
@@ -50,13 +62,12 @@ function generateCodeChallenge(verifier: string): string {
 // ---------------------------------------------------------------------------
 
 export async function buildGoogleAuthUrl(): Promise<string> {
-  const { clientId, redirectUri } = getConfig();
+  const { clientId, redirectUri } = await getConfig();
 
-  const state        = crypto.randomBytes(24).toString("base64url");
-  const codeVerifier = generateCodeVerifier();
+  const state         = crypto.randomBytes(24).toString("base64url");
+  const codeVerifier  = generateCodeVerifier();
   const codeChallenge = generateCodeChallenge(codeVerifier);
 
-  // Salva state e code_verifier in cookie httpOnly (5 minuti)
   const jar = await cookies();
   const cookieOpts = {
     httpOnly: true,
@@ -76,7 +87,7 @@ export async function buildGoogleAuthUrl(): Promise<string> {
     state,
     code_challenge:        codeChallenge,
     code_challenge_method: "S256",
-    access_type:           "offline", // per ottenere refresh_token
+    access_type:           "offline",
     prompt:                "select_account",
   });
 
@@ -88,7 +99,7 @@ export async function buildGoogleAuthUrl(): Promise<string> {
 // ---------------------------------------------------------------------------
 
 export interface GoogleUser {
-  sub:            string; // Google ID univoco
+  sub:            string;
   email:          string;
   email_verified: boolean;
   name:           string;
@@ -108,9 +119,8 @@ export async function handleGoogleCallback(
   code: string,
   stateParam: string,
 ): Promise<{ user: GoogleUser; tokens: GoogleTokens }> {
-  const { clientId, clientSecret, redirectUri } = getConfig();
+  const { clientId, clientSecret, redirectUri } = await getConfig();
 
-  // Leggi e valida state + code_verifier dai cookie
   const jar          = await cookies();
   const savedState   = jar.get("oauth_state")?.value;
   const codeVerifier = jar.get("oauth_code_verifier")?.value;
@@ -126,7 +136,6 @@ export async function handleGoogleCallback(
     throw new Error("[google-oauth] Missing code_verifier cookie");
   }
 
-  // Scambia authorization code → access_token + refresh_token
   const tokenRes = await fetch(GOOGLE_TOKEN_URL, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -162,7 +171,6 @@ export async function handleGoogleCallback(
     scope: tokenData.scope,
   };
 
-  // Chiama userinfo per ottenere i dati dell'utente
   const userRes = await fetch(GOOGLE_USER_URL, {
     headers: { Authorization: `Bearer ${tokens.access_token}` },
   });

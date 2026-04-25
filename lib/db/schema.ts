@@ -41,6 +41,8 @@ export const userProfiles = pgTable("user_profiles", {
   firstName: varchar("first_name", { length: 100 }),
   lastName: varchar("last_name", { length: 100 }),
   username: varchar("username", { length: 50 }).unique(),
+  // Avatar: URL immagine profilo (caricata dall'utente o importata da OAuth)
+  avatarUrl: text("avatar_url"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -408,6 +410,7 @@ export type UserWithProfile = User & {
   firstName: string | null;
   lastName: string | null;
   username: string | null;
+  avatarUrl: string | null;
   stripeCustomerId: string | null;
   stripeSubscriptionId: string | null;
   stripeProductId: string | null;
