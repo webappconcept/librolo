@@ -16,7 +16,12 @@ import {
   isUniqueConstraintError,
   resolveConflictField,
 } from "@/lib/auth/race-condition";
-import { checkRateLimit, recordLoginAttempt } from "@/lib/auth/rate-limit";
+import {
+  checkRateLimit,
+  checkSignupRateLimit,
+  recordLoginAttempt,
+  recordSignupAttempt,
+} from "@/lib/auth/rate-limit";
 import { comparePasswords, hashPassword, setSession } from "@/lib/auth/session";
 import {
   addEmailToBloom,
@@ -88,12 +93,24 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
     .where(eq(users.email, email))
     .limit(1);
 
+  // [FIX 2 - HIGH] Timing attack prevention: se l'utente non esiste eseguiamo
+  // comunque comparePasswords con un hash dummy per rendere il tempo di
+  // risposta costante e impedire la user enumeration via timing.
   if (!foundUser) {
+    await comparePasswords(
+      password,
+      "$2b$12$dummyhashXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+    );
     await recordLoginAttempt(email, ip, false);
     return { error: "Email o password errate, riprova.", email, password };
   }
 
   if (foundUser.bannedAt !== null) {
+    // Risposta costante anche per account bannati (no timing leak)
+    await comparePasswords(
+      password,
+      "$2b$12$dummyhashXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+    );
     return {
       error: "Il tuo account è stato sospeso. Contatta il supporto.",
       email,
@@ -188,6 +205,18 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
     headersList.get("x-real-ip") ??
     "unknown";
 
+  // [FIX 1 - HIGH] Rate limit dedicato per sign-up per IP.
+  // Previene spam di registrazioni e abuso di Resend (ogni registrazione
+  // invia un'email di verifica). Soglia = maxAttempts * 2 (default: 10).
+  const signupCheck = await checkSignupRateLimit(ip);
+  if (signupCheck.blocked) {
+    return {
+      error: "Troppi tentativi di registrazione. Riprova tra qualche minuto.",
+      email,
+      password,
+    };
+  }
+
   if (await isIpBlacklisted(ip)) {
     return { error: "Accesso non consentito.", email, password };
   }
@@ -212,6 +241,7 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
   await ensureBloomFilter();
   const emailAvailability = await checkEmailAvailability(email);
   if (!emailAvailability.available) {
+    await recordSignupAttempt(ip);
     return { error: "Questa email è già stata registrata", email, password };
   }
 
@@ -222,6 +252,7 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
     .limit(1);
 
   if (existingUsername.length > 0) {
+    await recordSignupAttempt(ip);
     return { error: "Questo username è già in uso.", email, password };
   }
 
@@ -263,6 +294,7 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
     createdUser = inserted;
   } catch (err: unknown) {
     if (isUniqueConstraintError(err)) {
+      await recordSignupAttempt(ip);
       return {
         error:
           "Questa email è appena stata registrata da un altro utente. Prova con un'altra.",
@@ -283,6 +315,7 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
   } catch (err: unknown) {
     if (isUniqueConstraintError(err)) {
       await db.delete(users).where(eq(users.id, createdUser.id));
+      await recordSignupAttempt(ip);
       return {
         error:
           "Questo username è appena stato scelto da un altro utente. Scegline un altro.",
