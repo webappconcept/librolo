@@ -4,7 +4,7 @@
 // isIpBlacklisted usa Redis come L1 cache (miss → fallback DB).
 
 import { db } from "@/lib/db/drizzle";
-import { domainBlacklist, ipBlacklist, usernameBlacklist } from "@/lib/db/schema";
+import { blockedUsernames, disposableDomains, ipBlacklist } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { isIpBlacklistedRedis } from "./rate-limit-redis";
 
@@ -32,9 +32,9 @@ export async function isDomainBlacklisted(email: string): Promise<boolean> {
   if (!domain) return false;
 
   const [row] = await db
-    .select({ id: domainBlacklist.id })
-    .from(domainBlacklist)
-    .where(eq(domainBlacklist.domain, domain))
+    .select({ id: disposableDomains.id })
+    .from(disposableDomains)
+    .where(eq(disposableDomains.domain, domain))
     .limit(1);
 
   return row !== undefined;
@@ -44,9 +44,9 @@ export async function isUsernameBlacklisted(username: string): Promise<boolean> 
   const normalized = username.toLowerCase();
 
   const [row] = await db
-    .select({ id: usernameBlacklist.id })
-    .from(usernameBlacklist)
-    .where(eq(usernameBlacklist.username, normalized))
+    .select({ id: blockedUsernames.id })
+    .from(blockedUsernames)
+    .where(eq(blockedUsernames.username, normalized))
     .limit(1);
 
   return row !== undefined;
