@@ -103,7 +103,7 @@ export async function duplicateTemplateAction(formData: FormData) {
   const user = await getUser();
   await logContentActivity(
     ActivityType.TEMPLATE_CREATED,
-    `duplicato da id: ${id}`,
+    `duplicated from id: ${id}`,
     user?.id ?? null,
   );
 }

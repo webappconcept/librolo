@@ -23,8 +23,7 @@ export default function PlaceholderHint({
       style={{
         border: "1px solid var(--admin-card-border)",
         background: "var(--admin-page-bg)",
-      }}
-    >
+      }}>
       {/* Intestazione collassabile */}
       <button
         type="button"
@@ -36,11 +35,10 @@ export default function PlaceholderHint({
         }
         onMouseLeave={(e) =>
           (e.currentTarget.style.color = "var(--admin-text-muted)")
-        }
-      >
+        }>
         <span className="flex items-center gap-1.5">
           <HelpCircle size={13} />
-          Placeholder disponibili
+          Available Placeholders
         </span>
         <ChevronDown
           size={13}
@@ -55,13 +53,12 @@ export default function PlaceholderHint({
       {open && (
         <div
           className="px-3 pb-3 pt-1 flex flex-wrap gap-2"
-          style={{ borderTop: "1px solid var(--admin-divider)" }}
-        >
+          style={{ borderTop: "1px solid var(--admin-divider)" }}>
           {tokens.map(([key, meta]) => (
             <button
               key={key}
               type="button"
-              title={`Clicca per inserire nel testo\n${meta.description}`}
+              title={`Click for insert into the text\n${meta.description}`}
               onClick={() => onInsert?.(`{${key}}`)}
               className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono transition-colors"
               style={{
@@ -74,15 +71,14 @@ export default function PlaceholderHint({
               onMouseEnter={(e) =>
                 (e.currentTarget.style.filter = "brightness(1.15)")
               }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.filter = "none")
-              }
-            >
+              onMouseLeave={(e) => (e.currentTarget.style.filter = "none")}>
               {`{${key}}`}
               <span
                 className="font-sans not-italic ml-1"
-                style={{ color: "var(--admin-text-faint)", fontSize: "0.7rem" }}
-              >
+                style={{
+                  color: "var(--admin-text-faint)",
+                  fontSize: "0.7rem",
+                }}>
                 {meta.description}
               </span>
             </button>
