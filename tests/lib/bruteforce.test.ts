@@ -64,8 +64,13 @@ vi.mock('@/lib/db/drizzle', () => ({
 
 vi.mock('@/lib/db/settings-queries', () => ({
   getAppSettings: vi.fn().mockResolvedValue({
-    bf_max_attempts: '3',
-    bf_window_minutes: '10',
+    // Granular rate-limit settings (aligned with getBruteforceConfig)
+    bf_signin_max:      '3',
+    bf_signup_max:      '10',
+    bf_check_max:       '30',
+    bf_check_window:    '5',
+    // Common
+    bf_window_minutes:  '10',
     bf_lockout_minutes: '20',
     bf_alert_threshold: '15',
   }),
@@ -89,7 +94,7 @@ beforeEach(() => {
 describe('rate-limit.ts -- checkRateLimit (soglie dal DB)', () => {
   it('blocca l\'IP quando i tentativi superano maxAttempts dal DB', async () => {
     // Prima call: blacklist vuota
-    // Seconda call: count tentativi = 4 > maxAttempts = 3
+    // Seconda call: count tentativi = 4 > signinMax = 3
     mockSelectFn
       .mockReturnValueOnce(buildSelectChain([]))
       .mockReturnValueOnce(buildSelectChain([{ total: 4 }]))
@@ -198,45 +203,41 @@ describe('rate-limit.ts -- azioni admin IP', () => {
 // ---------------------------------------------------------------------------
 describe('Bruteforce config — validazione Zod', () => {
   const { z } = require('zod')
+
+  // Schema aggiornato con i 4 campi granulari + 3 comuni
   const ConfigSchema = z.object({
-    bf_max_attempts: z.coerce.number().int().min(1).max(100),
-    bf_window_minutes: z.coerce.number().int().min(1).max(1440),
+    bf_signin_max:      z.coerce.number().int().min(1).max(100),
+    bf_signup_max:      z.coerce.number().int().min(1).max(100),
+    bf_check_max:       z.coerce.number().int().min(1).max(500),
+    bf_check_window:    z.coerce.number().int().min(1).max(60),
+    bf_window_minutes:  z.coerce.number().int().min(1).max(1440),
     bf_lockout_minutes: z.coerce.number().int().min(1).max(10080),
     bf_alert_threshold: z.coerce.number().int().min(1).max(1000),
   })
 
+  const validPayload = {
+    bf_signin_max: '5',   bf_signup_max: '10',
+    bf_check_max: '30',   bf_check_window: '5',
+    bf_window_minutes: '15', bf_lockout_minutes: '30', bf_alert_threshold: '20',
+  }
+
   it('accetta valori validi', () => {
-    expect(ConfigSchema.safeParse({
-      bf_max_attempts: '5', bf_window_minutes: '15',
-      bf_lockout_minutes: '30', bf_alert_threshold: '20',
-    }).success).toBe(true)
+    expect(ConfigSchema.safeParse(validPayload).success).toBe(true)
   })
 
-  it('rifiuta bf_max_attempts = 0', () => {
-    expect(ConfigSchema.safeParse({
-      bf_max_attempts: '0', bf_window_minutes: '15',
-      bf_lockout_minutes: '30', bf_alert_threshold: '20',
-    }).success).toBe(false)
+  it('rifiuta bf_signin_max = 0', () => {
+    expect(ConfigSchema.safeParse({ ...validPayload, bf_signin_max: '0' }).success).toBe(false)
   })
 
-  it('rifiuta bf_max_attempts > 100', () => {
-    expect(ConfigSchema.safeParse({
-      bf_max_attempts: '101', bf_window_minutes: '15',
-      bf_lockout_minutes: '30', bf_alert_threshold: '20',
-    }).success).toBe(false)
+  it('rifiuta bf_signin_max > 100', () => {
+    expect(ConfigSchema.safeParse({ ...validPayload, bf_signin_max: '101' }).success).toBe(false)
   })
 
   it('rifiuta bf_window_minutes > 1440 (più di 24h)', () => {
-    expect(ConfigSchema.safeParse({
-      bf_max_attempts: '5', bf_window_minutes: '1441',
-      bf_lockout_minutes: '30', bf_alert_threshold: '20',
-    }).success).toBe(false)
+    expect(ConfigSchema.safeParse({ ...validPayload, bf_window_minutes: '1441' }).success).toBe(false)
   })
 
   it('rifiuta bf_lockout_minutes > 10080 (più di 7 giorni)', () => {
-    expect(ConfigSchema.safeParse({
-      bf_max_attempts: '5', bf_window_minutes: '15',
-      bf_lockout_minutes: '10081', bf_alert_threshold: '20',
-    }).success).toBe(false)
+    expect(ConfigSchema.safeParse({ ...validPayload, bf_lockout_minutes: '10081' }).success).toBe(false)
   })
 })
