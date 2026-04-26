@@ -2,13 +2,15 @@
 import type { Metadata } from "next";
 import { requireAdminPage } from "@/lib/rbac/guards";
 import { TestsDashboard } from "./_components/tests-dashboard";
-import { getHealthChecks } from "./actions";
+import { getHealthChecks, getVitestReport } from "./actions";
 
-export const metadata: Metadata = { title: "Test & Stato sistema" };
+export const metadata: Metadata = { title: "Tests & System Status" };
 
 export default async function AdminTestsPage() {
   await requireAdminPage();
-  const health = await getHealthChecks();
-
-  return <TestsDashboard health={health} />;
+  const [health, vitestReport] = await Promise.all([
+    getHealthChecks(),
+    getVitestReport(),
+  ]);
+  return <TestsDashboard health={health} vitestReport={vitestReport} />;
 }
