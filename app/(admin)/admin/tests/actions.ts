@@ -1,18 +1,13 @@
 "use server";
 // app/(admin)/admin/tests/actions.ts
 //
-// Infrastructure health checks (read-only) + Vitest report reader.
-// Called by the Server Component page.tsx — no client state required.
+// Health checks infrastrutturali — read-only, nessun side effect.
+// Usati dal Server Component page.tsx per alimentare il dashboard.
 import { requireAdminPage } from "@/lib/rbac/guards";
 import { db } from "@/lib/db/drizzle";
 import { getAppSettings } from "@/lib/db/settings-queries";
 import { sql } from "drizzle-orm";
-import fs from "node:fs/promises";
-import path from "node:path";
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
 export type HealthStatus = "ok" | "degraded" | "error" | "unknown";
 
 export type ServiceHealth = {
@@ -26,38 +21,9 @@ export type HealthChecks = {
   supabase: ServiceHealth;
   redis: ServiceHealth;
   resend: ServiceHealth;
-  google: ServiceHealth;
   checkedAt: string;
 };
 
-// Vitest JSON reporter shape (subset we actually use)
-export type VitestTestResult = {
-  name: string;
-  status: "passed" | "failed" | "skipped" | "pending";
-  duration?: number;
-  failureMessages?: string[];
-};
-
-export type VitestSuite = {
-  name: string;        // file path, e.g. "tests/app/signup-action-e2e.test.ts"
-  status: "passed" | "failed" | "skipped";
-  duration: number;
-  tests: VitestTestResult[];
-};
-
-export type VitestReport = {
-  suites: VitestSuite[];
-  numPassedTests: number;
-  numFailedTests: number;
-  numPendingTests: number;
-  numTotalTests: number;
-  startTime: number;   // epoch ms
-  success: boolean;
-};
-
-// ---------------------------------------------------------------------------
-// Health checks
-// ---------------------------------------------------------------------------
 async function pingSupabase(): Promise<ServiceHealth> {
   const start = Date.now();
   try {
@@ -76,22 +42,29 @@ async function pingRedis(): Promise<ServiceHealth> {
     const token = settings.upstash_redis_rest_token;
 
     if (!url || !token) {
-      return { name: "Upstash Redis", status: "unknown", latencyMs: null, detail: "Credentials not configured" };
+      return { name: "Upstash Redis", status: "unknown", latencyMs: null, detail: "Credenziali non configurate" };
     }
 
     const res = await fetch(`${url}/ping`, {
+      method: "GET",
       headers: { Authorization: `Bearer ${token}` },
       signal: AbortSignal.timeout(4000),
     });
+
     const latencyMs = Date.now() - start;
-    if (!res.ok) return { name: "Upstash Redis", status: "error", latencyMs, detail: `HTTP ${res.status}` };
+
+    if (!res.ok) {
+      return { name: "Upstash Redis", status: "error", latencyMs, detail: `HTTP ${res.status}` };
+    }
+
     const body = await res.json() as { result?: string };
     const pong = body?.result === "PONG";
+
     return {
       name: "Upstash Redis",
       status: pong ? "ok" : "degraded",
       latencyMs,
-      detail: pong ? undefined : `Unexpected response: ${JSON.stringify(body)}`,
+      detail: pong ? undefined : `Risposta inattesa: ${JSON.stringify(body)}`,
     };
   } catch (e) {
     return { name: "Upstash Redis", status: "error", latencyMs: Date.now() - start, detail: String(e) };
@@ -101,114 +74,41 @@ async function pingRedis(): Promise<ServiceHealth> {
 async function pingResend(): Promise<ServiceHealth> {
   const start = Date.now();
   try {
+    // Resend ha un endpoint /domains read-only che non consuma credito
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) {
-      return { name: "Resend", status: "unknown", latencyMs: null, detail: "RESEND_API_KEY not set" };
+      return { name: "Resend", status: "unknown", latencyMs: null, detail: "RESEND_API_KEY non impostata" };
     }
+
     const res = await fetch("https://api.resend.com/domains", {
       headers: { Authorization: `Bearer ${apiKey}` },
       signal: AbortSignal.timeout(4000),
     });
+
     const latencyMs = Date.now() - start;
+
     if (res.status === 200) return { name: "Resend", status: "ok", latencyMs };
-    if (res.status === 401) return { name: "Resend", status: "error", latencyMs, detail: "Invalid API key" };
+    if (res.status === 401) return { name: "Resend", status: "error", latencyMs, detail: "API key non valida" };
+
     return { name: "Resend", status: "degraded", latencyMs, detail: `HTTP ${res.status}` };
   } catch (e) {
     return { name: "Resend", status: "error", latencyMs: Date.now() - start, detail: String(e) };
   }
 }
 
-async function pingGoogle(): Promise<ServiceHealth> {
-  const start = Date.now();
-  try {
-    const settings = await getAppSettings();
-    const clientId = settings.google_client_id;
-    const clientSecret = settings.google_client_secret;
-
-    if (!clientId || !clientSecret) {
-      return { name: "Google OAuth", status: "unknown", latencyMs: null, detail: "Credentials not configured in settings" };
-    }
-
-    // Validate credentials by hitting the token-info endpoint with a
-    // deliberately invalid token — a 400 means Google is reachable and the
-    // credentials are recognised; a 401/403 indicates a misconfiguration.
-    const res = await fetch("https://oauth2.googleapis.com/tokeninfo?id_token=probe", {
-      signal: AbortSignal.timeout(4000),
-    });
-    const latencyMs = Date.now() - start;
-
-    // 400 = invalid token (expected — it means the endpoint is live)
-    if (res.status === 400) {
-      return { name: "Google OAuth", status: "ok", latencyMs, detail: "Endpoint reachable · credentials present" };
-    }
-    return { name: "Google OAuth", status: "degraded", latencyMs, detail: `Unexpected HTTP ${res.status}` };
-  } catch (e) {
-    return { name: "Google OAuth", status: "error", latencyMs: Date.now() - start, detail: String(e) };
-  }
-}
-
 export async function getHealthChecks(): Promise<HealthChecks> {
   await requireAdminPage();
-  const [supabase, redis, resend, google] = await Promise.all([
+
+  const [supabase, redis, resend] = await Promise.all([
     pingSupabase(),
     pingRedis(),
     pingResend(),
-    pingGoogle(),
   ]);
-  return { supabase, redis, resend, google, checkedAt: new Date().toISOString() };
-}
 
-// ---------------------------------------------------------------------------
-// Vitest report reader
-// ---------------------------------------------------------------------------
-const REPORT_PATH = path.join(process.cwd(), "test-reports", "vitest-results.json");
-
-export async function getVitestReport(): Promise<VitestReport | null> {
-  await requireAdminPage();
-  try {
-    const raw = await fs.readFile(REPORT_PATH, "utf-8");
-    const json = JSON.parse(raw);
-
-    // Normalise the Vitest JSON reporter output into our VitestReport shape.
-    // Vitest JSON format: { testResults: Array<{ testFilePath, status, testResults: [...] }>, ... }
-    const suites: VitestSuite[] = (json.testResults ?? []).map((file: {
-      testFilePath: string;
-      status: string;
-      perfStats?: { start: number; end: number };
-      testResults: Array<{
-        fullName?: string;
-        title?: string;
-        status: string;
-        duration?: number;
-        failureMessages?: string[];
-      }>;
-    }) => ({
-      name: file.testFilePath
-        ? file.testFilePath.replace(process.cwd() + "/", "")
-        : "unknown",
-      status: file.status as VitestSuite["status"],
-      duration: file.perfStats
-        ? file.perfStats.end - file.perfStats.start
-        : 0,
-      tests: (file.testResults ?? []).map((t) => ({
-        name: t.fullName ?? t.title ?? "(unnamed)",
-        status: t.status as VitestTestResult["status"],
-        duration: t.duration,
-        failureMessages: t.failureMessages,
-      })),
-    }));
-
-    return {
-      suites,
-      numPassedTests: json.numPassedTests ?? 0,
-      numFailedTests: json.numFailedTests ?? 0,
-      numPendingTests: json.numPendingTests ?? 0,
-      numTotalTests: json.numTotalTests ?? 0,
-      startTime: json.startTime ?? 0,
-      success: json.success ?? false,
-    };
-  } catch {
-    // File not found (first deploy, no CI run yet) or parse error → return null
-    return null;
-  }
+  return {
+    supabase,
+    redis,
+    resend,
+    checkedAt: new Date().toISOString(),
+  };
 }
