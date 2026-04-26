@@ -13,9 +13,17 @@ const BLOOM_KEY_USERNAMES = "bloom:usernames";
 const BLOOM_M = 200_000; // bit array size
 const BLOOM_K = 7; // number of hash functions
 
-// ─── Redis REST client ────────────────────────────────────────────────────
-async function getRedisConfig() {
-  // Prima prova il DB (configurazione admin)
+// ─── Redis config singleton ────────────────────────────────────────────────
+// [FIX 1] Cache delle credenziali Redis in memoria di modulo.
+// Evita una query DB a getAppSettings() ad ogni singola chiamata a
+// redisPipeline / redisCommand, eliminando 300-600ms di latenza accumulata
+// per ogni registrazione (la cache vive per tutta la durata del processo warm).
+type RedisConfig = { url: string; token: string };
+let _redisConfigCache: RedisConfig | null = null;
+
+async function getRedisConfig(): Promise<RedisConfig> {
+  if (_redisConfigCache) return _redisConfigCache;
+
   const settings = await getAppSettings();
   const url = settings.upstash_redis_rest_url;
   const token = settings.upstash_redis_rest_token;
@@ -25,9 +33,21 @@ async function getRedisConfig() {
       "Missing Upstash Redis credentials. Configure them in Admin → Redis or set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN in .env",
     );
   }
-  return { url, token };
+
+  _redisConfigCache = { url, token };
+  return _redisConfigCache;
 }
 
+/**
+ * Invalida la cache delle credenziali Redis.
+ * Chiamare dopo aver aggiornato url/token nel pannello admin,
+ * così la prossima richiesta rileggerà le credenziali dal DB.
+ */
+export function invalidateRedisConfigCache(): void {
+  _redisConfigCache = null;
+}
+
+// ─── Redis REST client ────────────────────────────────────────────────────
 async function redisCommand<T = unknown>(
   command: (string | number)[],
 ): Promise<T> {
@@ -52,6 +72,7 @@ async function redisCommand<T = unknown>(
 async function redisPipeline(
   commands: (string | number)[][],
 ): Promise<unknown[]> {
+  // [FIX 1] getRedisConfig() usa la cache in memoria → nessuna query DB extra
   const { url, token } = await getRedisConfig();
   const res = await fetch(`${url}/pipeline`, {
     method: "POST",
@@ -81,9 +102,9 @@ function hashEmail(email: string, seed: number): number {
   return Math.abs(h);
 }
 
-function getBitPositions(email: string): number[] {
-  const h1 = hashEmail(email, 0x811c9dc5);
-  const h2 = hashEmail(email, 0xc4ceb9fe);
+function getBitPositions(value: string): number[] {
+  const h1 = hashEmail(value, 0x811c9dc5);
+  const h2 = hashEmail(value, 0xc4ceb9fe);
   const positions: number[] = [];
   for (let i = 0; i < BLOOM_K; i++) {
     positions.push((h1 + i * h2) % BLOOM_M);
@@ -143,9 +164,11 @@ export async function addEmailsBulkToBloom(emails: string[]): Promise<void> {
  * Checks if an email is possibly registered.
  *
  * Flow:
- * 1. k GETBIT commands via pipeline (O(k), sub-millisecond)
+ * 1. k GETBIT commands via pipeline (O(k), sub-millisecond on Redis side)
  * 2. If ALL bits = 1 → possibly present → confirm via DB (eliminate false positives)
  * 3. If ANY bit = 0 → certainly absent → skip DB
+ *
+ * [FIX 1] getRedisConfig() usa la cache → nessuna query DB per le credenziali
  */
 export async function checkEmailAvailability(
   email: string,
