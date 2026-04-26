@@ -31,6 +31,11 @@ const passwordRules = [
     label: "Numero",
     test: (p: string) => /[0-9]/.test(p),
   },
+  {
+    id: "special",
+    label: "Carattere speciale",
+    test: (p: string) => /[^a-zA-Z0-9]/.test(p),
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -126,6 +131,8 @@ export function Login({
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [acceptPrivacy, setAcceptPrivacy] = useState(false);
   const [acceptMarketing, setAcceptMarketing] = useState(false);
+  // Traccia se l'utente ha già tentato il submit (per mostrare errori checkbox)
+  const [submitAttempted, setSubmitAttempted] = useState(false);
 
   // Messaggio errore OAuth da searchParams
   const oauthError = searchParams.get("error");
@@ -205,6 +212,27 @@ export function Login({
     }
   };
 
+  // Guard client-side: mostra errori inline invece di bloccare il bottone
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    if (mode !== "signup") return; // signin: nessun guard aggiuntivo
+
+    setSubmitAttempted(true);
+
+    const allPasswordRulesPassed = passwordRules.every((rule) =>
+      rule.test(password),
+    );
+
+    if (
+      emailError ||
+      usernameError ||
+      !allPasswordRulesPassed ||
+      !acceptTerms ||
+      !acceptPrivacy
+    ) {
+      e.preventDefault();
+    }
+  };
+
   return (
     <div className="min-h-dvh flex items-center justify-center px-4 py-12 bg-brand-bg">
       <div className="w-full max-w-md">
@@ -265,7 +293,7 @@ export function Login({
               <OrDivider />
 
               {/* ── Form email + password ── */}
-              <form className="space-y-5" action={formAction}>
+              <form className="space-y-5" action={formAction} onSubmit={handleSubmit}>
                 <input type="hidden" name="redirect" value={redirect || ""} />
                 <input type="hidden" name="priceId" value={priceId || ""} />
 
@@ -505,7 +533,6 @@ export function Login({
                       <input
                         type="checkbox"
                         name="acceptTerms"
-                        required
                         checked={acceptTerms}
                         onChange={(e) => setAcceptTerms(e.target.checked)}
                         className="mt-0.5 h-4 w-4 shrink-0 rounded border-brand-border accent-brand-accent cursor-pointer"
@@ -521,12 +548,16 @@ export function Login({
                         d&apos;uso
                       </span>
                     </label>
+                    {submitAttempted && !acceptTerms && (
+                      <p className="text-xs flex items-center gap-1 text-brand-destructive -mt-2">
+                        <X className="h-3 w-3" /> Devi accettare i Termini e Condizioni
+                      </p>
+                    )}
 
                     <label className="flex items-start gap-3 cursor-pointer group">
                       <input
                         type="checkbox"
                         name="acceptPrivacy"
-                        required
                         checked={acceptPrivacy}
                         onChange={(e) => setAcceptPrivacy(e.target.checked)}
                         className="mt-0.5 h-4 w-4 shrink-0 rounded border-brand-border accent-brand-accent cursor-pointer"
@@ -541,6 +572,11 @@ export function Login({
                         </Link>
                       </span>
                     </label>
+                    {submitAttempted && !acceptPrivacy && (
+                      <p className="text-xs flex items-center gap-1 text-brand-destructive -mt-2">
+                        <X className="h-3 w-3" /> Devi accettare la Privacy Policy
+                      </p>
+                    )}
 
                     <label className="flex items-start gap-3 cursor-pointer group">
                       <input
@@ -571,15 +607,10 @@ export function Login({
                   </div>
                 )}
 
+                {/* Il bottone è sempre cliccabile: solo pending/checking bloccano */}
                 <Button
                   type="submit"
-                  disabled={
-                    pending ||
-                    checkingEmail ||
-                    checkingUsername ||
-                    !!emailError ||
-                    (mode === "signup" && (!acceptTerms || !acceptPrivacy))
-                  }
+                  disabled={pending || checkingEmail || checkingUsername}
                   className="w-full">
                   {pending ? (
                     <>
