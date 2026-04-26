@@ -14,8 +14,11 @@ import type { ipBlacklist } from "@/lib/db/schema";
 type BlacklistRow = InferSelectModel<typeof ipBlacklist>;
 
 type Config = {
-  maxAttempts: number;
-  windowMinutes: number;
+  signinMax:      number;
+  signupMax:      number;
+  checkMax:       number;
+  checkWindow:    number;
+  windowMinutes:  number;
   lockoutMinutes: number;
   alertThreshold: number;
 };
@@ -66,6 +69,66 @@ const btnDanger: React.CSSProperties = {
   border: "1px solid color-mix(in srgb, #ef4444 30%, transparent)",
 };
 
+// Sezione configurazione con titolo e descrizione contestuale
+function ConfigSection({ title, description, children }: {
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div style={{
+      borderRadius: 8,
+      border: "1px solid var(--admin-border)",
+      padding: "14px 16px",
+      display: "flex",
+      flexDirection: "column",
+      gap: 12,
+    }}>
+      <div>
+        <p style={{ fontSize: 12, fontWeight: 600, color: "var(--admin-text)", marginBottom: 2 }}>{title}</p>
+        <p style={{ fontSize: 11, color: "var(--admin-text-faint)" }}>{description}</p>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function NumberField({ label, desc, fieldKey, value, min, max, onChange }: {
+  label: string;
+  desc: string;
+  fieldKey: string;
+  value: number;
+  min: number;
+  max: number;
+  onChange: (key: string, val: number) => void;
+}) {
+  return (
+    <div>
+      <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--admin-text)", marginBottom: 4 }}>
+        {label}
+      </label>
+      <input
+        type="number"
+        min={min}
+        max={max}
+        value={value}
+        onChange={(e) => onChange(fieldKey, parseInt(e.target.value, 10) || value)}
+        style={{
+          width: "100%",
+          borderRadius: 6,
+          border: "1px solid var(--admin-border)",
+          background: "var(--admin-bg)",
+          color: "var(--admin-text)",
+          padding: "7px 10px",
+          fontSize: 13,
+          outline: "none",
+        }}
+      />
+      <p style={{ marginTop: 3, fontSize: 11, color: "var(--admin-text-faint)" }}>{desc}</p>
+    </div>
+  );
+}
+
 export function BruteforceClient({ offenders, blacklist, config }: Props) {
   const [pending, startTransition] = useTransition();
   const [tab, setTab] = useState<"offenders" | "blacklist" | "config">("offenders");
@@ -75,6 +138,10 @@ export function BruteforceClient({ offenders, blacklist, config }: Props) {
   function showFeedback(msg: string) {
     setFeedback(msg);
     setTimeout(() => setFeedback(null), 3000);
+  }
+
+  function handleFieldChange(key: string, val: number) {
+    setConfigValues((prev) => ({ ...prev, [key]: val }));
   }
 
   function handleUnblock(ip: string) {
@@ -108,8 +175,11 @@ export function BruteforceClient({ offenders, blacklist, config }: Props) {
 
   function handleConfigSave() {
     const fd = new FormData();
-    fd.set("bf_max_attempts", String(configValues.maxAttempts));
-    fd.set("bf_window_minutes", String(configValues.windowMinutes));
+    fd.set("bf_signin_max",      String(configValues.signinMax));
+    fd.set("bf_signup_max",      String(configValues.signupMax));
+    fd.set("bf_check_max",       String(configValues.checkMax));
+    fd.set("bf_check_window",    String(configValues.checkWindow));
+    fd.set("bf_window_minutes",  String(configValues.windowMinutes));
     fd.set("bf_lockout_minutes", String(configValues.lockoutMinutes));
     fd.set("bf_alert_threshold", String(configValues.alertThreshold));
     startTransition(async () => {
@@ -160,12 +230,15 @@ export function BruteforceClient({ offenders, blacklist, config }: Props) {
         </div>
       )}
 
+      {/* KPI cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 12 }}>
         {[
-          { label: "IP sospetti (24h)", value: offenders.length },
-          { label: "IP blacklistati", value: blacklist.length },
-          { label: "Max tentativi", value: configValues.maxAttempts },
-          { label: "Finestra (min)", value: configValues.windowMinutes },
+          { label: "IP sospetti (24h)",    value: offenders.length },
+          { label: "IP blacklistati",       value: blacklist.length },
+          { label: "Max login (signin)",    value: configValues.signinMax },
+          { label: "Max signup",            value: configValues.signupMax },
+          { label: "Max check (5 min)",     value: configValues.checkMax },
+          { label: "Finestra login (min)",  value: configValues.windowMinutes },
         ].map((s) => (
           <div key={s.label} style={{
             borderRadius: 10,
@@ -179,6 +252,7 @@ export function BruteforceClient({ offenders, blacklist, config }: Props) {
         ))}
       </div>
 
+      {/* Tabs */}
       <div style={{ borderBottom: "1px solid var(--admin-border)", display: "flex", gap: 24 }}>
         {tabs.map((t) => (
           <button
@@ -202,6 +276,7 @@ export function BruteforceClient({ offenders, blacklist, config }: Props) {
         ))}
       </div>
 
+      {/* Tab: Tentativi */}
       {tab === "offenders" && (
         <div style={{ overflowX: "auto", borderRadius: 10, border: "1px solid var(--admin-border)" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -249,6 +324,7 @@ export function BruteforceClient({ offenders, blacklist, config }: Props) {
         </div>
       )}
 
+      {/* Tab: Blacklist */}
       {tab === "blacklist" && (
         <div style={{ overflowX: "auto", borderRadius: 10, border: "1px solid var(--admin-border)" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -284,57 +360,48 @@ export function BruteforceClient({ offenders, blacklist, config }: Props) {
         </div>
       )}
 
+      {/* Tab: Configurazione */}
       {tab === "config" && (
-        <div style={{
-          maxWidth: 480,
-          borderRadius: 10,
-          border: "1px solid var(--admin-border)",
-          background: "var(--admin-card-bg)",
-          padding: 24,
-          display: "flex",
-          flexDirection: "column",
-          gap: 16,
-        }}>
-          <div>
-            <h3 style={{ fontSize: 14, fontWeight: 600, color: "var(--admin-text)", marginBottom: 4 }}>Soglie protezione bruteforce</h3>
-            <p style={{ fontSize: 12, color: "var(--admin-text-faint)" }}>Le modifiche si applicano immediatamente ai nuovi tentativi di login.</p>
-          </div>
+        <div style={{ maxWidth: 520, display: "flex", flexDirection: "column", gap: 16 }}>
 
-          {([
-            { key: "maxAttempts" as const, label: "Tentativi massimi", desc: "Tentativi falliti prima del blocco", min: 1, max: 100 },
-            { key: "windowMinutes" as const, label: "Finestra (minuti)", desc: "Intervallo in cui vengono contati i tentativi", min: 1, max: 1440 },
-            { key: "lockoutMinutes" as const, label: "Durata blocco (minuti)", desc: "Per quanto tempo rimane bloccato l'IP", min: 1, max: 10080 },
-            { key: "alertThreshold" as const, label: "Soglia alert email", desc: "Tentativi totali (24h) per ricevere un alert via Resend", min: 1, max: 1000 },
-          ] as const).map((field) => (
-            <div key={field.key}>
-              <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--admin-text)", marginBottom: 4 }}>
-                {field.label}
-              </label>
-              <input
-                type="number"
-                min={field.min}
-                max={field.max}
-                value={configValues[field.key]}
-                onChange={(e) =>
-                  setConfigValues((prev) => ({
-                    ...prev,
-                    [field.key]: parseInt(e.target.value, 10) || prev[field.key],
-                  }))
-                }
-                style={{
-                  width: "100%",
-                  borderRadius: 6,
-                  border: "1px solid var(--admin-border)",
-                  background: "var(--admin-bg)",
-                  color: "var(--admin-text)",
-                  padding: "7px 10px",
-                  fontSize: 13,
-                  outline: "none",
-                }}
-              />
-              <p style={{ marginTop: 3, fontSize: 11, color: "var(--admin-text-faint)" }}>{field.desc}</p>
-            </div>
-          ))}
+          <p style={{ fontSize: 12, color: "var(--admin-text-faint)" }}>
+            Le modifiche si applicano immediatamente ai nuovi tentativi.
+          </p>
+
+          {/* Login */}
+          <ConfigSection
+            title="🔐 Login"
+            description="Tentativi di accesso falliti per coppia IP + email prima del blocco."
+          >
+            <NumberField label="Max tentativi login" desc="Blocco dopo N password errate" fieldKey="signinMax" value={configValues.signinMax} min={1} max={100} onChange={handleFieldChange} />
+          </ConfigSection>
+
+          {/* Registrazione */}
+          <ConfigSection
+            title="📝 Registrazione"
+            description="Invii del form di registrazione per IP prima del blocco."
+          >
+            <NumberField label="Max tentativi registrazione" desc="Blocco dopo N submit del form signup" fieldKey="signupMax" value={configValues.signupMax} min={1} max={100} onChange={handleFieldChange} />
+          </ConfigSection>
+
+          {/* Check disponibilità */}
+          <ConfigSection
+            title="🔍 Check email / username"
+            description="Controlli di disponibilità nel form di registrazione (on-blur). Soglia alta per non penalizzare gli utenti reali."
+          >
+            <NumberField label="Max check per finestra" desc="Blocco dopo N check in bf_check_window minuti" fieldKey="checkMax" value={configValues.checkMax} min={5} max={500} onChange={handleFieldChange} />
+            <NumberField label="Finestra check (minuti)" desc="Durata della finestra di conteggio dei check" fieldKey="checkWindow" value={configValues.checkWindow} min={1} max={60} onChange={handleFieldChange} />
+          </ConfigSection>
+
+          {/* Comune */}
+          <ConfigSection
+            title="⚙️ Parametri comuni"
+            description="Finestra e durata blocco condivisi tra login e registrazione. L'alert email scatta quando un IP supera la soglia in 24h."
+          >
+            <NumberField label="Finestra login/signup (minuti)" desc="Intervallo in cui vengono contati i tentativi" fieldKey="windowMinutes" value={configValues.windowMinutes} min={1} max={1440} onChange={handleFieldChange} />
+            <NumberField label="Durata blocco (minuti)" desc="Per quanto tempo rimane bloccato l'IP" fieldKey="lockoutMinutes" value={configValues.lockoutMinutes} min={1} max={10080} onChange={handleFieldChange} />
+            <NumberField label="Soglia alert email" desc="Tentativi totali (24h) per alert via Resend" fieldKey="alertThreshold" value={configValues.alertThreshold} min={1} max={1000} onChange={handleFieldChange} />
+          </ConfigSection>
 
           <button
             disabled={pending}
