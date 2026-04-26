@@ -298,43 +298,6 @@ export function Login({
                 <input type="hidden" name="priceId" value={priceId || ""} />
 
                 {mode === "signup" && (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1.5">
-                      <Label
-                        htmlFor="firstName"
-                        className="text-xs font-semibold uppercase tracking-wide text-brand-label">
-                        Nome
-                      </Label>
-                      <Input
-                        id="firstName"
-                        name="firstName"
-                        type="text"
-                        autoComplete="given-name"
-                        required
-                        maxLength={100}
-                        placeholder="Mario"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label
-                        htmlFor="lastName"
-                        className="text-xs font-semibold uppercase tracking-wide text-brand-label">
-                        Cognome
-                      </Label>
-                      <Input
-                        id="lastName"
-                        name="lastName"
-                        type="text"
-                        autoComplete="family-name"
-                        required
-                        maxLength={100}
-                        placeholder="Rossi"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {mode === "signup" && (
                   <div className="space-y-1.5">
                     <Label
                       htmlFor="username"
