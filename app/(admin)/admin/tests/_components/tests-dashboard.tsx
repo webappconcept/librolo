@@ -3,11 +3,10 @@
 import {
   FlaskConical, Database, Zap, Mail, Globe,
   CheckCircle2, XCircle, AlertCircle, HelpCircle,
-  Clock, RefreshCw, ChevronDown, ChevronRight,
-  SkipForward, CircleDot,
+  Clock, ChevronDown, ChevronRight,
+  SkipForward, CircleDot, ShieldCheck,
 } from "lucide-react";
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import type { HealthChecks, HealthStatus, ServiceHealth, VitestReport, VitestSuite } from "../actions";
 
 function statusIcon(status: HealthStatus, size = 16) {
@@ -15,7 +14,8 @@ function statusIcon(status: HealthStatus, size = 16) {
     case "ok":       return <CheckCircle2 size={size} style={{ color: "var(--admin-success, #4ade80)" }} />;
     case "degraded": return <AlertCircle  size={size} style={{ color: "var(--admin-warning, #fb923c)" }} />;
     case "error":    return <XCircle      size={size} style={{ color: "var(--admin-danger, #f87171)" }} />;
-    default:         return <HelpCircle   size={size} style={{ color: "var(--admin-text-faint)" }} />;
+    // unknown = not configured = warning (yellow)
+    default:         return <HelpCircle   size={size} style={{ color: "var(--admin-warning, #fb923c)" }} />;
   }
 }
 
@@ -24,7 +24,7 @@ function statusLabel(status: HealthStatus) {
     case "ok":       return "Operational";
     case "degraded": return "Degraded";
     case "error":    return "Error";
-    default:         return "Unknown";
+    default:         return "Not configured";
   }
 }
 
@@ -33,7 +33,8 @@ function statusBg(status: HealthStatus) {
     case "ok":       return "color-mix(in srgb, #4ade80 8%, var(--admin-card-bg, #1c1b19))";
     case "degraded": return "color-mix(in srgb, #fb923c 8%, var(--admin-card-bg, #1c1b19))";
     case "error":    return "color-mix(in srgb, #f87171 8%, var(--admin-card-bg, #1c1b19))";
-    default:         return "var(--admin-card-bg, #1c1b19)";
+    // unknown = same yellow tint as degraded/warning
+    default:         return "color-mix(in srgb, #fb923c 8%, var(--admin-card-bg, #1c1b19))";
   }
 }
 
@@ -42,7 +43,8 @@ function statusBorder(status: HealthStatus) {
     case "ok":       return "color-mix(in srgb, #4ade80 22%, transparent)";
     case "degraded": return "color-mix(in srgb, #fb923c 22%, transparent)";
     case "error":    return "color-mix(in srgb, #f87171 22%, transparent)";
-    default:         return "var(--admin-border)";
+    // unknown = yellow border
+    default:         return "color-mix(in srgb, #fb923c 22%, transparent)";
   }
 }
 
@@ -104,7 +106,11 @@ function ServiceCard({ service }: { service: ServiceHealth }) {
       {service.detail && (
         <p style={{
           fontSize: 11, margin: 0, lineHeight: 1.5, wordBreak: "break-word",
-          color: service.status === "error" ? "var(--admin-danger, #f87171)" : "var(--admin-text-muted)",
+          color: service.status === "error"
+            ? "var(--admin-danger, #f87171)"
+            : service.status === "unknown"
+            ? "var(--admin-warning, #fb923c)"
+            : "var(--admin-text-muted)",
         }}>
           {service.detail}
         </p>
@@ -221,9 +227,6 @@ export function TestsDashboard({
   health: HealthChecks;
   vitestReport: VitestReport | null;
 }) {
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
-
   const services: ServiceHealth[] = [
     health.supabase,
     health.redis,
@@ -238,46 +241,27 @@ export function TestsDashboard({
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
 
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{
-            width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            background: "color-mix(in srgb, var(--admin-accent) 12%, var(--admin-card-bg))",
-            border: "1px solid color-mix(in srgb, var(--admin-accent) 25%, transparent)",
-          }}>
-            <FlaskConical size={18} style={{ color: "var(--admin-accent)" }} />
-          </div>
-          <div>
-            <h2 style={{ fontSize: 16, fontWeight: 700, color: "var(--admin-text)", margin: 0 }}>
-              Tests &amp; System Status
-            </h2>
-            <p style={{ fontSize: 12, color: "var(--admin-text-faint)", margin: "2px 0 0" }}>
-              Checked at {fmt(health.checkedAt)}
-            </p>
-          </div>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+        <div style={{
+          width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          background: "color-mix(in srgb, var(--admin-accent) 12%, var(--admin-card-bg))",
+          border: "1px solid color-mix(in srgb, var(--admin-accent) 25%, transparent)",
+        }}>
+          <FlaskConical size={18} style={{ color: "var(--admin-accent)" }} />
         </div>
-        <button
-          onClick={() => startTransition(() => router.refresh())}
-          disabled={isPending}
-          style={{
-            display: "flex", alignItems: "center", gap: 6,
-            fontSize: 13, fontWeight: 500, color: "var(--admin-accent)",
-            background: "color-mix(in srgb, var(--admin-accent) 8%, var(--admin-card-bg))",
-            border: "1px solid color-mix(in srgb, var(--admin-accent) 20%, transparent)",
-            borderRadius: 8, padding: "6px 14px",
-            cursor: isPending ? "default" : "pointer",
-            opacity: isPending ? 0.6 : 1, transition: "opacity 150ms", flexShrink: 0,
-          }}
-        >
-          <RefreshCw
-            size={13}
-            style={{ transition: "transform 600ms", transform: isPending ? "rotate(360deg)" : "rotate(0deg)" }}
-          />
-          Refresh
-        </button>
+        <div>
+          <h2 style={{ fontSize: 16, fontWeight: 700, color: "var(--admin-text)", margin: 0 }}>
+            Tests &amp; System Status
+          </h2>
+          <p style={{ fontSize: 12, color: "var(--admin-text-faint)", margin: "2px 0 0" }}>
+            Checked at {fmt(health.checkedAt)}
+          </p>
+        </div>
       </div>
 
+      {/* Global status banner */}
       <div style={{
         display: "flex", alignItems: "center", gap: 10,
         padding: "12px 16px", borderRadius: 10,
@@ -294,6 +278,7 @@ export function TestsDashboard({
         </span>
       </div>
 
+      {/* Infrastructure */}
       <section>
         <h3 style={{
           fontSize: 11, fontWeight: 700, letterSpacing: "0.08em",
@@ -311,7 +296,23 @@ export function TestsDashboard({
         </div>
       </section>
 
+      {/* Test Suites */}
       <section>
+        {/* CI info banner — above the suites, prominent */}
+        <div style={{
+          display: "flex", alignItems: "flex-start", gap: 10,
+          padding: "10px 14px", marginBottom: 12, borderRadius: 8,
+          background: "color-mix(in srgb, var(--admin-accent) 6%, var(--admin-card-bg))",
+          border: "1px solid color-mix(in srgb, var(--admin-accent) 18%, transparent)",
+        }}>
+          <ShieldCheck size={14} style={{ color: "var(--admin-accent)", flexShrink: 0, marginTop: 1 }} />
+          <p style={{ fontSize: 12, color: "var(--admin-text-muted)", margin: 0, lineHeight: 1.6 }}>
+            Tests run automatically by the CI pipeline on every commit to{" "}
+            <code style={{ fontFamily: "monospace", fontSize: 11 }}>main</code>.
+            {" "}The branch is protected — merges are blocked if any test fails.
+          </p>
+        </div>
+
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
           <h3 style={{
             fontSize: 11, fontWeight: 700, letterSpacing: "0.08em",
@@ -356,11 +357,6 @@ export function TestsDashboard({
             {vitestReport.suites.map((suite, i) => (
               <SuiteRow key={i} suite={suite} />
             ))}
-            <p style={{ fontSize: 11, color: "var(--admin-text-faint)", margin: "6px 0 0", lineHeight: 1.6 }}>
-              Tests run automatically by the CI pipeline on every commit to{" "}
-              <code style={{ fontFamily: "monospace", fontSize: 11 }}>main</code>.
-              The branch is protected — merges are blocked if any test fails.
-            </p>
           </div>
         )}
       </section>
