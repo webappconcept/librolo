@@ -150,40 +150,86 @@ export async function getHealthChecks(): Promise<HealthChecks> {
 }
 
 // ---------------------------------------------------------------------------
-// Vitest report reader
+// Vitest JSON reporter format
+// The --reporter=json output has this shape per file entry:
+//   {
+//     name: "/abs/path/to/tests/foo.test.ts",   // absolute runner path
+//     status: "passed" | "failed",
+//     startTime: number,
+//     endTime: number,
+//     assertionResults: [                        // individual tests
+//       { fullName, status, duration, failureMessages, ... }
+//     ]
+//   }
 // ---------------------------------------------------------------------------
 const REPORT_PATH = path.join(process.cwd(), "test-reports", "vitest-results.json");
+
+type RawAssertion = {
+  fullName?: string;
+  title?: string;
+  status: string;
+  duration?: number;
+  failureMessages?: string[];
+};
+
+type RawFileResult = {
+  name: string;
+  status: string;
+  startTime?: number;
+  endTime?: number;
+  assertionResults: RawAssertion[];
+};
+
+type RawReport = {
+  success: boolean;
+  startTime: number;
+  numTotalTests: number;
+  numPassedTests: number;
+  numFailedTests: number;
+  numPendingTests: number;
+  testResults: RawFileResult[];
+};
 
 export async function getVitestReport(): Promise<VitestReport | null> {
   await requireAdminPage();
   try {
     const raw = await fs.readFile(REPORT_PATH, "utf-8");
-    const json = JSON.parse(raw);
+    const json = JSON.parse(raw) as RawReport;
 
-    const suites: VitestSuite[] = (json.testResults ?? []).map((file: {
-      testFilePath: string;
-      status: string;
-      perfStats?: { start: number; end: number };
-      testResults: Array<{
-        fullName?: string;
-        title?: string;
-        status: string;
-        duration?: number;
-        failureMessages?: string[];
-      }>;
-    }) => ({
-      name: file.testFilePath
-        ? file.testFilePath.replace(process.cwd() + "/", "")
-        : "unknown",
-      status: file.status as VitestSuite["status"],
-      duration: file.perfStats ? file.perfStats.end - file.perfStats.start : 0,
-      tests: (file.testResults ?? []).map((t) => ({
+    const cwd = process.cwd();
+
+    const suites: VitestSuite[] = (json.testResults ?? []).map((file) => {
+      // Strip absolute runner prefix to get a relative display name.
+      // The runner path looks like: /home/runner/work/librolo/librolo/tests/...
+      // We want: tests/lib/auth.test.ts
+      let name = file.name ?? "unknown";
+      // Try stripping cwd first (works locally), then strip up to /tests/
+      if (name.startsWith(cwd)) {
+        name = name.slice(cwd.length).replace(/^\//, "");
+      } else {
+        const testsIdx = name.indexOf("/tests/");
+        if (testsIdx !== -1) name = name.slice(testsIdx + 1); // e.g. "tests/lib/auth.test.ts"
+      }
+
+      const duration =
+        file.startTime != null && file.endTime != null
+          ? file.endTime - file.startTime
+          : 0;
+
+      const tests: VitestTestResult[] = (file.assertionResults ?? []).map((t) => ({
         name: t.fullName ?? t.title ?? "(unnamed)",
         status: t.status as VitestTestResult["status"],
         duration: t.duration,
         failureMessages: t.failureMessages,
-      })),
-    }));
+      }));
+
+      return {
+        name,
+        status: file.status as VitestSuite["status"],
+        duration,
+        tests,
+      };
+    });
 
     return {
       suites,
