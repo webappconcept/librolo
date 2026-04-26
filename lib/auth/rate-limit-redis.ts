@@ -7,6 +7,7 @@
 //   rl:login:{ip}:{email}   → tentativi login per coppia IP+email
 //   rl:email:{email}        → tentativi login per sola email (anti IP-rotation)
 //   rl:signup:{ip}          → tentativi signup per IP
+//   rl:check:{ip}           → check disponibilità email/username per IP
 //   rl:blacklist:{ip}       → flag blacklist IP ("1", no TTL = permanente)
 //
 // Il layer Redis è always-first: se Redis è down il chiamante fa fallback
@@ -15,11 +16,16 @@
 import { getAppSettings } from "@/lib/db/settings-queries";
 
 // ---------------------------------------------------------------------------
-// Redis REST client (stesso pattern del bloom filter)
+// Redis REST client (cache TTL 60s per le credenziali)
 // ---------------------------------------------------------------------------
 
 let _cachedConfig: { url: string; token: string } | null = null;
 let _cacheExpiry = 0;
+
+export function invalidateRedisConfigCache(): void {
+  _cachedConfig = null;
+  _cacheExpiry = 0;
+}
 
 async function getRedisConfig(): Promise<{ url: string; token: string }> {
   const now = Date.now();
@@ -84,6 +90,7 @@ async function redisPipeline(commands: (string | number)[][]): Promise<unknown[]
 const KEY_LOGIN     = (ip: string, email: string) => `rl:login:${ip}:${email}`;
 const KEY_EMAIL     = (email: string)             => `rl:email:${email}`;
 const KEY_SIGNUP    = (ip: string)                => `rl:signup:${ip}`;
+const KEY_CHECK     = (ip: string)                => `rl:check:${ip}`;
 const KEY_BLACKLIST = (ip: string)                => `rl:blacklist:${ip}`;
 
 // ---------------------------------------------------------------------------
@@ -95,7 +102,6 @@ export type RedisRateLimitResult =
   | { blocked: false; remaining: number; lockoutSeconds: number; source: "redis" }
   | { source: "unavailable" };
 
-// Helper che restituisce il tipo corretto senza ambiguità per TypeScript
 function makeResult(
   blocked: boolean,
   remaining: number,
@@ -108,7 +114,7 @@ function makeResult(
 }
 
 // ---------------------------------------------------------------------------
-// Blacklist IP — Redis come L1 cache
+// Blacklist IP
 // ---------------------------------------------------------------------------
 
 export async function isIpBlacklistedRedis(ip: string): Promise<boolean | null> {
@@ -234,19 +240,44 @@ export async function checkAndIncrSignupRedis(
   windowSeconds: number,
 ): Promise<RedisRateLimitResult> {
   try {
-    const key             = KEY_SIGNUP(ip);
-    const signupThreshold = maxAttempts * 2;
-
+    const key   = KEY_SIGNUP(ip);
     const count = (await redisCmd<number>(["INCR", key])) as number;
-    if (count === 1) {
-      await redisCmd(["EXPIRE", key, windowSeconds]);
-    }
+    if (count === 1) await redisCmd(["EXPIRE", key, windowSeconds]);
 
-    const blocked   = count >= signupThreshold;
-    const remaining = Math.max(0, signupThreshold - count);
+    const blocked   = count >= maxAttempts;
+    const remaining = Math.max(0, maxAttempts - count);
 
     return makeResult(blocked, remaining, windowSeconds);
   } catch {
+    return { source: "unavailable" };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Rate limit check disponibilità email / username
+//
+// Usa un contatore dedicato rl:check:{ip} con:
+//   - soglia alta (default 30) — l'utente può provare liberamente nel form
+//   - finestra breve (default 5 min) — si resetta in fretta
+//   - NO recordSignupAttempt: non è un tentativo di registrazione
+// ---------------------------------------------------------------------------
+
+export async function checkAndIncrAvailabilityRedis(
+  ip: string,
+  maxChecks: number,
+  windowSeconds: number,
+): Promise<RedisRateLimitResult> {
+  try {
+    const key   = KEY_CHECK(ip);
+    const count = (await redisCmd<number>(["INCR", key])) as number;
+    if (count === 1) await redisCmd(["EXPIRE", key, windowSeconds]);
+
+    const blocked   = count >= maxChecks;
+    const remaining = Math.max(0, maxChecks - count);
+
+    return makeResult(blocked, remaining, windowSeconds);
+  } catch {
+    // Se Redis è down lasciamo passare — il check Bloom è solo ottimistico
     return { source: "unavailable" };
   }
 }

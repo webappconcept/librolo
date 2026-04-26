@@ -5,8 +5,10 @@
 //   L2 — DB (Postgres/Drizzle): fallback se Redis non è disponibile
 //                                + storage storico per la dashboard admin
 //
-// Il DB riceve sempre recordLoginAttempt in background (fire-and-forget)
-// così la dashboard bruteforce rimane invariata.
+// Contesti separati:
+//   checkRateLimit          → login (bf_signin_max, bf_window_minutes)
+//   checkSignupRateLimit    → registrazione (bf_signup_max, bf_window_minutes)
+//   checkAvailabilityRateLimit → check email/username nel form (bf_check_max, bf_check_window)
 
 import { db } from "@/lib/db/drizzle";
 import { loginAttempts, ipBlacklist } from "@/lib/db/schema";
@@ -15,6 +17,7 @@ import { and, count, eq, gte, lt, desc, sql } from "drizzle-orm";
 import {
   checkAndIncrLoginRedis,
   checkAndIncrSignupRedis,
+  checkAndIncrAvailabilityRedis,
   peekLoginRedis,
   unblockIpRedis,
 } from "./rate-limit-redis";
@@ -26,13 +29,23 @@ async function getBruteforceConfig() {
   try {
     const s = await getAppSettings();
     return {
-      maxAttempts:    parseInt(s.bf_max_attempts,    10) || 5,
+      // Login
+      signinMax:      parseInt(s.bf_signin_max,      10) || 5,
+      // Signup
+      signupMax:      parseInt(s.bf_signup_max,      10) || 10,
+      // Availability check email/username
+      checkMax:       parseInt(s.bf_check_max,       10) || 30,
+      checkWindow:    parseInt(s.bf_check_window,    10) || 5,
+      // Comuni
       windowMinutes:  parseInt(s.bf_window_minutes,  10) || 15,
       lockoutMinutes: parseInt(s.bf_lockout_minutes, 10) || 30,
       alertThreshold: parseInt(s.bf_alert_threshold, 10) || 20,
     };
   } catch {
-    return { maxAttempts: 5, windowMinutes: 15, lockoutMinutes: 30, alertThreshold: 20 };
+    return {
+      signinMax: 5, signupMax: 10, checkMax: 30, checkWindow: 5,
+      windowMinutes: 15, lockoutMinutes: 30, alertThreshold: 20,
+    };
   }
 }
 
@@ -45,34 +58,20 @@ function cleanupOldAttempts(): void {
     .delete(loginAttempts)
     .where(lt(loginAttempts.attemptedAt, cutoff))
     .catch((err: unknown) => {
-      console.error("[cleanupOldAttempts] failed to delete old login attempts:", err);
+      console.error("[cleanupOldAttempts] failed:", err);
     });
 }
 
 // ---------------------------------------------------------------------------
-// Marker interni DB (invariati — la dashboard li filtra già)
+// Marker interni DB
 // ---------------------------------------------------------------------------
-const GENERAL_IP_MARKER         = "__general__";
-const SIGNUP_EMAIL_MARKER       = "__signup__";
-const PER_EMAIL_ANY_IP_MARKER   = "__anyip__";
+const GENERAL_IP_MARKER       = "__general__";
+const SIGNUP_EMAIL_MARKER     = "__signup__";
+const PER_EMAIL_ANY_IP_MARKER = "__anyip__";
 
 // ---------------------------------------------------------------------------
-// checkRateLimit — DUAL LAYER
+// checkRateLimit — login, DUAL LAYER
 // ---------------------------------------------------------------------------
-
-/**
- * Controlla il rate limit per il login.
- *
- * Flusso:
- *   1. Redis L1: peekLoginRedis (solo GET, no INCR) per vedere se già bloccato
- *      → bloccato: ritorna subito senza toccare il DB
- *   2. Redis L1: checkAndIncrLoginRedis (INCR) se non ancora bloccato
- *      → il contatore Redis viene incrementato
- *   3. DB L2 fallback: se Redis è unavailable usa la logica DB originale
- *
- * Nota: recordLoginAttempt sul DB viene chiamato separatamente da signIn/signUp
- * (come prima) — rimane il source of truth per la dashboard.
- */
 export async function checkRateLimit(
   email: string,
   ip: string,
@@ -81,19 +80,13 @@ export async function checkRateLimit(
   const windowSeconds = cfg.windowMinutes * 60;
 
   // ── L1: Redis ────────────────────────────────────────────────────────────
-  const peek = await peekLoginRedis(email, ip, cfg.maxAttempts, windowSeconds);
+  const peek = await peekLoginRedis(email, ip, cfg.signinMax, windowSeconds);
 
   if (peek.source === "redis") {
     if (peek.blocked) {
-      // Già bloccato — ritorna senza INCR e senza DB
-      return {
-        blocked: true,
-        remaining: 0,
-        lockoutMinutes: cfg.lockoutMinutes,
-      };
+      return { blocked: true, remaining: 0, lockoutMinutes: cfg.lockoutMinutes };
     }
-    // Non ancora bloccato — INCR e ritorna il risultato Redis
-    const incr = await checkAndIncrLoginRedis(email, ip, cfg.maxAttempts, windowSeconds);
+    const incr = await checkAndIncrLoginRedis(email, ip, cfg.signinMax, windowSeconds);
     if (incr.source === "redis") {
       return {
         blocked:        incr.blocked,
@@ -101,12 +94,10 @@ export async function checkRateLimit(
         lockoutMinutes: cfg.lockoutMinutes,
       };
     }
-    // INCR fallita (Redis down tra peek e incr) → cade su DB
   }
 
   // ── L2: DB fallback ──────────────────────────────────────────────────────
   cleanupOldAttempts();
-
   const windowStart = new Date(Date.now() - windowSeconds * 1000);
 
   const [blacklisted] = await db
@@ -114,48 +105,38 @@ export async function checkRateLimit(
     .from(ipBlacklist)
     .where(eq(ipBlacklist.ip, ip))
     .limit(1);
-
-  if (blacklisted) {
-    return { blocked: true, remaining: 0, lockoutMinutes: cfg.lockoutMinutes };
-  }
+  if (blacklisted) return { blocked: true, remaining: 0, lockoutMinutes: cfg.lockoutMinutes };
 
   const [resultByEmailIp] = await db
     .select({ total: count() })
     .from(loginAttempts)
-    .where(
-      and(
-        eq(loginAttempts.email, email),
-        eq(loginAttempts.ip, ip),
-        gte(loginAttempts.attemptedAt, windowStart),
-        eq(loginAttempts.success, false),
-      ),
-    );
+    .where(and(
+      eq(loginAttempts.email, email),
+      eq(loginAttempts.ip, ip),
+      gte(loginAttempts.attemptedAt, windowStart),
+      eq(loginAttempts.success, false),
+    ));
 
   const totalByEmailIp = resultByEmailIp?.total ?? 0;
-  if (totalByEmailIp >= cfg.maxAttempts) {
+  if (totalByEmailIp >= cfg.signinMax) {
     return { blocked: true, remaining: 0, lockoutMinutes: cfg.lockoutMinutes };
   }
 
-  const globalEmailThreshold = cfg.maxAttempts * 3;
+  const globalEmailThreshold = cfg.signinMax * 3;
   const [resultByEmail] = await db
     .select({ total: count() })
     .from(loginAttempts)
-    .where(
-      and(
-        eq(loginAttempts.email, email),
-        gte(loginAttempts.attemptedAt, windowStart),
-        eq(loginAttempts.success, false),
-        sql`${loginAttempts.ip} NOT IN (${GENERAL_IP_MARKER}, ${PER_EMAIL_ANY_IP_MARKER})`,
-      ),
-    );
+    .where(and(
+      eq(loginAttempts.email, email),
+      gte(loginAttempts.attemptedAt, windowStart),
+      eq(loginAttempts.success, false),
+      sql`${loginAttempts.ip} NOT IN (${GENERAL_IP_MARKER}, ${PER_EMAIL_ANY_IP_MARKER})`,
+    ));
 
   const totalByEmail = resultByEmail?.total ?? 0;
   const remaining = Math.max(
     0,
-    Math.min(
-      cfg.maxAttempts     - totalByEmailIp,
-      globalEmailThreshold - totalByEmail,
-    ),
+    Math.min(cfg.signinMax - totalByEmailIp, globalEmailThreshold - totalByEmail),
   );
 
   return {
@@ -174,27 +155,22 @@ export async function recordLoginAttempt(
 }
 
 // ---------------------------------------------------------------------------
-// checkSignupRateLimit — DUAL LAYER
+// checkSignupRateLimit — registrazione, DUAL LAYER
 // ---------------------------------------------------------------------------
-
-const SIGNUP_MAX_MULTIPLIER = 2;
-
 export async function checkSignupRateLimit(
   ip: string,
 ): Promise<{ blocked: boolean; remaining: number }> {
   const cfg = await getBruteforceConfig();
-  const windowSeconds  = cfg.windowMinutes * 60;
-  const signupMax      = cfg.maxAttempts * SIGNUP_MAX_MULTIPLIER;
+  const windowSeconds = cfg.windowMinutes * 60;
 
   // ── L1: Redis ────────────────────────────────────────────────────────────
-  const result = await checkAndIncrSignupRedis(ip, cfg.maxAttempts, windowSeconds);
+  const result = await checkAndIncrSignupRedis(ip, cfg.signupMax, windowSeconds);
   if (result.source === "redis") {
     return { blocked: result.blocked, remaining: result.remaining };
   }
 
   // ── L2: DB fallback ──────────────────────────────────────────────────────
   cleanupOldAttempts();
-
   const windowStart = new Date(Date.now() - windowSeconds * 1000);
 
   const [blacklisted] = await db
@@ -202,25 +178,22 @@ export async function checkSignupRateLimit(
     .from(ipBlacklist)
     .where(eq(ipBlacklist.ip, ip))
     .limit(1);
-
   if (blacklisted) return { blocked: true, remaining: 0 };
 
   const [result2] = await db
     .select({ total: count() })
     .from(loginAttempts)
-    .where(
-      and(
-        eq(loginAttempts.ip, ip),
-        eq(loginAttempts.email, SIGNUP_EMAIL_MARKER),
-        gte(loginAttempts.attemptedAt, windowStart),
-        eq(loginAttempts.success, false),
-      ),
-    );
+    .where(and(
+      eq(loginAttempts.ip, ip),
+      eq(loginAttempts.email, SIGNUP_EMAIL_MARKER),
+      gte(loginAttempts.attemptedAt, windowStart),
+      eq(loginAttempts.success, false),
+    ));
 
   const total = result2?.total ?? 0;
   return {
-    blocked:   total >= signupMax,
-    remaining: Math.max(0, signupMax - total),
+    blocked:   total >= cfg.signupMax,
+    remaining: Math.max(0, cfg.signupMax - total),
   };
 }
 
@@ -231,7 +204,30 @@ export async function recordSignupAttempt(ip: string): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// Rate limit generico (invariato)
+// checkAvailabilityRateLimit — check email/username nel form di registrazione
+//
+// Contatore separato, soglia alta (default 30), finestra breve (default 5min).
+// NON usa recordSignupAttempt: controllare la disponibilità non è un
+// tentativo di registrazione e non deve penalizzare l'utente reale.
+// ---------------------------------------------------------------------------
+export async function checkAvailabilityRateLimit(
+  ip: string,
+): Promise<{ blocked: boolean; remaining: number }> {
+  const cfg = await getBruteforceConfig();
+  const windowSeconds = cfg.checkWindow * 60;
+
+  // Solo L1 Redis — se Redis è down lasciamo passare (degradazione graceful)
+  const result = await checkAndIncrAvailabilityRedis(ip, cfg.checkMax, windowSeconds);
+  if (result.source === "redis") {
+    return { blocked: result.blocked, remaining: result.remaining };
+  }
+
+  // Redis unavailable → allow (il Bloom è già una protezione sufficiente)
+  return { blocked: false, remaining: cfg.checkMax };
+}
+
+// ---------------------------------------------------------------------------
+// checkGeneralRateLimit — rate limit generico (invariato)
 // ---------------------------------------------------------------------------
 export async function checkGeneralRateLimit(
   key: string,
@@ -239,20 +235,17 @@ export async function checkGeneralRateLimit(
   windowSeconds: number,
 ): Promise<{ blocked: boolean; remaining: number }> {
   cleanupOldAttempts();
-
   const windowStart = new Date(Date.now() - windowSeconds * 1000);
 
   const [result] = await db
     .select({ total: count() })
     .from(loginAttempts)
-    .where(
-      and(
-        eq(loginAttempts.email, key),
-        eq(loginAttempts.ip, GENERAL_IP_MARKER),
-        gte(loginAttempts.attemptedAt, windowStart),
-        eq(loginAttempts.success, false),
-      ),
-    );
+    .where(and(
+      eq(loginAttempts.email, key),
+      eq(loginAttempts.ip, GENERAL_IP_MARKER),
+      gte(loginAttempts.attemptedAt, windowStart),
+      eq(loginAttempts.success, false),
+    ));
 
   const total = result?.total ?? 0;
   return {
@@ -268,7 +261,7 @@ export async function recordGeneralAttempt(key: string): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// Queries admin — usate dalla dashboard bruteforce
+// Queries admin — dashboard bruteforce
 // ---------------------------------------------------------------------------
 
 export type BruteforceEntry = {
@@ -290,12 +283,10 @@ export async function getTopOffenders(limit = 50): Promise<BruteforceEntry[]> {
       lastAttempt: sql<Date>`max(${loginAttempts.attemptedAt})`,
     })
     .from(loginAttempts)
-    .where(
-      and(
-        gte(loginAttempts.attemptedAt, cutoff),
-        eq(loginAttempts.success, false),
-      ),
-    )
+    .where(and(
+      gte(loginAttempts.attemptedAt, cutoff),
+      eq(loginAttempts.success, false),
+    ))
     .groupBy(loginAttempts.ip, loginAttempts.email)
     .orderBy(desc(sql`count(*)`))    
     .limit(limit);
@@ -320,24 +311,16 @@ export async function getTopOffenders(limit = 50): Promise<BruteforceEntry[]> {
     }));
 }
 
-/**
- * Sblocca un IP: cancella da Redis (L1) e da DB (L2).
- */
 export async function unblockIp(ip: string): Promise<void> {
-  // Redis prima (fire-and-forget, non blocca se fallisce)
   void unblockIpRedis(ip).catch((err: unknown) => {
     console.error("[unblockIp] Redis unblock failed:", err);
   });
-
-  // DB: cancella tutta la storia fallita dell'IP
   await db
     .delete(loginAttempts)
-    .where(
-      and(
-        eq(loginAttempts.ip, ip),
-        eq(loginAttempts.success, false),
-      ),
-    );
+    .where(and(
+      eq(loginAttempts.ip, ip),
+      eq(loginAttempts.success, false),
+    ));
 }
 
 export async function blacklistIp(ip: string, reason?: string): Promise<void> {
