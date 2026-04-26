@@ -3,7 +3,7 @@
 import { getAdminPath } from "@/lib/admin-nav";
 import { invalidateBlockedUsernamesCache } from "@/lib/auth/blocked-usernames";
 import { invalidateDisposableDomainsCache } from "@/lib/auth/disposable-domains";
-import { addUsernameToBloom } from "@/lib/bloom/bloom-filter";
+import { addUsernameToBloom, invalidateRedisConfigCache } from "@/lib/bloom/bloom-filter";
 import { getUser } from "@/lib/db/queries";
 import { db } from "@/lib/db/drizzle";
 import type { SiteSnippet } from "@/lib/db/schema";
@@ -208,6 +208,12 @@ export async function saveRedisSettings(
     ).trim();
     await updateAppSetting("upstash_redis_rest_url", url || null);
     await updateAppSetting("upstash_redis_rest_token", token || null);
+
+    // [FIX] Invalida la cache in-memory delle credenziali Redis nel modulo
+    // bloom-filter, così la prossima chiamata redisPipeline() rilegge url/token
+    // dal DB senza attendere il riavvio del processo Node.
+    invalidateRedisConfigCache();
+
     revalidatePath(getAdminPath("settings-redis"));
     return { success: "Credenziali Redis salvate.", timestamp: Date.now() };
   } catch {

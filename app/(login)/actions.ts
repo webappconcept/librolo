@@ -237,21 +237,23 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
     };
   }
 
-  // ── Check ottimistici pre-insert (Bloom + DB) ───────────────────────────
+  // ── Check ottimistici pre-insert (Bloom) ───────────────────────────────────────
+  // [FIX 4] checkEmailAvailability e checkUsernameAvailability vengono
+  // eseguiti in parallelo con Promise.all anziché in sequenza, dimezzando
+  // il tempo totale dei check ottimistici (da ~2×RTT a ~1×RTT).
   await ensureBloomFilter();
-  const emailAvailability = await checkEmailAvailability(email);
+
+  const [emailAvailability, usernameAvailability] = await Promise.all([
+    checkEmailAvailability(email),
+    checkUsernameAvailability(username),
+  ]);
+
   if (!emailAvailability.available) {
     await recordSignupAttempt(ip);
     return { error: "Questa email è già stata registrata", email, password };
   }
 
-  const existingUsername = await db
-    .select({ id: userProfiles.id })
-    .from(userProfiles)
-    .where(eq(userProfiles.username, username))
-    .limit(1);
-
-  if (existingUsername.length > 0) {
+  if (!usernameAvailability.available) {
     await recordSignupAttempt(ip);
     return { error: "Questo username è già in uso.", email, password };
   }
