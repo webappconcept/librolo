@@ -148,8 +148,8 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
 
 const signUpSchema = z
   .object({
-    firstName: z.string().min(1, "Il nome è obbligatorio").max(100),
-    lastName: z.string().min(1, "Il cognome è obbligatorio").max(100),
+    // firstName e lastName non sono raccolti nella form di registrazione:
+    // vengono inseriti dall'utente nella pagina del profilo dopo la registrazione.
     username: z
       .string()
       .min(3, "Username minimo 3 caratteri")
@@ -161,15 +161,14 @@ const signUpSchema = z
       .min(8, "La password deve contenere almeno 8 caratteri")
       .max(30)
       .regex(/[A-Z]/, "La password deve contenere almeno una lettera maiuscola")
-      .regex(/[0-9]/, "La password deve contenere almeno un numero"),
-    confirmPassword: z.string().min(8).max(30),
+      .regex(/[0-9]/, "La password deve contenere almeno un numero")
+      .regex(
+        /[^a-zA-Z0-9]/,
+        "La password deve contenere almeno un carattere speciale",
+      ),
     acceptTerms: z.string(),
     acceptPrivacy: z.string(),
     acceptMarketing: z.string().optional(),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Le password non sono uguali",
-    path: ["confirmPassword"],
   })
   .refine((data) => data.acceptTerms === "on", {
     message: "Devi accettare i Termini e Condizioni per procedere",
@@ -181,7 +180,9 @@ const signUpSchema = z
   });
 
 export const signUp = validatedAction(signUpSchema, async (data) => {
-  const { firstName, lastName, username, email, password } = data;
+  const { username, email, password } = data;
+  // firstName e lastName non presenti in questa fase: saranno null nel DB
+  // fino a quando l'utente non li compila dalla pagina del profilo.
 
   const settings = await getAppSettings();
   if (settings.registrations_enabled === "false") {
@@ -235,8 +236,6 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
     checkUsernameAvailability(username),
   ]);
 
-  // Email/username già in uso: NON è un tentativo di registrazione malevolo,
-  // è feedback UX. Non chiamiamo recordSignupAttempt qui.
   if (!emailAvailability.available) {
     return { error: "Questa email è già stata registrata", email, password };
   }
@@ -278,8 +277,6 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
     createdUser = inserted;
   } catch (err: unknown) {
     if (isUniqueConstraintError(err)) {
-      // Race condition: email già presa tra il check e l'insert.
-      // Questo SÌ è un tentativo fallito → recordSignupAttempt.
       await recordSignupAttempt(ip);
       return {
         error: "Questa email è appena stata registrata da un altro utente. Prova con un'altra.",
@@ -293,15 +290,12 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
   try {
     await db.insert(userProfiles).values({
       userId: createdUser.id,
-      firstName,
-      lastName,
+      // firstName e lastName lasciati null: l'utente li inserirà dal profilo
       username,
     });
   } catch (err: unknown) {
     if (isUniqueConstraintError(err)) {
       await db.delete(users).where(eq(users.id, createdUser.id));
-      // Race condition: username già preso tra il check e l'insert.
-      // Questo SÌ è un tentativo fallito → recordSignupAttempt.
       await recordSignupAttempt(ip);
       return {
         error: "Questo username è appena stato scelto da un altro utente. Scegline un altro.",
@@ -318,7 +312,9 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
   const code = await createVerificationCode(createdUser.id);
 
   try {
-    await sendSignupVerificationEmail(createdUser.email, code, firstName);
+    // firstName non disponibile in questa fase: passiamo undefined,
+    // il template email userà un saluto generico.
+    await sendSignupVerificationEmail(createdUser.email, code, undefined);
   } catch (emailErr) {
     console.error("[signUp] sendSignupVerificationEmail failed:", emailErr);
   }
@@ -345,9 +341,6 @@ export async function checkEmailAction(email: string) {
   const ip =
     headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
 
-  // Rate limit dedicato per i check disponibilità: soglia alta (30),
-  // finestra breve (5 min). NON usa checkRateLimit (login) né
-  // recordSignupAttempt — controllare un campo non è una registrazione.
   const availCheck = await checkAvailabilityRateLimit(ip);
   if (availCheck.blocked) {
     return {
@@ -387,8 +380,6 @@ export async function checkUsernameAction(
   const ip =
     headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
 
-  // Rate limit dedicato per i check disponibilità: soglia alta (30),
-  // finestra breve (5 min). NON usa checkRateLimit (login).
   const availCheck = await checkAvailabilityRateLimit(ip);
   if (availCheck.blocked) {
     return {
