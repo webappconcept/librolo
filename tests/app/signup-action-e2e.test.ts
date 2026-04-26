@@ -1,7 +1,7 @@
 // tests/app/signup-action-e2e.test.ts
 //
 // Flusso integrato signUpAction — mock di tutti i layer esterni,
-// verifica l’orchestrazione end-to-end della Server Action.
+// verifica l'orchestrazione end-to-end della Server Action.
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -91,11 +91,6 @@ vi.mock("@/lib/bloom/bloom-filter", () => ({
 //   call 1 → users          → .values().returning()
 //   call 2 → userProfiles   → .values()
 //   call 3 → activityLogs   → .values()
-//
-// We expose three separate vi.fn() references so each test can override
-// only what it needs via mockResolvedValueOnce / mockRejectedValueOnce.
-// The factory inside vi.mock() reads them by closure at call time, so
-// vi.clearAllMocks() resets call history without destroying the factory.
 
 const MOCK_USER = {
   id: "user-abc-123",
@@ -105,24 +100,16 @@ const MOCK_USER = {
   bannedAt: null,
 };
 
-// users insert: .values() returns { returning: fn }
 const mockUsersReturning = vi.fn().mockResolvedValue([MOCK_USER]);
 const mockUsersValues    = vi.fn().mockReturnValue({ returning: mockUsersReturning });
-
-// userProfiles insert: .values() resolves directly
 const mockProfilesValues = vi.fn().mockResolvedValue([]);
-
-// activityLogs insert: .values() resolves directly
 const mockActivityValues = vi.fn().mockResolvedValue([]);
-
-// delete: .where() resolves
-const mockDbDeleteWhere = vi.fn().mockResolvedValue([]);
+const mockDbDeleteWhere  = vi.fn().mockResolvedValue([]);
 
 let insertCallCount = 0;
 
 vi.mock("@/lib/db/drizzle", () => ({
   db: {
-    // Factory reads the external vi.fn() refs by closure — survives clearAllMocks()
     insert: vi.fn(() => {
       insertCallCount += 1;
       if (insertCallCount === 1) return { values: mockUsersValues };
@@ -158,14 +145,14 @@ vi.mock("drizzle-orm", () => ({
 }));
 
 // ─── Mock session / password ──────────────────────────────────────────────────
-const mockHashPassword    = vi.fn().mockResolvedValue("$2b$12$hashedXXX");
+const mockHashPassword     = vi.fn().mockResolvedValue("$2b$12$hashedXXX");
 const mockComparePasswords = vi.fn().mockResolvedValue(true);
 const mockSetSession       = vi.fn().mockResolvedValue(undefined);
 vi.mock("@/lib/auth/session", () => ({
-  hashPassword:    mockHashPassword,
+  hashPassword:     mockHashPassword,
   comparePasswords: mockComparePasswords,
-  setSession:      mockSetSession,
-  getSession:      vi.fn(),
+  setSession:       mockSetSession,
+  getSession:       vi.fn(),
 }));
 
 // ─── Mock OTP ─────────────────────────────────────────────────────────────────
@@ -194,8 +181,7 @@ vi.mock("@/lib/db/pages-queries", () => ({
   }),
 }));
 
-// ─── Mock middleware ─────────────────────────────────────────────────────────────
-// validatedAction wraps fn transparently: runs Zod parse, then calls fn
+// ─── Mock middleware ──────────────────────────────────────────────────────────
 vi.mock("@/lib/auth/middleware", () => ({
   validatedAction: vi.fn(
     (
@@ -220,17 +206,17 @@ vi.mock("@/lib/auth/middleware", () => ({
 }));
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+// NOTA: firstName, lastName e confirmPassword rimossi dal form di registrazione.
+// La password ora deve soddisfare anche il requisito del carattere speciale
+// introdotto nello schema server insieme alla rimozione di nome/cognome.
 function makeFormData(overrides: Record<string, string> = {}): FormData {
   const fd = new FormData();
   const defaults: Record<string, string> = {
-    firstName:       "Mario",
-    lastName:        "Rossi",
-    username:        "mario_rossi",
-    email:           "mario@example.com",
-    password:        "Password1",
-    confirmPassword: "Password1",
-    acceptTerms:     "on",
-    acceptPrivacy:   "on",
+    username:     "mario_rossi",
+    email:        "mario@example.com",
+    password:     "Password1!",   // soddisfa: min8, maiuscola, numero, carattere speciale
+    acceptTerms:  "on",
+    acceptPrivacy: "on",
   };
   for (const [k, v] of Object.entries({ ...defaults, ...overrides })) {
     fd.set(k, v);
@@ -255,7 +241,6 @@ describe("signUpAction — flusso end-to-end", () => {
     vi.clearAllMocks();
     insertCallCount = 0;
 
-    // Restore defaults after clearAllMocks()
     mockGetAppSettings.mockResolvedValue(DEFAULT_SETTINGS);
     mockCheckSignupRateLimit.mockResolvedValue({ blocked: false, remaining: 9 });
     mockIsIpBlacklisted.mockResolvedValue(false);
@@ -268,7 +253,6 @@ describe("signUpAction — flusso end-to-end", () => {
     mockSendSignupVerificationEmail.mockResolvedValue(undefined);
     mockDbDeleteWhere.mockResolvedValue([]);
 
-    // DB insert mocks — restore default implementations
     mockUsersReturning.mockResolvedValue([MOCK_USER]);
     mockUsersValues.mockReturnValue({ returning: mockUsersReturning });
     mockProfilesValues.mockResolvedValue([]);
@@ -284,7 +268,7 @@ describe("signUpAction — flusso end-to-end", () => {
 
     it("chiama hashPassword con la password fornita", async () => {
       await callSignUp();
-      expect(mockHashPassword).toHaveBeenCalledWith("Password1");
+      expect(mockHashPassword).toHaveBeenCalledWith("Password1!");
     });
 
     it("aggiunge email al Bloom filter dopo l'insert", async () => {
@@ -297,12 +281,14 @@ describe("signUpAction — flusso end-to-end", () => {
       expect(mockAddUsernameToBloom).toHaveBeenCalledWith("mario_rossi");
     });
 
-    it("invia email di verifica con email, OTP e firstName", async () => {
+    // firstName non è più raccolto in fase di registrazione:
+    // sendSignupVerificationEmail riceve undefined come terzo argomento.
+    it("invia email di verifica con email, OTP e firstName=undefined", async () => {
       await callSignUp();
       expect(mockSendSignupVerificationEmail).toHaveBeenCalledWith(
         "mario@example.com",
         "123456",
-        "Mario",
+        undefined,
       );
     });
 
@@ -319,15 +305,25 @@ describe("signUpAction — flusso end-to-end", () => {
       const result = await callSignUp({ acceptMarketing: "on" });
       expect(result).toMatchObject({ redirected: true, url: "/verify-email" });
     });
+
+    // userProfiles viene inserito solo con username; firstName e lastName
+    // sono null nel DB fino a quando l'utente non li compila dal profilo.
+    it("inserisce userProfiles con solo username (firstName/lastName null)", async () => {
+      await callSignUp();
+      expect(mockProfilesValues).toHaveBeenCalledWith(
+        expect.objectContaining({ username: "mario_rossi" }),
+      );
+      const callArg = mockProfilesValues.mock.calls[0][0] as Record<string, unknown>;
+      expect(callArg.firstName).toBeUndefined();
+      expect(callArg.lastName).toBeUndefined();
+    });
   });
 
   // ─── Registrations disabled ───────────────────────────────────────────────
   describe("Registrazioni disabilitate", () => {
     it("restituisce errore se registrations_enabled=false", async () => {
       mockGetAppSettings.mockResolvedValue({ ...DEFAULT_SETTINGS, registrations_enabled: "false" });
-
       const result = await callSignUp();
-
       expect(result).toMatchObject({ error: expect.stringContaining("chiuse") });
       expect(mockUsersReturning).not.toHaveBeenCalled();
     });
@@ -337,9 +333,7 @@ describe("signUpAction — flusso end-to-end", () => {
   describe("Rate limiting", () => {
     it("blocca se checkSignupRateLimit è blocked", async () => {
       mockCheckSignupRateLimit.mockResolvedValue({ blocked: true, remaining: 0 });
-
       const result = await callSignUp();
-
       expect(result).toMatchObject({ error: expect.stringContaining("Troppi tentativi") });
       expect(mockUsersReturning).not.toHaveBeenCalled();
     });
@@ -389,27 +383,17 @@ describe("signUpAction — flusso end-to-end", () => {
   // ─── Race conditions ──────────────────────────────────────────────────────
   describe("Race conditions", () => {
     it("gestisce race condition su email (unique constraint users) → recordSignupAttempt", async () => {
-      // users .values().returning() rejects + isUniqueConstraintError returns true
       mockUsersReturning.mockRejectedValueOnce(new Error("unique violation"));
       mockIsUniqueConstraintError.mockReturnValueOnce(true);
-
       const result = await callSignUp();
-
       expect(result).toMatchObject({ error: expect.stringContaining("appena stata registrata") });
       expect(mockRecordSignupAttempt).toHaveBeenCalledWith("1.2.3.4");
     });
 
     it("gestisce race condition su username (unique constraint userProfiles) → elimina user orfano + recordSignupAttempt", async () => {
-      // users insert succeeds normally (no mock override needed).
-      // userProfiles .values() rejects + isUniqueConstraintError returns true
-      // NOTE: isUniqueConstraintError is only called inside catch blocks.
-      //   - users catch: NOT reached (users succeeds) → no call, no value consumed
-      //   - userProfiles catch: reached → first mockReturnValueOnce(true) consumed here
       mockProfilesValues.mockRejectedValueOnce(new Error("unique violation"));
       mockIsUniqueConstraintError.mockReturnValueOnce(true);
-
       const result = await callSignUp();
-
       expect(result).toMatchObject({ error: expect.stringContaining("username è appena stato scelto") });
       expect(mockDbDeleteWhere).toHaveBeenCalled();
       expect(mockRecordSignupAttempt).toHaveBeenCalledWith("1.2.3.4");
@@ -420,26 +404,38 @@ describe("signUpAction — flusso end-to-end", () => {
   describe("Email verification fallback", () => {
     it("non interrompe il flusso se sendSignupVerificationEmail fallisce", async () => {
       mockSendSignupVerificationEmail.mockRejectedValueOnce(new Error("Resend error"));
-
       const result = await callSignUp();
-
       expect(result).toMatchObject({ redirected: true, url: "/verify-email" });
       expect(mockAddEmailToBloom).toHaveBeenCalled();
       expect(mockCookiesSet).toHaveBeenCalled();
     });
   });
 
-  // ─── Validazione Zod ─────────────────────────────────────────────────────────────
+  // ─── Validazione Zod ──────────────────────────────────────────────────────
   describe("Validazione schema", () => {
-    it("rifiuta firstName vuoto prima di qualsiasi chiamata server", async () => {
+    // firstName e lastName non fanno più parte dello schema di registrazione.
+    // Vengono raccolti nella pagina profilo dopo la registrazione.
+    it("ignora firstName se passato (non fa parte dello schema)", async () => {
       const result = await callSignUp({ firstName: "" });
-      expect(result).toMatchObject({ error: expect.stringContaining("nome") });
+      // Il campo viene ignorato dallo schema: la registrazione prosegue normalmente
+      expect(result).toMatchObject({ redirected: true, url: "/verify-email" });
+    });
+
+    it("rifiuta password senza carattere speciale", async () => {
+      const result = await callSignUp({ password: "Password1" });
+      expect(result).toMatchObject({ error: expect.stringContaining("carattere speciale") });
       expect(mockGetAppSettings).not.toHaveBeenCalled();
     });
 
-    it("rifiuta password mismatch", async () => {
-      const result = await callSignUp({ confirmPassword: "AltroPass1" });
-      expect(result).toMatchObject({ error: expect.stringContaining("password non sono uguali") });
+    it("rifiuta password senza maiuscola", async () => {
+      const result = await callSignUp({ password: "password1!" });
+      expect(result).toMatchObject({ error: expect.anything() });
+      expect(mockGetAppSettings).not.toHaveBeenCalled();
+    });
+
+    it("rifiuta password troppo corta", async () => {
+      const result = await callSignUp({ password: "P1!" });
+      expect(result).toMatchObject({ error: expect.anything() });
       expect(mockGetAppSettings).not.toHaveBeenCalled();
     });
 
