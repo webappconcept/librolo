@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ActionState } from "@/lib/auth/middleware";
-import { Check, Loader2, X } from "lucide-react";
+import { Check, Eye, EyeOff, Loader2, X } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useActionState, useState } from "react";
@@ -18,22 +18,17 @@ import {
 const passwordRules = [
   {
     id: "min",
-    label: "Almeno 8 caratteri",
+    label: "8+ car.",
     test: (p: string) => p.length >= 8,
   },
   {
-    id: "max",
-    label: "Massimo 30 caratteri",
-    test: (p: string) => p.length <= 30,
-  },
-  {
     id: "upper",
-    label: "Almeno una lettera maiuscola",
+    label: "Maiuscola",
     test: (p: string) => /[A-Z]/.test(p),
   },
   {
     id: "number",
-    label: "Almeno un numero",
+    label: "Numero",
     test: (p: string) => /[0-9]/.test(p),
   },
 ];
@@ -125,8 +120,7 @@ export function Login({
   const [usernameAvailable, setUsernameAvailable] = useState(false);
   const [checkingUsername, setCheckingUsername] = useState(false);
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [confirmError, setConfirmError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [username, setUsername] = useState("");
   const [usernameError, setUsernameError] = useState("");
   const [acceptTerms, setAcceptTerms] = useState(false);
@@ -178,14 +172,6 @@ export function Login({
     } finally {
       setCheckingEmail(false);
     }
-  };
-
-  const validateConfirm = (value: string) => {
-    if (!value) {
-      setConfirmError("");
-      return;
-    }
-    setConfirmError(value === password ? "" : "Le password non coincidono");
   };
 
   const validateUsername = async (value: string) => {
@@ -437,31 +423,44 @@ export function Login({
                     className="text-xs font-semibold uppercase tracking-wide text-brand-label">
                     Password
                   </Label>
-                  <Input
-                    id="password"
-                    name="password"
-                    type="password"
-                    autoComplete={
-                      mode === "signin" ? "current-password" : "new-password"
-                    }
-                    value={password}
-                    onChange={(e) => {
-                      setPassword(e.target.value);
-                      if (confirmPassword) validateConfirm(confirmPassword);
-                    }}
-                    required
-                    minLength={8}
-                    maxLength={30}
-                    placeholder="••••••••"
-                  />
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      name="password"
+                      type={showPassword ? "text" : "password"}
+                      autoComplete={
+                        mode === "signin" ? "current-password" : "new-password"
+                      }
+                      value={password}
+                      onChange={(e) => {
+                        setPassword(e.target.value);
+                      }}
+                      required
+                      minLength={8}
+                      maxLength={30}
+                      placeholder="••••••••"
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((v) => !v)}
+                      aria-label={showPassword ? "Nascondi password" : "Mostra password"}
+                      className="absolute inset-y-0 right-0 flex items-center px-3 text-brand-text-muted hover:text-brand-text transition-colors">
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" aria-hidden="true" />
+                      ) : (
+                        <Eye className="h-4 w-4" aria-hidden="true" />
+                      )}
+                    </button>
+                  </div>
                   {mode === "signup" && password.length > 0 && (
-                    <ul className="mt-2 space-y-1">
+                    <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
                       {passwordRules.map((rule) => {
                         const passed = rule.test(password);
                         return (
                           <li
                             key={rule.id}
-                            className={`text-xs flex items-center gap-1.5 transition-colors duration-200 ${
+                            className={`text-xs flex items-center gap-1 transition-colors duration-200 ${
                               passed
                                 ? "text-brand-accent-hover"
                                 : "text-brand-text-light"
@@ -478,58 +477,17 @@ export function Login({
                     </ul>
                   )}
                   {mode === "signup" && password.length === 0 && (
-                    <ul className="mt-2 space-y-1">
+                    <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
                       {passwordRules.map((rule) => (
                         <li
                           key={rule.id}
-                          className="text-xs flex items-center gap-1.5 text-brand-text-light">
+                          className="text-xs flex items-center gap-1 text-brand-text-light">
                           <span className="w-3 text-center">•</span> {rule.label}
                         </li>
                       ))}
                     </ul>
                   )}
                 </div>
-
-                {mode === "signup" && (
-                  <div className="space-y-1.5">
-                    <Label
-                      htmlFor="confirmPassword"
-                      className="text-xs font-semibold uppercase tracking-wide text-brand-label">
-                      Conferma password
-                    </Label>
-                    <Input
-                      id="confirmPassword"
-                      name="confirmPassword"
-                      type="password"
-                      autoComplete="new-password"
-                      value={confirmPassword}
-                      onChange={(e) => {
-                        setConfirmPassword(e.target.value);
-                        validateConfirm(e.target.value);
-                      }}
-                      required
-                      minLength={8}
-                      maxLength={30}
-                      placeholder="••••••••"
-                      aria-invalid={!!confirmError}
-                      className={
-                        confirmPassword && !confirmError
-                          ? "border-brand-accent"
-                          : ""
-                      }
-                    />
-                    {confirmError && (
-                      <p className="text-xs flex items-center gap-1 text-brand-destructive">
-                        <X className="h-3 w-3" /> {confirmError}
-                      </p>
-                    )}
-                    {confirmPassword && !confirmError && (
-                      <p className="text-xs flex items-center gap-1 text-brand-accent-hover">
-                        <Check className="h-3 w-3" /> Le password coincidono
-                      </p>
-                    )}
-                  </div>
-                )}
 
                 {mode === "signin" && (
                   <div className="text-right">
