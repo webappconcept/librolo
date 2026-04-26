@@ -118,10 +118,7 @@ beforeEach(() => {
 // ==========================================================================
 describe('checkSignupRateLimit — Redis L1', () => {
   it('non blocca quando Redis risponde con count < max (remaining corretto)', async () => {
-    // peekLogin non viene chiamato per signup — qui arriva direttamente checkAndIncrSignupRedis
-    // INCR → 2  (sotto il limite di 4)
     mockRedisOk(2)
-    // EXPIRE (count===1 è falso, non viene chiamato)
 
     vi.resetModules()
     const { invalidateRedisConfigCache } = await import('@/lib/auth/rate-limit-redis')
@@ -134,7 +131,6 @@ describe('checkSignupRateLimit — Redis L1', () => {
   })
 
   it('blocca quando Redis risponde con count >= max', async () => {
-    // INCR → 4 (= limite)
     mockRedisOk(4)
 
     vi.resetModules()
@@ -161,7 +157,6 @@ describe('checkSignupRateLimit — Redis L1', () => {
   })
 
   it('setta EXPIRE solo al primo INCR (count === 1)', async () => {
-    // Prima call: INCR → 1 → deve chiamare EXPIRE
     mockRedisOk(1)     // INCR
     mockRedisOk('OK')  // EXPIRE
 
@@ -171,16 +166,14 @@ describe('checkSignupRateLimit — Redis L1', () => {
     const { checkSignupRateLimit } = await import('@/lib/auth/rate-limit')
     await checkSignupRateLimit('2.2.2.2')
 
-    // fetch chiamato 2 volte: INCR + EXPIRE
     expect(mockFetch).toHaveBeenCalledTimes(2)
-    // La seconda call è EXPIRE
     const expireBody = JSON.parse(mockFetch.mock.calls[1][1].body as string) as unknown[]
     expect(expireBody[0]).toBe('EXPIRE')
     expect(expireBody[1]).toBe('rl:signup:2.2.2.2')
   })
 
   it('non setta EXPIRE quando count > 1', async () => {
-    mockRedisOk(3) // INCR → 3, no EXPIRE
+    mockRedisOk(3)
 
     vi.resetModules()
     const { invalidateRedisConfigCache } = await import('@/lib/auth/rate-limit-redis')
@@ -188,19 +181,15 @@ describe('checkSignupRateLimit — Redis L1', () => {
     const { checkSignupRateLimit } = await import('@/lib/auth/rate-limit')
     await checkSignupRateLimit('3.3.3.3')
 
-    // Solo 1 fetch: INCR, nessun EXPIRE
     expect(mockFetch).toHaveBeenCalledTimes(1)
   })
 })
 
 describe('checkSignupRateLimit — DB L2 fallback (Redis unavailable)', () => {
   it('usa il DB quando Redis è down — non blocca sotto la soglia', async () => {
-    // Redis INCR → errore di rete
     mockRedisDown()
-    // DB: blacklist vuota
     mockSelectFn
       .mockReturnValueOnce(buildSelectChain([]))
-      // count signup = 2 < 4
       .mockReturnValueOnce(buildSelectChain([{ total: 2 }]))
 
     vi.resetModules()
@@ -210,14 +199,14 @@ describe('checkSignupRateLimit — DB L2 fallback (Redis unavailable)', () => {
     const result = await checkSignupRateLimit('4.4.4.4')
 
     expect(result.blocked).toBe(false)
-    expect(result.remaining).toBe(2) // 4 - 2
+    expect(result.remaining).toBe(2)
   })
 
   it('usa il DB quando Redis è down — blocca sopra la soglia', async () => {
     mockRedisDown()
     mockSelectFn
       .mockReturnValueOnce(buildSelectChain([]))
-      .mockReturnValueOnce(buildSelectChain([{ total: 5 }])) // > 4
+      .mockReturnValueOnce(buildSelectChain([{ total: 5 }]))
 
     vi.resetModules()
     const { invalidateRedisConfigCache } = await import('@/lib/auth/rate-limit-redis')
@@ -231,7 +220,6 @@ describe('checkSignupRateLimit — DB L2 fallback (Redis unavailable)', () => {
 
   it('blacklist blocca il signup immediatamente (DB fallback)', async () => {
     mockRedisDown()
-    // Blacklist ha un record per questo IP
     mockSelectFn.mockReturnValueOnce(buildSelectChain([{ id: 42 }]))
 
     vi.resetModules()
@@ -242,7 +230,6 @@ describe('checkSignupRateLimit — DB L2 fallback (Redis unavailable)', () => {
 
     expect(result.blocked).toBe(true)
     expect(result.remaining).toBe(0)
-    // Si ferma alla blacklist: solo 1 select
     expect(mockSelectFn).toHaveBeenCalledTimes(1)
   })
 })
@@ -252,7 +239,7 @@ describe('checkSignupRateLimit — DB L2 fallback (Redis unavailable)', () => {
 // ==========================================================================
 describe('checkAvailabilityRateLimit — Redis L1', () => {
   it('non blocca quando count < max', async () => {
-    mockRedisOk(3) // INCR → 3 < 10
+    mockRedisOk(3)
 
     vi.resetModules()
     const { invalidateRedisConfigCache } = await import('@/lib/auth/rate-limit-redis')
@@ -261,11 +248,11 @@ describe('checkAvailabilityRateLimit — Redis L1', () => {
     const result = await checkAvailabilityRateLimit('1.1.1.1')
 
     expect(result.blocked).toBe(false)
-    expect(result.remaining).toBe(7) // 10 - 3
+    expect(result.remaining).toBe(7)
   })
 
   it('blocca quando count >= max', async () => {
-    mockRedisOk(10) // INCR → 10 = limite
+    mockRedisOk(10)
 
     vi.resetModules()
     const { invalidateRedisConfigCache } = await import('@/lib/auth/rate-limit-redis')
@@ -303,7 +290,6 @@ describe('checkAvailabilityRateLimit — Redis unavailable (graceful allow)', ()
     const result = await checkAvailabilityRateLimit('9.9.9.9')
 
     expect(result.blocked).toBe(false)
-    // remaining = checkMax (10) dal settings mock
     expect(result.remaining).toBe(10)
   })
 
@@ -338,7 +324,7 @@ describe('availability check — nessun recordSignupAttempt', () => {
   })
 
   it('checkSignupRateLimit via Redis NON chiama db.insert (il contatore è solo su Redis)', async () => {
-    mockRedisOk(2) // INCR → 2
+    mockRedisOk(2)
 
     vi.resetModules()
     const { invalidateRedisConfigCache } = await import('@/lib/auth/rate-limit-redis')
@@ -355,10 +341,9 @@ describe('availability check — nessun recordSignupAttempt', () => {
 // ==========================================================================
 describe('checkAndIncrLoginRedis — pipeline INCR+EXPIRE', () => {
   it('non blocca con count coppia < max', async () => {
-    // Pipeline INCR×2: pairCount=2, emailCount=1
+    // pairCount=2, emailCount=1 → EXPIRE schedulato solo per emailCount===1
     mockRedisPipeline([2, 1])
-    // EXPIRE per emailCount===1
-    mockRedisPipeline([1])
+    mockRedisPipeline([1]) // EXPIRE per la chiave email
 
     vi.resetModules()
     const { invalidateRedisConfigCache, checkAndIncrLoginRedis } = await import('@/lib/auth/rate-limit-redis')
@@ -373,8 +358,8 @@ describe('checkAndIncrLoginRedis — pipeline INCR+EXPIRE', () => {
   })
 
   it('blocca quando pairCount >= maxAttempts', async () => {
-    mockRedisPipeline([5, 2]) // pairCount=5 = limite
-    // Nessun EXPIRE (né count è 1)
+    // pairCount=5 = limite, emailCount=2 — nessun count è 1, nessun EXPIRE
+    mockRedisPipeline([5, 2])
 
     vi.resetModules()
     const { invalidateRedisConfigCache, checkAndIncrLoginRedis } = await import('@/lib/auth/rate-limit-redis')
@@ -389,7 +374,9 @@ describe('checkAndIncrLoginRedis — pipeline INCR+EXPIRE', () => {
   })
 
   it('blocca quando emailCount >= globalThreshold (maxAttempts * 3)', async () => {
-    mockRedisPipeline([1, 15]) // emailCount=15 = 5*3
+    // pairCount=2 (>1, no EXPIRE), emailCount=15 (= 5*3, già oltre)
+    // Nessun count è 1 → nessun EXPIRE → un solo fetch pipeline
+    mockRedisPipeline([2, 15])
 
     vi.resetModules()
     const { invalidateRedisConfigCache, checkAndIncrLoginRedis } = await import('@/lib/auth/rate-limit-redis')
@@ -588,7 +575,6 @@ describe('invalidateRedisConfigCache', () => {
     const { getAppSettings } = await import('@/lib/db/settings-queries')
     const mockedGetSettings = vi.mocked(getAppSettings)
 
-    // Prima call — popola la cache
     mockRedisOk(1)
     vi.resetModules()
     const mod1 = await import('@/lib/auth/rate-limit-redis')
@@ -596,7 +582,6 @@ describe('invalidateRedisConfigCache', () => {
     await mod1.checkAndIncrSignupRedis('1.1.1.1', 5, 900)
     const callCount1 = mockedGetSettings.mock.calls.length
 
-    // Invalida e seconda call — deve ri-leggere
     mockRedisOk(2)
     mod1.invalidateRedisConfigCache()
     await mod1.checkAndIncrSignupRedis('1.1.1.1', 5, 900)
