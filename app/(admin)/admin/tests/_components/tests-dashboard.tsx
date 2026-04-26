@@ -1,7 +1,7 @@
 // app/(admin)/admin/tests/_components/tests-dashboard.tsx
 "use client";
 import {
-  FlaskConical, Database, Zap, Mail, Chrome,
+  FlaskConical, Database, Zap, Mail, Globe,
   CheckCircle2, XCircle, AlertCircle, HelpCircle,
   Clock, RefreshCw, ChevronDown, ChevronRight,
   SkipForward, CircleDot,
@@ -53,7 +53,7 @@ function serviceIcon(name: string) {
   const n = name.toLowerCase();
   if (n.includes("redis"))  return <Zap      size={15} style={{ color: "var(--admin-accent)" }} />;
   if (n.includes("resend")) return <Mail     size={15} style={{ color: "var(--admin-accent)" }} />;
-  if (n.includes("google")) return <Chrome   size={15} style={{ color: "var(--admin-accent)" }} />;
+  if (n.includes("google")) return <Globe    size={15} style={{ color: "var(--admin-accent)" }} />;
   return                            <Database size={15} style={{ color: "var(--admin-accent)" }} />;
 }
 
@@ -138,11 +138,9 @@ function SuiteRow({ suite }: { suite: VitestSuite }) {
 
   const passed  = suite.tests.filter(t => t.status === "passed").length;
   const failed  = suite.tests.filter(t => t.status === "failed").length;
-  const skipped = suite.tests.filter(t => t.status === "skipped").length;
   const total   = suite.tests.length;
 
   const suiteStatus: HealthStatus = failed > 0 ? "error" : suite.status === "passed" ? "ok" : "degraded";
-  // Short display name: strip leading "tests/" prefix for compactness
   const displayName = suite.name.replace(/^tests\//, "");
 
   return (
@@ -152,7 +150,6 @@ function SuiteRow({ suite }: { suite: VitestSuite }) {
       overflow: "hidden",
       background: statusBg(suiteStatus),
     }}>
-      {/* Header — always visible, click to toggle */}
       <button
         onClick={() => setOpen(o => !o)}
         style={{
@@ -162,17 +159,12 @@ function SuiteRow({ suite }: { suite: VitestSuite }) {
           cursor: "pointer", textAlign: "left",
         }}
       >
-        {/* Chevron */}
         <span style={{ color: "var(--admin-text-faint)", flexShrink: 0 }}>
-          {open
-            ? <ChevronDown  size={14} />
-            : <ChevronRight size={14} />}
+          {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
         </span>
 
-        {/* Suite status icon */}
         {statusIcon(suiteStatus, 14)}
 
-        {/* File name */}
         <span style={{
           flex: 1, fontSize: 12, fontFamily: "monospace",
           color: "var(--admin-text)", wordBreak: "break-all",
@@ -180,7 +172,6 @@ function SuiteRow({ suite }: { suite: VitestSuite }) {
           {displayName}
         </span>
 
-        {/* Counters */}
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
           {failed > 0 && (
             <span style={{ fontSize: 11, fontWeight: 600, color: "var(--admin-danger, #f87171)", fontVariantNumeric: "tabular-nums" }}>
@@ -198,7 +189,6 @@ function SuiteRow({ suite }: { suite: VitestSuite }) {
         </div>
       </button>
 
-      {/* Expanded test list */}
       {open && (
         <div style={{
           borderTop: "1px solid var(--admin-border)",
@@ -227,7 +217,6 @@ function SuiteRow({ suite }: { suite: VitestSuite }) {
               )}
             </div>
           ))}
-          {/* Failure messages */}
           {suite.tests.filter(t => t.failureMessages?.length).map((t, i) => (
             <pre key={`err-${i}`} style={{
               fontSize: 10, lineHeight: 1.5, margin: "4px 0 0",
@@ -383,7 +372,6 @@ export function TestsDashboard({
         </div>
 
         {vitestReport === null ? (
-          // No report yet — first deploy before any CI run
           <div style={{
             background: "var(--admin-card-bg)",
             border: "1px solid var(--admin-border)",
@@ -395,7 +383,8 @@ export function TestsDashboard({
               No test report available yet.
             </p>
             <p style={{ fontSize: 12, color: "var(--admin-text-faint)", margin: "4px 0 0" }}>
-              The report is generated automatically on every push to <code style={{ fontFamily: "monospace", fontSize: 11 }}>main</code>.
+              The report is generated automatically on every push to{" "}
+              <code style={{ fontFamily: "monospace", fontSize: 11 }}>main</code>.
             </p>
           </div>
         ) : (
@@ -407,7 +396,8 @@ export function TestsDashboard({
               fontSize: 11, color: "var(--admin-text-faint)",
               margin: "6px 0 0", lineHeight: 1.6,
             }}>
-              Tests run automatically by the CI pipeline on every commit to <code style={{ fontFamily: "monospace", fontSize: 11 }}>main</code>.
+              Tests run automatically by the CI pipeline on every commit to{" "}
+              <code style={{ fontFamily: "monospace", fontSize: 11 }}>main</code>.
               The branch is protected — merges are blocked if any test fails.
             </p>
           </div>
