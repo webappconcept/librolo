@@ -214,7 +214,7 @@ export function Login({
 
   // Guard client-side: mostra errori inline invece di bloccare il bottone
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    if (mode !== "signup") return;
+    if (mode !== "signup") return; // signin: nessun guard aggiuntivo
 
     setSubmitAttempted(true);
 
