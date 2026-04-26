@@ -44,6 +44,10 @@ export type SettingKey =
   // Redis / Upstash
   | 'upstash_redis_rest_url'
   | 'upstash_redis_rest_token'
+  // Google OAuth
+  | 'google_client_id'
+  | 'google_client_secret'
+  | 'google_redirect_uri'
 
 export type AppSettings = {
   app_name: string
@@ -81,6 +85,10 @@ export type AppSettings = {
   // Redis / Upstash
   upstash_redis_rest_url: string | null
   upstash_redis_rest_token: string | null
+  // Google OAuth
+  google_client_id: string | null
+  google_client_secret: string | null
+  google_redirect_uri: string | null
 }
 
 const DEFAULTS: AppSettings = {
@@ -119,6 +127,10 @@ const DEFAULTS: AppSettings = {
   // Redis defaults
   upstash_redis_rest_url: null,
   upstash_redis_rest_token: null,
+  // Google OAuth defaults
+  google_client_id: null,
+  google_client_secret: null,
+  google_redirect_uri: null,
 }
 
 async function fetchAppSettings(): Promise<AppSettings> {
