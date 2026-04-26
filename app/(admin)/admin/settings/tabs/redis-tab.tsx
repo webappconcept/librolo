@@ -194,6 +194,10 @@ export function RedisTab({ settings }: { settings: AppSettings }) {
                 keys on Redis (type{" "}
                 <span className="italic">String/Bitmap</span>).
               </p>
+              <p style={{ color: "var(--admin-text-muted)" }}>
+                The same Database is also used to record the rate limiting
+                actions for Emails and IP.
+              </p>
             </div>
           </div>
 

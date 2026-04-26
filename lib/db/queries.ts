@@ -54,6 +54,7 @@ async function getUserInternal() {
       firstName: userProfiles.firstName,
       lastName: userProfiles.lastName,
       username: userProfiles.username,
+      avatarUrl: userProfiles.avatarUrl,
       // subscription
       stripeCustomerId: userSubscriptions.stripeCustomerId,
       stripeSubscriptionId: userSubscriptions.stripeSubscriptionId,
@@ -102,9 +103,12 @@ export async function getUserByStripeCustomerId(customerId: string) {
       createdAt: users.createdAt,
       updatedAt: users.updatedAt,
       deletedAt: users.deletedAt,
+      // profile
       firstName: userProfiles.firstName,
       lastName: userProfiles.lastName,
       username: userProfiles.username,
+      avatarUrl: userProfiles.avatarUrl,
+      // subscription
       stripeCustomerId: userSubscriptions.stripeCustomerId,
       stripeSubscriptionId: userSubscriptions.stripeSubscriptionId,
       stripeProductId: userSubscriptions.stripeProductId,
