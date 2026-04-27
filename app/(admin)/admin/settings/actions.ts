@@ -270,7 +270,7 @@ export async function addDisposableDomainAction(
       .insert(disposableDomains)
       .values({ domain: clean })
       .onConflictDoNothing();
-    invalidateDisposableDomainsCache();
+    await invalidateDisposableDomainsCache();
     revalidatePath(getAdminPath("security-blocked-domains"));
     return { success: `"${clean}" aggiunto.`, timestamp: Date.now() };
   } catch {
@@ -285,7 +285,7 @@ export async function removeDisposableDomainAction(
     await db
       .delete(disposableDomains)
       .where(eq(disposableDomains.domain, domain.trim().toLowerCase()));
-    invalidateDisposableDomainsCache();
+    await invalidateDisposableDomainsCache();
     revalidatePath(getAdminPath("security-blocked-domains"));
     return { success: `"${domain}" rimosso.`, timestamp: Date.now() };
   } catch {
@@ -304,7 +304,7 @@ export async function bulkImportDisposableDomainsAction(
       .filter(Boolean)
       .map((domain) => ({ domain }));
     await db.insert(disposableDomains).values(values).onConflictDoNothing();
-    invalidateDisposableDomainsCache();
+    await invalidateDisposableDomainsCache();
     revalidatePath(getAdminPath("security-blocked-domains"));
     return {
       success: `${values.length} domini importati con successo.`,
@@ -351,7 +351,7 @@ export async function addBlockedUsernameAction(
       }
     }
 
-    invalidateBlockedUsernamesCache();
+    await invalidateBlockedUsernamesCache();
     revalidatePath(getAdminPath("security-blocked-usernames"));
     return { success: `"${clean}" aggiunto.`, timestamp: Date.now() };
   } catch {
@@ -368,7 +368,7 @@ export async function removeBlockedUsernameAction(
       .where(
         eq(blockedUsernames.username, username.trim().toLowerCase()),
       );
-    invalidateBlockedUsernamesCache();
+    await invalidateBlockedUsernamesCache();
     revalidatePath(getAdminPath("security-blocked-usernames"));
     return { success: `"${username}" rimosso.`, timestamp: Date.now() };
   } catch {
@@ -421,7 +421,7 @@ export async function bulkImportBlockedUsernamesAction(
       }
     }
 
-    invalidateBlockedUsernamesCache();
+    await invalidateBlockedUsernamesCache();
     revalidatePath(getAdminPath("security-blocked-usernames"));
 
     const msg =
