@@ -60,6 +60,7 @@ import {
     addEmailsBulkToBloom,
     checkEmailAvailability,
     ensureBloomFilter,
+    invalidateRedisConfigCache,
 } from "@/lib/bloom/bloom-filter";
 
 const ALL_ZEROS = Array(7).fill(0);
@@ -69,6 +70,11 @@ const ALL_ONES = Array(7).fill(1);
 describe("Bloom Filter — Email", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Reset the module-level Redis config cache so each test starts cold.
+    // Without this, getRedisConfig() would return the cached credentials
+    // from the previous test and never call getAppSettings() again,
+    // breaking tests that mock getAppSettings with different values.
+    invalidateRedisConfigCache();
     process.env.UPSTASH_REDIS_REST_URL = "https://fake.upstash.io";
     process.env.UPSTASH_REDIS_REST_TOKEN = "fake-token";
   });

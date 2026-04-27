@@ -16,7 +16,13 @@ import {
   isUniqueConstraintError,
   resolveConflictField,
 } from "@/lib/auth/race-condition";
-import { checkRateLimit, recordLoginAttempt } from "@/lib/auth/rate-limit";
+import {
+  checkAvailabilityRateLimit,
+  checkRateLimit,
+  checkSignupRateLimit,
+  recordLoginAttempt,
+  recordSignupAttempt,
+} from "@/lib/auth/rate-limit";
 import { comparePasswords, hashPassword, setSession } from "@/lib/auth/session";
 import {
   addEmailToBloom,
@@ -76,7 +82,7 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
   const { blocked } = await checkRateLimit(email, ip);
   if (blocked) {
     return {
-      error: "Troppi tentativi falliti. Riprova tra 15 minuti.",
+      error: "Troppi tentativi falliti. Riprova tra qualche minuto.",
       email,
       password,
     };
@@ -89,11 +95,19 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
     .limit(1);
 
   if (!foundUser) {
+    await comparePasswords(
+      password,
+      "$2b$12$dummyhashXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+    );
     await recordLoginAttempt(email, ip, false);
     return { error: "Email o password errate, riprova.", email, password };
   }
 
   if (foundUser.bannedAt !== null) {
+    await comparePasswords(
+      password,
+      "$2b$12$dummyhashXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+    );
     return {
       error: "Il tuo account è stato sospeso. Contatta il supporto.",
       email,
@@ -101,10 +115,7 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
     };
   }
 
-  const isPasswordValid = await comparePasswords(
-    password,
-    foundUser.passwordHash,
-  );
+  const isPasswordValid = await comparePasswords(password, foundUser.passwordHash);
 
   if (!isPasswordValid) {
     await recordLoginAttempt(email, ip, false);
@@ -115,8 +126,7 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
     const settings = await getAppSettings();
     if (settings.maintenance_mode === "true") {
       return {
-        error:
-          "Il sito è in manutenzione. Solo gli amministratori possono accedere.",
+        error: "Il sito è in manutenzione. Solo gli amministratori possono accedere.",
         email,
         password,
       };
@@ -138,8 +148,8 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
 
 const signUpSchema = z
   .object({
-    firstName: z.string().min(1, "Il nome è obbligatorio").max(100),
-    lastName: z.string().min(1, "Il cognome è obbligatorio").max(100),
+    // firstName e lastName non sono raccolti nella form di registrazione:
+    // vengono inseriti dall'utente nella pagina del profilo dopo la registrazione.
     username: z
       .string()
       .min(3, "Username minimo 3 caratteri")
@@ -151,15 +161,14 @@ const signUpSchema = z
       .min(8, "La password deve contenere almeno 8 caratteri")
       .max(30)
       .regex(/[A-Z]/, "La password deve contenere almeno una lettera maiuscola")
-      .regex(/[0-9]/, "La password deve contenere almeno un numero"),
-    confirmPassword: z.string().min(8).max(30),
+      .regex(/[0-9]/, "La password deve contenere almeno un numero")
+      .regex(
+        /[^a-zA-Z0-9]/,
+        "La password deve contenere almeno un carattere speciale",
+      ),
     acceptTerms: z.string(),
     acceptPrivacy: z.string(),
     acceptMarketing: z.string().optional(),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Le password non sono uguali",
-    path: ["confirmPassword"],
   })
   .refine((data) => data.acceptTerms === "on", {
     message: "Devi accettare i Termini e Condizioni per procedere",
@@ -171,7 +180,9 @@ const signUpSchema = z
   });
 
 export const signUp = validatedAction(signUpSchema, async (data) => {
-  const { firstName, lastName, username, email, password } = data;
+  const { username, email, password } = data;
+  // firstName e lastName non presenti in questa fase: saranno null nel DB
+  // fino a quando l'utente non li compila dalla pagina del profilo.
 
   const settings = await getAppSettings();
   if (settings.registrations_enabled === "false") {
@@ -187,6 +198,16 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
     headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ??
     headersList.get("x-real-ip") ??
     "unknown";
+
+  // Rate limit registrazione (bf_signup_max, default 10 per IP)
+  const signupCheck = await checkSignupRateLimit(ip);
+  if (signupCheck.blocked) {
+    return {
+      error: "Troppi tentativi di registrazione. Riprova tra qualche minuto.",
+      email,
+      password,
+    };
+  }
 
   if (await isIpBlacklisted(ip)) {
     return { error: "Accesso non consentito.", email, password };
@@ -208,20 +229,18 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
     };
   }
 
-  // ── Check ottimistici pre-insert (Bloom + DB) ───────────────────────────
   await ensureBloomFilter();
-  const emailAvailability = await checkEmailAvailability(email);
+
+  const [emailAvailability, usernameAvailability] = await Promise.all([
+    checkEmailAvailability(email),
+    checkUsernameAvailability(username),
+  ]);
+
   if (!emailAvailability.available) {
     return { error: "Questa email è già stata registrata", email, password };
   }
 
-  const existingUsername = await db
-    .select({ id: userProfiles.id })
-    .from(userProfiles)
-    .where(eq(userProfiles.username, username))
-    .limit(1);
-
-  if (existingUsername.length > 0) {
+  if (!usernameAvailability.available) {
     return { error: "Questo username è già in uso.", email, password };
   }
 
@@ -232,7 +251,6 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
   const defaultRole = settings.default_role || "member";
   const now = new Date();
 
-  // ── INSERT atomico — unico gate reale contro le race condition ──────────
   let createdUser: typeof users.$inferSelect;
 
   try {
@@ -253,19 +271,15 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
       .returning();
 
     if (!inserted) {
-      return {
-        error: "Impossibile creare l'account. Riprova.",
-        email,
-        password,
-      };
+      return { error: "Impossibile creare l'account. Riprova.", email, password };
     }
 
     createdUser = inserted;
   } catch (err: unknown) {
     if (isUniqueConstraintError(err)) {
+      await recordSignupAttempt(ip);
       return {
-        error:
-          "Questa email è appena stata registrata da un altro utente. Prova con un'altra.",
+        error: "Questa email è appena stata registrata da un altro utente. Prova con un'altra.",
         email,
         password,
       };
@@ -276,16 +290,15 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
   try {
     await db.insert(userProfiles).values({
       userId: createdUser.id,
-      firstName,
-      lastName,
+      // firstName e lastName lasciati null: l'utente li inserirà dal profilo
       username,
     });
   } catch (err: unknown) {
     if (isUniqueConstraintError(err)) {
       await db.delete(users).where(eq(users.id, createdUser.id));
+      await recordSignupAttempt(ip);
       return {
-        error:
-          "Questo username è appena stato scelto da un altro utente. Scegline un altro.",
+        error: "Questo username è appena stato scelto da un altro utente. Scegline un altro.",
         email,
         password,
       };
@@ -293,14 +306,15 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
     throw err;
   }
 
-  // ── Sync Bloom — solo dopo entrambi gli INSERT confermati ───────────────
   await addEmailToBloom(createdUser.email);
   await addUsernameToBloom(username);
 
   const code = await createVerificationCode(createdUser.id);
 
   try {
-    await sendSignupVerificationEmail(createdUser.email, code, firstName);
+    // firstName non disponibile in questa fase: passiamo undefined,
+    // il template email userà un saluto generico.
+    await sendSignupVerificationEmail(createdUser.email, code, undefined);
   } catch (emailErr) {
     console.error("[signUp] sendSignupVerificationEmail failed:", emailErr);
   }
@@ -318,16 +332,22 @@ export const signUp = validatedAction(signUpSchema, async (data) => {
   redirect("/verify-email");
 });
 
+// ---------------------------------------------------------------------------
+// checkEmailAction — usa checkAvailabilityRateLimit (non login!)
+// ---------------------------------------------------------------------------
+
 export async function checkEmailAction(email: string) {
   const headersList = await headers();
   const ip =
     headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-  const { blocked } = await checkRateLimit(email, ip);
-  if (blocked)
+
+  const availCheck = await checkAvailabilityRateLimit(ip);
+  if (availCheck.blocked) {
     return {
       available: false,
-      error: "Troppi tentativi, riprova tra qualche minuto.",
+      error: "Hai effettuato troppi controlli. Riprova tra qualche minuto.",
     };
+  }
 
   const normalizedEmail = email.trim().toLowerCase();
 
@@ -350,7 +370,7 @@ export async function checkEmailAction(email: string) {
 }
 
 // ---------------------------------------------------------------------------
-// checkUsernameAction
+// checkUsernameAction — usa checkAvailabilityRateLimit (non login!)
 // ---------------------------------------------------------------------------
 
 export async function checkUsernameAction(
@@ -359,18 +379,19 @@ export async function checkUsernameAction(
   const headersList = await headers();
   const ip =
     headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-  const { blocked } = await checkRateLimit(username, ip);
-  if (blocked)
+
+  const availCheck = await checkAvailabilityRateLimit(ip);
+  if (availCheck.blocked) {
     return {
       available: false,
-      error: "Troppi tentativi, riprova tra qualche minuto.",
+      error: "Hai effettuato troppi controlli. Riprova tra qualche minuto.",
     };
+  }
 
   if (!username || username.length < 3) {
     return { available: false };
   }
 
-  // Controlla prima la blacklist (cache in-memory, nessun costo aggiuntivo)
   if (await isUsernameBlacklisted(username)) {
     return { available: false, error: "Questo username non è disponibile." };
   }
@@ -468,10 +489,7 @@ export const deleteAccount = validatedActionWithUser(
 
     const isPasswordValid = await comparePasswords(password, user.passwordHash);
     if (!isPasswordValid) {
-      return {
-        password,
-        error: "Incorrect password. Account deletion failed.",
-      };
+      return { password, error: "Incorrect password. Account deletion failed." };
     }
 
     await logActivity(user.id, ActivityType.DELETE_ACCOUNT);

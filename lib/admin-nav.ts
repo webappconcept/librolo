@@ -242,7 +242,7 @@ export const ADMIN_NAV: NavItem[] = [
     label: "Settings",
     icon: "Settings",
     permission: "admin:settings",
-    childrenMaxHeight: "320px",
+    childrenMaxHeight: "360px",
     children: [
       {
         key: "settings-general",
@@ -291,6 +291,13 @@ export const ADMIN_NAV: NavItem[] = [
         href: "/admin/settings/redis",
         label: "Redis",
         icon: "Database",
+        permission: "admin:settings",
+      },
+      {
+        key: "settings-google",
+        href: "/admin/settings/google-oauth",
+        label: "Google OAuth",
+        icon: "LogIn",
         permission: "admin:settings",
       },
     ],

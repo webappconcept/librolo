@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { Trash2 } from "lucide-react";
-import { deleteTemplateAction } from "../actions";
 import ConfirmModal from "@/app/(admin)/admin/_components/confirm-modal";
+import { Trash2 } from "lucide-react";
+import { useState, useTransition } from "react";
+import { deleteTemplateAction } from "../actions";
 
 interface Props {
   id: number;
@@ -28,18 +28,23 @@ export default function DeleteTemplateButton({ id, name, pageCount }: Props) {
 
   const message = inUse ? (
     <>
-      Il template <strong style={{ color: "var(--admin-text)" }}>"{name}"</strong> è usato da{" "}
+      Il template{" "}
+      <strong style={{ color: "var(--admin-text)" }}>"{name}"</strong> è usato
+      da{" "}
       <strong style={{ color: "var(--admin-text)" }}>
         {pageCount} {pageCount === 1 ? "pagina" : "pagine"}
-      </strong>.
-      <br /><br />
-      Eliminandolo, quelle pagine non avranno più un template assegnato e
-      useranno il layout di default. L'operazione è irreversibile.
+      </strong>
+      .
+      <br />
+      <br />
+      Removing it will leave those pages without an assigned template, and they
+      will use the default layout. This action is irreversible.
     </>
   ) : (
     <>
-      Eliminare il template <strong style={{ color: "var(--admin-text)" }}>"{name}"</strong>?{" "}
-      L'operazione è irreversibile.
+      Delete the Template{" "}
+      <strong style={{ color: "var(--admin-text)" }}>"{name}"</strong>? This
+      action is irreversible.
     </>
   );
 
@@ -47,20 +52,24 @@ export default function DeleteTemplateButton({ id, name, pageCount }: Props) {
     <>
       <button
         type="button"
-        title="Elimina template"
+        title="Delete Template"
         onClick={() => setOpen(true)}
         className="p-1.5 rounded-lg transition-colors"
-        style={{ color: "var(--admin-error, #dc2626)", border: "1px solid var(--admin-border)" }}
-      >
+        style={{
+          color: "var(--admin-error, #dc2626)",
+          border: "1px solid var(--admin-border)",
+        }}>
         <Trash2 size={14} />
       </button>
 
       <ConfirmModal
         open={open}
-        title={inUse ? `Template in uso — elimina comunque?` : `Elimina template`}
+        title={
+          inUse ? `Template is in use — deleting anyway?` : `Delete Template`
+        }
         message={message}
-        confirmLabel="Elimina"
-        cancelLabel="Annulla"
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
         variant={inUse ? "warning" : "danger"}
         loading={isPending}
         onConfirm={handleConfirm}

@@ -14,6 +14,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Need write access to commit the report back on push to main
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # Fetch full history so rebase can resolve diverged refs
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -42,7 +47,42 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Run tests
-        run: pnpm test
+        # Always generate the report, even when tests fail (continue-on-error
+        # is handled below so the commit step still runs).
+        id: run_tests
+        continue-on-error: true
+        run: |
+          mkdir -p test-reports
+          pnpm vitest run \
+            --reporter=default \
+            --reporter=json \
+            --outputFile=test-reports/vitest-results.json
         env:
           AUTH_SECRET: ${{ secrets.AUTH_SECRET || 'ci-test-secret-key-at-least-32-chars-!!' }}
           DATABASE_URL: ${{ secrets.DATABASE_URL || 'postgresql://mock:mock@localhost/mock' }}
+
+      # Commit the JSON report back to main so the admin dashboard
+      # can read it at runtime via fs.readFile (Next.js server component).
+      # Only runs on direct pushes to main, not on PRs (no write access).
+      #
+      # FIX: git pull --rebase prima del push per gestire il caso in cui
+      # main sia avanzato mentre il job era in esecuzione (merge ravvicinati
+      # causavano un non-fast-forward reject e il commit veniva perso).
+      - name: Commit test report
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add test-reports/vitest-results.json
+          if git diff --cached --quiet; then
+            echo "No changes to commit, skipping."
+          else
+            git commit -m "chore(ci): update vitest-results.json [skip ci]"
+            git pull --rebase origin main
+            git push origin main
+          fi
+
+      # Re-fail the job if tests actually failed (after the commit step).
+      - name: Propagate test failure
+        if: steps.run_tests.outcome == 'failure'
+        run: exit 1

@@ -58,3 +58,11 @@ export async function setSession(user: NewUser) {
     sameSite: "lax",
   });
 }
+
+/**
+ * Alias usato dai callback OAuth dove non si ha un oggetto NewUser completo.
+ * Internamente delega a setSession.
+ */
+export async function createSession(userId: string, role: string) {
+  return setSession({ id: userId, role } as NewUser);
+}

@@ -1,25 +1,53 @@
+// lib/auth/blacklist.ts
+//
+// Blacklist IP/dominio/username.
+// isIpBlacklisted usa Redis come L1 cache (miss → fallback DB).
+
 import { db } from "@/lib/db/drizzle";
-import { ipBlacklist } from "@/lib/db/schema";
+import { blockedUsernames, disposableDomains, ipBlacklist } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { isBlockedUsername } from "./blocked-usernames";
-import { isDisposableDomain } from "./disposable-domains";
+import { isIpBlacklistedRedis } from "./rate-limit-redis";
 
-// Cache in-memory via disposable-domains.ts
-export async function isDomainBlacklisted(email: string): Promise<boolean> {
-  return isDisposableDomain(email);
-}
-
-// Cache in-memory via blocked-usernames.ts
-export async function isUsernameBlacklisted(username: string): Promise<boolean> {
-  return isBlockedUsername(username);
-}
-
-// Asincrono — DB diretto (lista IP generalmente piccola)
+/**
+ * Controlla se un IP è in blacklist.
+ * L1: Redis (< 1ms) — L2: DB (fallback se Redis è unavailable).
+ */
 export async function isIpBlacklisted(ip: string): Promise<boolean> {
-  const result = await db
-    .select()
+  // L1: Redis
+  const redisResult = await isIpBlacklistedRedis(ip);
+  if (redisResult !== null) return redisResult;
+
+  // L2: DB fallback
+  const [row] = await db
+    .select({ id: ipBlacklist.id })
     .from(ipBlacklist)
     .where(eq(ipBlacklist.ip, ip))
     .limit(1);
-  return result.length > 0;
+
+  return row !== undefined;
+}
+
+export async function isDomainBlacklisted(email: string): Promise<boolean> {
+  const domain = email.split("@")[1]?.toLowerCase();
+  if (!domain) return false;
+
+  const [row] = await db
+    .select({ id: disposableDomains.id })
+    .from(disposableDomains)
+    .where(eq(disposableDomains.domain, domain))
+    .limit(1);
+
+  return row !== undefined;
+}
+
+export async function isUsernameBlacklisted(username: string): Promise<boolean> {
+  const normalized = username.toLowerCase();
+
+  const [row] = await db
+    .select({ id: blockedUsernames.id })
+    .from(blockedUsernames)
+    .where(eq(blockedUsernames.username, normalized))
+    .limit(1);
+
+  return row !== undefined;
 }

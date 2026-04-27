@@ -1,20 +1,14 @@
 // app/(admin)/admin/logs/page.tsx
-import type { Metadata } from "next";
-import { requireAdminPage } from "@/lib/rbac/guards";
 import { getActivityLogs } from "@/lib/db/admin-queries";
+import { requireAdminPage } from "@/lib/rbac/guards";
 import { ClipboardList } from "lucide-react";
-import { LogsClient } from "./_components/logs-client";
+import type { Metadata } from "next";
 import { Suspense } from "react";
+import { LogsClient } from "./_components/logs-client";
 
 export const metadata: Metadata = { title: "Log attività" };
 
-async function LogsContent({
-  page,
-  tab,
-}: {
-  page: number;
-  tab: string;
-}) {
+async function LogsContent({ page, tab }: { page: number; tab: string }) {
   const data = await getActivityLogs({ page, perPage: 20, tab });
   return <LogsClient data={data} />;
 }
@@ -36,18 +30,24 @@ export default async function AdminLogsPage({
         <div
           className="w-9 h-9 rounded-xl flex items-center justify-center"
           style={{
-            background: "color-mix(in srgb, var(--admin-accent) 12%, var(--admin-card-bg))",
-            border: "1px solid color-mix(in srgb, var(--admin-accent) 25%, transparent)",
-          }}
-        >
+            background:
+              "color-mix(in srgb, var(--admin-accent) 12%, var(--admin-card-bg))",
+            border:
+              "1px solid color-mix(in srgb, var(--admin-accent) 25%, transparent)",
+          }}>
           <ClipboardList size={18} style={{ color: "var(--admin-accent)" }} />
         </div>
         <div>
-          <h2 className="text-lg font-bold" style={{ color: "var(--admin-text)" }}>
-            Log attività
+          <h2
+            className="text-lg font-bold"
+            style={{ color: "var(--admin-text)" }}>
+            Activity Logs
           </h2>
-          <p className="text-sm mt-0.5" style={{ color: "var(--admin-text-faint)" }}>
-            Traccia delle operazioni eseguite in app e in amministrazione
+          <p
+            className="text-sm mt-0.5"
+            style={{ color: "var(--admin-text-faint)" }}>
+            Log of operations performed in the app and in the administration
+            panel.
           </p>
         </div>
       </div>
@@ -58,7 +58,10 @@ export default async function AdminLogsPage({
           <div className="flex items-center justify-center h-40">
             <div
               className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin"
-              style={{ borderColor: "var(--admin-accent)", borderTopColor: "transparent" }}
+              style={{
+                borderColor: "var(--admin-accent)",
+                borderTopColor: "transparent",
+              }}
             />
           </div>
         }>

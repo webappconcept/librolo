@@ -27,14 +27,14 @@ import {
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 
-// LogEntry e PaginatedLogs sono ora in @/lib/db/types — non ridefinire qui.
+// LogEntry and PaginatedLogs are now in @/lib/db/types — do not redefine here.
 
 type Props = { data: PaginatedLogs };
 
 const TABS = [
   { id: "rbac", label: "RBAC", icon: KeyRound },
-  { id: "auth", label: "Autenticazione", icon: LogIn },
-  { id: "pages", label: "Contenuti", icon: FileText },
+  { id: "auth", label: "Authentication", icon: LogIn },
+  { id: "pages", label: "Content", icon: FileText },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
@@ -95,7 +95,7 @@ function ActionIcon({ type }: { type: ActivityType | null }) {
   // Auth
   if (AUTH_TYPES.has(type))
     return <LogIn size={13} style={{ color: "#0284c7" }} />;
-  // Contenuti — pagine
+  // Content — pages
   if (type === ActivityType.PAGE_CREATED)
     return <FilePlus2 size={13} style={{ color: "#16a34a" }} />;
   if (type === ActivityType.PAGE_UPDATED)
@@ -106,7 +106,7 @@ function ActionIcon({ type }: { type: ActivityType | null }) {
     return <Eye size={13} style={{ color: "#16a34a" }} />;
   if (type === ActivityType.PAGE_UNPUBLISHED)
     return <EyeOff size={13} style={{ color: "#d97706" }} />;
-  // Contenuti — template
+  // Content — template
   if (type === ActivityType.TEMPLATE_CREATED)
     return <LayoutTemplate size={13} style={{ color: "#16a34a" }} />;
   if (type === ActivityType.TEMPLATE_UPDATED)
@@ -151,7 +151,7 @@ function TypeBadge({ type }: { type: ActivityType | null }) {
   } else if (AUTH_TYPES.has(type)) {
     bg = "#e0f2fe";
     color = "#0369a1";
-    // Contenuti
+    // Content
   } else if (
     type === ActivityType.PAGE_CREATED ||
     type === ActivityType.TEMPLATE_CREATED
@@ -217,7 +217,7 @@ export function LogsClient({ data }: Props) {
 
   return (
     <div className="space-y-4">
-      {/* Tab bar + ricerca */}
+      {/* Tab bar + search */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div
           className="flex items-center gap-1 p-1 rounded-xl w-fit"
@@ -244,7 +244,7 @@ export function LogsClient({ data }: Props) {
           })}
         </div>
 
-        {/* Ricerca */}
+        {/* Search */}
         <div className="relative">
           <Search
             size={13}
@@ -253,7 +253,7 @@ export function LogsClient({ data }: Props) {
           />
           <input
             type="text"
-            placeholder="Cerca azione, email, IP..."
+            placeholder="Search action, email, IP..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-8 pr-4 py-2 text-sm rounded-lg outline-none border w-64"
@@ -266,26 +266,26 @@ export function LogsClient({ data }: Props) {
         </div>
       </div>
 
-      {/* Filtro attivo info */}
+      {/* Active filter info */}
       {search && (
         <div className="flex items-center gap-2">
           <Filter size={12} style={{ color: "var(--admin-text-faint)" }} />
           <span
             className="text-xs"
             style={{ color: "var(--admin-text-faint)" }}>
-            {filtered.length} risultati in questa pagina per &ldquo;{search}
+            {filtered.length} results on this page for &ldquo;{search}
             &rdquo;
           </span>
           <button
             onClick={() => setSearch("")}
             className="text-xs underline"
             style={{ color: "var(--admin-accent)" }}>
-            Cancella
+            Clear
           </button>
         </div>
       )}
 
-      {/* Lista log */}
+      {/* Log list */}
       <div
         className="rounded-xl overflow-hidden"
         style={{ border: "1px solid var(--admin-card-border)" }}>
@@ -298,7 +298,7 @@ export function LogsClient({ data }: Props) {
               style={{ opacity: 0.2, color: "var(--admin-text)" }}
             />
             <p className="text-sm" style={{ color: "var(--admin-text-faint)" }}>
-              Nessun log trovato
+              No logs found
             </p>
           </div>
         ) : (
@@ -368,13 +368,13 @@ export function LogsClient({ data }: Props) {
         )}
       </div>
 
-      {/* Paginazione */}
+      {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between gap-4">
           <span
             className="text-xs tabular-nums"
             style={{ color: "var(--admin-text-faint)" }}>
-            {start}–{end} di {total} eventi
+            {start}–{end} of {total} events
           </span>
           <div className="flex items-center gap-1">
             <button
@@ -394,7 +394,7 @@ export function LogsClient({ data }: Props) {
                 (e.currentTarget as HTMLButtonElement).style.background =
                   "transparent";
               }}
-              aria-label="Pagina precedente">
+              aria-label="Previous page">
               <ChevronLeft size={15} />
             </button>
 
@@ -464,7 +464,7 @@ export function LogsClient({ data }: Props) {
                 (e.currentTarget as HTMLButtonElement).style.background =
                   "transparent";
               }}
-              aria-label="Pagina successiva">
+              aria-label="Next page">
               <ChevronRight size={15} />
             </button>
           </div>
@@ -475,7 +475,7 @@ export function LogsClient({ data }: Props) {
         <p
           className="text-xs text-right"
           style={{ color: "var(--admin-text-faint)" }}>
-          {total} eventi totali • ordinati dal più recente
+          {total} total events • sorted by most recent
         </p>
       )}
     </div>

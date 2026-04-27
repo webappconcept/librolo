@@ -9,7 +9,6 @@
 //   rl:signup:{ip}          → tentativi signup per IP
 //   rl:check:{ip}           → check disponibilità email/username per IP
 //   rl:blacklist:{ip}       → flag blacklist IP ("1", no TTL = permanente)
-//   blacklist:usernames     → lista JSON username bloccati (TTL 5 min)
 //
 // Il layer Redis è always-first: se Redis è down il chiamante fa fallback
 // trasparente al DB esistente — nessuna interruzione del servizio.
@@ -45,11 +44,7 @@ async function getRedisConfig(): Promise<{ url: string; token: string }> {
   return _cachedConfig;
 }
 
-/**
- * Esegue un singolo comando Redis via REST.
- * Esportata per essere riutilizzata da altri moduli (es. blocked-usernames).
- */
-export async function redisCmd<T = unknown>(command: (string | number)[]): Promise<T> {
+async function redisCmd<T = unknown>(command: (string | number)[]): Promise<T> {
   const { url, token } = await getRedisConfig();
   const res = await fetch(url, {
     method: "POST",

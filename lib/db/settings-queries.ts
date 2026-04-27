@@ -36,14 +36,21 @@ export type SettingKey =
   // SEO
   | 'robots_txt'
   | 'humans_txt'
-  // Bruteforce
-  | 'bf_max_attempts'
+  // Bruteforce — contesti separati
+  | 'bf_signin_max'       // max tentativi login per IP+email (finestra bf_window_minutes)
+  | 'bf_signup_max'       // max tentativi registrazione per IP (finestra bf_window_minutes)
+  | 'bf_check_max'        // max check email/username per IP (finestra bf_check_window)
+  | 'bf_check_window'     // finestra in minuti per i check disponibilità
   | 'bf_window_minutes'
   | 'bf_lockout_minutes'
   | 'bf_alert_threshold'
   // Redis / Upstash
   | 'upstash_redis_rest_url'
   | 'upstash_redis_rest_token'
+  // Google OAuth
+  | 'google_client_id'
+  | 'google_client_secret'
+  | 'google_redirect_uri'
 
 export type AppSettings = {
   app_name: string
@@ -73,14 +80,21 @@ export type AppSettings = {
   email_deleted_footer: string | null
   robots_txt: string | null
   humans_txt: string | null
-  // Bruteforce
-  bf_max_attempts: string
+  // Bruteforce — contesti separati
+  bf_signin_max: string
+  bf_signup_max: string
+  bf_check_max: string
+  bf_check_window: string
   bf_window_minutes: string
   bf_lockout_minutes: string
   bf_alert_threshold: string
   // Redis / Upstash
   upstash_redis_rest_url: string | null
   upstash_redis_rest_token: string | null
+  // Google OAuth
+  google_client_id: string | null
+  google_client_secret: string | null
+  google_redirect_uri: string | null
 }
 
 const DEFAULTS: AppSettings = {
@@ -112,13 +126,18 @@ const DEFAULTS: AppSettings = {
   robots_txt: null,
   humans_txt: null,
   // Bruteforce defaults
-  bf_max_attempts: '5',
+  bf_signin_max: '5',       // 5 tentativi login falliti → blocco
+  bf_signup_max: '10',      // 10 tentativi registrazione per IP → blocco
+  bf_check_max: '30',       // 30 check email/username in 5 min → blocco
+  bf_check_window: '5',     // finestra check: 5 minuti
   bf_window_minutes: '15',
   bf_lockout_minutes: '30',
   bf_alert_threshold: '20',
-  // Redis defaults
   upstash_redis_rest_url: null,
   upstash_redis_rest_token: null,
+  google_client_id: null,
+  google_client_secret: null,
+  google_redirect_uri: null,
 }
 
 async function fetchAppSettings(): Promise<AppSettings> {

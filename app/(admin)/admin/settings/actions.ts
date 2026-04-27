@@ -3,7 +3,7 @@
 import { getAdminPath } from "@/lib/admin-nav";
 import { invalidateBlockedUsernamesCache } from "@/lib/auth/blocked-usernames";
 import { invalidateDisposableDomainsCache } from "@/lib/auth/disposable-domains";
-import { addUsernameToBloom } from "@/lib/bloom/bloom-filter";
+import { addUsernameToBloom, invalidateRedisConfigCache } from "@/lib/bloom/bloom-filter";
 import { getUser } from "@/lib/db/queries";
 import { db } from "@/lib/db/drizzle";
 import type { SiteSnippet } from "@/lib/db/schema";
@@ -208,6 +208,12 @@ export async function saveRedisSettings(
     ).trim();
     await updateAppSetting("upstash_redis_rest_url", url || null);
     await updateAppSetting("upstash_redis_rest_token", token || null);
+
+    // [FIX] Invalida la cache in-memory delle credenziali Redis nel modulo
+    // bloom-filter, così la prossima chiamata redisPipeline() rilegge url/token
+    // dal DB senza attendere il riavvio del processo Node.
+    invalidateRedisConfigCache();
+
     revalidatePath(getAdminPath("settings-redis"));
     return { success: "Credenziali Redis salvate.", timestamp: Date.now() };
   } catch {
@@ -251,6 +257,88 @@ export async function testRedisConnection(
   } catch {
     return {
       error: "Impossibile contattare Redis / Upstash.",
+      timestamp: Date.now(),
+    };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Google OAuth
+// ---------------------------------------------------------------------------
+
+export async function saveGoogleOAuthSettings(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  try {
+    const clientId     = ((formData.get("google_client_id")     as string) ?? "").trim();
+    const clientSecret = ((formData.get("google_client_secret") as string) ?? "").trim();
+    const redirectUri  = ((formData.get("google_redirect_uri")  as string) ?? "").trim();
+
+    await updateAppSetting("google_client_id",     clientId     || null);
+    await updateAppSetting("google_client_secret", clientSecret || null);
+    await updateAppSetting("google_redirect_uri",  redirectUri  || null);
+
+    revalidatePath(getAdminPath("settings-google"));
+    return { success: "Credenziali Google OAuth salvate.", timestamp: Date.now() };
+  } catch {
+    return { error: "Errore durante il salvataggio.", timestamp: Date.now() };
+  }
+}
+
+export async function testGoogleOAuthSettings(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  try {
+    const clientId     = ((formData.get("google_client_id")     as string | null) ?? "").trim();
+    const clientSecret = ((formData.get("google_client_secret") as string | null) ?? "").trim();
+    const redirectUri  = ((formData.get("google_redirect_uri")  as string | null) ?? "").trim();
+
+    if (!clientId || !clientSecret || !redirectUri) {
+      return {
+        error: "Compila tutti e tre i campi prima di testare.",
+        timestamp: Date.now(),
+      };
+    }
+
+    // Verifica che il redirect URI sia HTTPS (o localhost per dev)
+    const isLocalhost = redirectUri.startsWith("http://localhost") ||
+                        redirectUri.startsWith("http://127.0.0.1");
+    if (!redirectUri.startsWith("https://") && !isLocalhost) {
+      return {
+        error: "Redirect URI deve iniziare con https:// (o http://localhost per dev).",
+        timestamp: Date.now(),
+      };
+    }
+
+    // Verifica che il Client ID abbia il formato Google corretto
+    if (!clientId.endsWith(".apps.googleusercontent.com")) {
+      return {
+        error: "Client ID non valido: deve terminare con .apps.googleusercontent.com",
+        timestamp: Date.now(),
+      };
+    }
+
+    // Verifica liveness: richiede il discovery document di Google
+    const discovery = await fetch(
+      "https://accounts.google.com/.well-known/openid-configuration",
+      { cache: "no-store" },
+    );
+    if (!discovery.ok) {
+      return {
+        error: "Impossibile contattare i server Google. Riprova tra qualche istante.",
+        timestamp: Date.now(),
+      };
+    }
+
+    return {
+      success: "Formato credenziali valido e server Google raggiungibili.",
+      timestamp: Date.now(),
+    };
+  } catch {
+    return {
+      error: "Errore durante la verifica. Controlla la connessione.",
       timestamp: Date.now(),
     };
   }
