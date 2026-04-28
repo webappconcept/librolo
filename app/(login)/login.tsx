@@ -137,13 +137,16 @@ export function Login({
   // Messaggio errore OAuth da searchParams
   const oauthError = searchParams.get("error");
   const oauthErrorMessages: Record<string, string> = {
-    oauth_denied:      "Accesso con Google annullato.",
-    oauth_invalid:     "Parametri OAuth non validi. Riprova.",
-    oauth_failed:      "Errore durante l'accesso con Google. Riprova.",
-    oauth_init_failed: "Impossibile avviare il login con Google. Riprova.",
-    oauth_user_failed: "Impossibile creare o trovare l'account. Riprova.",
-    blocked:           "Il tuo IP è stato bloccato. Contatta il supporto.",
-    banned:            "Il tuo account è stato sospeso.",
+    oauth_denied:           "Accesso con Google annullato.",
+    oauth_invalid:          "Parametri OAuth non validi. Riprova.",
+    oauth_failed:           "Errore durante l'accesso con Google. Riprova.",
+    oauth_init_failed:      "Impossibile avviare il login con Google. Riprova.",
+    oauth_user_failed:      "Impossibile creare o trovare l'account. Riprova.",
+    oauth_domain_blocked:   "Non accettiamo registrazioni con questo provider email.",
+    registrations_disabled: "Le registrazioni sono temporaneamente chiuse.",
+    maintenance:            "Il sito è in manutenzione. Solo gli amministratori possono accedere.",
+    blocked:                "Il tuo IP è stato bloccato. Contatta il supporto.",
+    banned:                 "Il tuo account è stato sospeso.",
   };
   const oauthErrorMessage = oauthError ? (oauthErrorMessages[oauthError] ?? "Errore di autenticazione.") : null;
 
