@@ -51,6 +51,11 @@ export type SettingKey =
   | 'google_client_id'
   | 'google_client_secret'
   | 'google_redirect_uri'
+  // GitHub CI (per la dashboard /admin/tests che legge il vitest report
+  // dal branch ci-results del repo via GitHub Contents API)
+  | 'github_repo'         // formato "owner/repo"
+  | 'github_pat'          // fine-grained PAT con Contents:Read
+  | 'github_ci_branch'    // default "ci-results"
 
 export type AppSettings = {
   app_name: string
@@ -95,6 +100,10 @@ export type AppSettings = {
   google_client_id: string | null
   google_client_secret: string | null
   google_redirect_uri: string | null
+  // GitHub CI
+  github_repo: string | null
+  github_pat: string | null
+  github_ci_branch: string | null
 }
 
 const DEFAULTS: AppSettings = {
@@ -138,6 +147,9 @@ const DEFAULTS: AppSettings = {
   google_client_id: null,
   google_client_secret: null,
   google_redirect_uri: null,
+  github_repo: null,
+  github_pat: null,
+  github_ci_branch: 'ci-results',
 }
 
 async function fetchAppSettings(): Promise<AppSettings> {

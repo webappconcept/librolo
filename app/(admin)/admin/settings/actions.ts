@@ -12,8 +12,12 @@ import { updateAppSetting } from "@/lib/db/settings-queries";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
-// Regex identica al form sign-up (signUpSchema)
-const USERNAME_REGEX = /^[a-zA-Z0-9_]+$/;
+// Regex permissiva per il core di un blocked username/pattern.
+// NB: qui *non* applichiamo le regole strict del form sign-up sui punti
+// (no leading/trailing/consecutive) perché un pattern come "marco.*" ha
+// core "marco." con trailing dot, e va consentito per poter bloccare i
+// nick che iniziano con "marco.".
+const USERNAME_CORE_REGEX = /^[a-zA-Z0-9_.]+$/;
 const USERNAME_MIN = 3;
 const USERNAME_MAX = 50;
 
@@ -32,8 +36,8 @@ function validateBlockedEntry(raw: string): { error: string } | { isPattern: boo
     return { error: `Core troppo corto (min ${USERNAME_MIN} caratteri).` };
   if (core.length > USERNAME_MAX)
     return { error: `Core troppo lungo (max ${USERNAME_MAX} caratteri).` };
-  if (!USERNAME_REGEX.test(core))
-    return { error: "Solo lettere, numeri e underscore (_) nel core." };
+  if (!USERNAME_CORE_REGEX.test(core))
+    return { error: "Solo lettere, numeri, punto (.) e underscore (_) nel core." };
 
   return { isPattern };
 }
@@ -341,6 +345,88 @@ export async function testGoogleOAuthSettings(
       error: "Errore durante la verifica. Controlla la connessione.",
       timestamp: Date.now(),
     };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// GitHub CI (vitest report dal branch ci-results)
+// ---------------------------------------------------------------------------
+
+export async function saveGitHubCISettings(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  try {
+    const repo   = ((formData.get("github_repo")      as string) ?? "").trim();
+    const pat    = ((formData.get("github_pat")       as string) ?? "").trim();
+    const branch = ((formData.get("github_ci_branch") as string) ?? "").trim();
+
+    // Validazione formato "owner/repo" se presente
+    if (repo && !/^[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+$/.test(repo)) {
+      return {
+        error: 'Formato repo non valido. Usa "owner/repo" (es. webappconcept/librolo).',
+        timestamp: Date.now(),
+      };
+    }
+
+    await updateAppSetting("github_repo",      repo   || null);
+    await updateAppSetting("github_pat",       pat    || null);
+    await updateAppSetting("github_ci_branch", branch || null);
+
+    revalidatePath(getAdminPath("settings-github"));
+    revalidatePath("/admin/tests");
+    return { success: "Configurazione GitHub CI salvata.", timestamp: Date.now() };
+  } catch {
+    return { error: "Errore durante il salvataggio.", timestamp: Date.now() };
+  }
+}
+
+export async function testGitHubCISettings(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  try {
+    const repo   = ((formData.get("github_repo")      as string | null) ?? "").trim();
+    const pat    = ((formData.get("github_pat")       as string | null) ?? "").trim();
+    const branch = (((formData.get("github_ci_branch") as string | null) ?? "").trim() || "ci-results");
+
+    if (!repo || !pat) {
+      return { error: "Compila almeno repo e token prima di testare.", timestamp: Date.now() };
+    }
+
+    // Verifica accesso al file vitest-results.json sul branch
+    const url = `https://api.github.com/repos/${repo}/contents/vitest-results.json?ref=${branch}`;
+    const res = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${pat}`,
+        Accept: "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+      },
+      cache: "no-store",
+    });
+
+    if (res.status === 401) {
+      return { error: "Token non valido o scaduto.", timestamp: Date.now() };
+    }
+    if (res.status === 403) {
+      return { error: "Token senza permessi sufficienti (serve Contents:Read).", timestamp: Date.now() };
+    }
+    if (res.status === 404) {
+      return {
+        error: `Branch "${branch}" o file vitest-results.json non trovato. Il primo run del CI lo creerà.`,
+        timestamp: Date.now(),
+      };
+    }
+    if (!res.ok) {
+      return { error: `GitHub API ha risposto ${res.status}.`, timestamp: Date.now() };
+    }
+
+    return {
+      success: `Connessione OK · branch "${branch}" raggiungibile.`,
+      timestamp: Date.now(),
+    };
+  } catch {
+    return { error: "Errore durante la verifica. Controlla la connessione.", timestamp: Date.now() };
   }
 }
 

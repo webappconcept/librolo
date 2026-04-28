@@ -6,6 +6,21 @@ on:
   pull_request:
     branches: [main]
 
+# Permessi espliciti per il GITHUB_TOKEN: serve `contents: write` allo
+# step "Commit test report" per poter fare push del JSON aggiornato su main.
+# Senza questo blocco si eredita il default org/repo, che a volte è read-only
+# e fa fallire il push silenziosamente.
+permissions:
+  contents: write
+
+# Evita run in parallelo sulla stessa ref. Se durante l'esecuzione arriva un
+# nuovo merge su main, il run vecchio viene annullato: solo l'ultimo finisce
+# e committa i risultati. Per le PR (event_name diverso) è gestito a parte
+# così i merge su main non killano i check dei PR aperti.
+concurrency:
+  group: test-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     name: Vitest
@@ -61,28 +76,42 @@ jobs:
           AUTH_SECRET: ${{ secrets.AUTH_SECRET || 'ci-test-secret-key-at-least-32-chars-!!' }}
           DATABASE_URL: ${{ secrets.DATABASE_URL || 'postgresql://mock:mock@localhost/mock' }}
 
-      # Commit the JSON report back to main so the admin dashboard
-      # can read it at runtime via fs.readFile (Next.js server component).
-      # Only runs on direct pushes to main, not on PRs (no write access).
+      # Force-push del report sul branch ci-results (orphan, niente storia).
       #
-      # FIX: git pull --rebase prima del push per gestire il caso in cui
-      # main sia avanzato mentre il job era in esecuzione (merge ravvicinati
-      # causavano un non-fast-forward reject e il commit veniva perso).
-      - name: Commit test report
+      # Architettura:
+      #   - main resta strict (require PR + status checks + no bypass)
+      #   - il bot non ha bisogno di scrivere su main, scrive solo su ci-results
+      #   - ci-results è un branch dedicato senza protezioni, una sola entry
+      #     che viene rimpiazzata ad ogni push (orphan + force)
+      #   - la dashboard /admin/tests legge il file via GitHub Contents API
+      #
+      # Solo su push a main, non su PR (le PR non devono toccare ci-results).
+      - name: Push report to ci-results branch
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add test-reports/vitest-results.json
-          if git diff --cached --quiet; then
-            echo "No changes to commit, skipping."
-          else
-            git commit -m "chore(ci): update vitest-results.json [skip ci]"
-            git pull --rebase origin main
-            git push origin main
-          fi
 
-      # Re-fail the job if tests actually failed (after the commit step).
+          SOURCE_SHA=$(git rev-parse HEAD)
+          SOURCE_MSG=$(git log -1 --format=%s)
+
+          # Salva il report fuori dal working tree perché git rm -rf .
+          # cancellerà tutta la directory test-reports
+          cp test-reports/vitest-results.json /tmp/vitest-results.json
+
+          # Branch orphan: nessuna parent commit, partenza da zero
+          git checkout --orphan ci-results-tmp
+          git rm -rf . > /dev/null 2>&1 || true
+
+          # Aggiungi solo il report
+          cp /tmp/vitest-results.json vitest-results.json
+          git add vitest-results.json
+          git commit -m "ci: vitest report from main@${SOURCE_SHA:0:7} — ${SOURCE_MSG}"
+
+          # Force push: ad ogni run il branch ha un solo commit, niente accumulo
+          git push origin HEAD:ci-results --force
+
+      # Re-fail the job if tests actually failed (after the report push).
       - name: Propagate test failure
         if: steps.run_tests.outcome == 'failure'
         run: exit 1

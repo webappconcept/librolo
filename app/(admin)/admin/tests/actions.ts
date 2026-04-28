@@ -3,12 +3,16 @@
 //
 // Infrastructure health checks (read-only) + Vitest report reader.
 // Called by the Server Component page.tsx — no client state required.
+//
+// Architettura del Vitest report:
+//   - Il workflow CI .github/workflows/test.yml esegue vitest sul push a main
+//   - Il JSON viene pusha sul branch ci-results (orphan, force-pushed)
+//   - Qui leggiamo via GitHub Contents API con cache di 60s
+//   - Niente fs.readFile: il file non è sotto la directory di deploy
 import { requireAdminPage } from "@/lib/rbac/guards";
 import { db } from "@/lib/db/drizzle";
 import { getAppSettings } from "@/lib/db/settings-queries";
 import { sql } from "drizzle-orm";
-import fs from "node:fs/promises";
-import path from "node:path";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -162,7 +166,6 @@ export async function getHealthChecks(): Promise<HealthChecks> {
 //     ]
 //   }
 // ---------------------------------------------------------------------------
-const REPORT_PATH = path.join(process.cwd(), "test-reports", "vitest-results.json");
 
 type RawAssertion = {
   fullName?: string;
@@ -190,57 +193,89 @@ type RawReport = {
   testResults: RawFileResult[];
 };
 
-export async function getVitestReport(): Promise<VitestReport | null> {
-  await requireAdminPage();
+/**
+ * Fetcha il report da GitHub Contents API leggendo il branch ci-results.
+ * Cache di 60s via Next.js fetch cache: la dashboard è sempre fresca entro
+ * 1 minuto dall'ultimo push del CI senza martellare l'API.
+ *
+ * Ritorna null se le credenziali non sono configurate, se l'API risponde
+ * un errore, o se il file non esiste ancora (primo run del CI non avvenuto).
+ */
+async function fetchVitestReportFromGitHub(): Promise<RawReport | null> {
+  const settings = await getAppSettings();
+  const repo   = settings.github_repo   ?? process.env.GITHUB_REPO ?? null;
+  const token  = settings.github_pat    ?? process.env.GITHUB_PAT ?? null;
+  const branch = settings.github_ci_branch ?? "ci-results";
+
+  if (!repo || !token) return null;
+
+  const url = `https://api.github.com/repos/${repo}/contents/vitest-results.json?ref=${branch}`;
+
   try {
-    const raw = await fs.readFile(REPORT_PATH, "utf-8");
-    const json = JSON.parse(raw) as RawReport;
-
-    const cwd = process.cwd();
-
-    const suites: VitestSuite[] = (json.testResults ?? []).map((file) => {
-      // Strip absolute runner prefix to get a relative display name.
-      // The runner path looks like: /home/runner/work/librolo/librolo/tests/...
-      // We want: tests/lib/auth.test.ts
-      let name = file.name ?? "unknown";
-      // Try stripping cwd first (works locally), then strip up to /tests/
-      if (name.startsWith(cwd)) {
-        name = name.slice(cwd.length).replace(/^\//, "");
-      } else {
-        const testsIdx = name.indexOf("/tests/");
-        if (testsIdx !== -1) name = name.slice(testsIdx + 1); // e.g. "tests/lib/auth.test.ts"
-      }
-
-      const duration =
-        file.startTime != null && file.endTime != null
-          ? file.endTime - file.startTime
-          : 0;
-
-      const tests: VitestTestResult[] = (file.assertionResults ?? []).map((t) => ({
-        name: t.fullName ?? t.title ?? "(unnamed)",
-        status: t.status as VitestTestResult["status"],
-        duration: t.duration,
-        failureMessages: t.failureMessages,
-      }));
-
-      return {
-        name,
-        status: file.status as VitestSuite["status"],
-        duration,
-        tests,
-      };
+    const res = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/vnd.github.raw",
+        "X-GitHub-Api-Version": "2022-11-28",
+      },
+      next: { revalidate: 60 },
     });
 
-    return {
-      suites,
-      numPassedTests: json.numPassedTests ?? 0,
-      numFailedTests: json.numFailedTests ?? 0,
-      numPendingTests: json.numPendingTests ?? 0,
-      numTotalTests: json.numTotalTests ?? 0,
-      startTime: json.startTime ?? 0,
-      success: json.success ?? false,
-    };
-  } catch {
+    if (!res.ok) {
+      // 404 = branch o file non esistono ancora (primo run pendente)
+      // 401/403 = token non valido o senza permessi
+      // 5xx = problemi GitHub
+      console.warn(`[admin/tests] GitHub Contents API ${res.status} for ${repo}@${branch}`);
+      return null;
+    }
+
+    return (await res.json()) as RawReport;
+  } catch (err) {
+    console.error("[admin/tests] fetchVitestReportFromGitHub failed:", err);
     return null;
   }
+}
+
+export async function getVitestReport(): Promise<VitestReport | null> {
+  await requireAdminPage();
+
+  const json = await fetchVitestReportFromGitHub();
+  if (!json) return null;
+
+  const suites: VitestSuite[] = (json.testResults ?? []).map((file) => {
+    // Il path nel JSON è quello del runner CI (es. /home/runner/work/librolo/librolo/tests/...).
+    // Strippiamo fino a /tests/ per avere "tests/lib/auth.test.ts" leggibile.
+    let name = file.name ?? "unknown";
+    const testsIdx = name.indexOf("/tests/");
+    if (testsIdx !== -1) name = name.slice(testsIdx + 1);
+
+    const duration =
+      file.startTime != null && file.endTime != null
+        ? file.endTime - file.startTime
+        : 0;
+
+    const tests: VitestTestResult[] = (file.assertionResults ?? []).map((t) => ({
+      name: t.fullName ?? t.title ?? "(unnamed)",
+      status: t.status as VitestTestResult["status"],
+      duration: t.duration,
+      failureMessages: t.failureMessages,
+    }));
+
+    return {
+      name,
+      status: file.status as VitestSuite["status"],
+      duration,
+      tests,
+    };
+  });
+
+  return {
+    suites,
+    numPassedTests:  json.numPassedTests  ?? 0,
+    numFailedTests:  json.numFailedTests  ?? 0,
+    numPendingTests: json.numPendingTests ?? 0,
+    numTotalTests:   json.numTotalTests   ?? 0,
+    startTime:       json.startTime       ?? 0,
+    success:         json.success         ?? false,
+  };
 }
