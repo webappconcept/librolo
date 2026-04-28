@@ -1,16 +1,31 @@
 // lib/auth/oauth/index.ts
 //
 // findOrCreateOAuthUser — upsert utente + profilo + oauth_account.
-// Usato dal callback di ogni provider OAuth.
+// Usato dal callback di ogni provider OAuth (al momento solo Google).
 //
 // Logica:
-//   A) L'account OAuth esiste già  → aggiorna tokens, ritorna user
-//   B) Esiste un user con la stessa email → collega l'account OAuth, ritorna user
-//   C) Nessun match → crea user + profile + oauth_account
+//   A) L'account OAuth esiste già           → aggiorna tokens, ritorna user
+//   B) Esiste un user con la stessa email   → collega l'account OAuth, ritorna user
+//   C) Nessun match                         → crea user + profile + oauth_account
+//
+// Side effects al primo signup OAuth (caso C):
+//   - registra acceptedTermsAt/Version, acceptedPrivacyAt/Version (consenso
+//     implicito tramite la consent screen di Google, che mostra i nostri T&S)
+//   - aggiunge l'email al Bloom filter `bloom:emails`
+//   - logga ActivityType.SIGN_UP (il caller logga SIGN_IN per i casi A/B)
 
+import { addEmailToBloom } from "@/lib/bloom/bloom-filter";
 import { db } from "@/lib/db/drizzle";
-import { oauthAccounts, userProfiles, users } from "@/lib/db/schema";
-import { and, eq } from "drizzle-orm";
+import { getConsentVersions } from "@/lib/db/pages-queries";
+import {
+  activityLogs,
+  ActivityType,
+  oauthAccounts,
+  userProfiles,
+  users,
+  type NewActivityLog,
+} from "@/lib/db/schema";
+import { and, eq, isNull } from "drizzle-orm";
 import type { GoogleTokens } from "./google";
 
 export interface OAuthProfile {
@@ -22,10 +37,29 @@ export interface OAuthProfile {
   lastName:          string | null;
   picture:           string | null;
   tokens:            GoogleTokens;
+  ipAddress?:        string;
 }
 
-export async function findOrCreateOAuthUser(profile: OAuthProfile) {
-  const { provider, providerAccountId, email, firstName, lastName, picture, tokens } = profile;
+export type FindOrCreateResult =
+  | { status: "ok"; user: typeof users.$inferSelect; created: boolean }
+  | { status: "blocked"; reason: "registrations_disabled" }
+  | { status: "error" };
+
+export async function findOrCreateOAuthUser(
+  profile: OAuthProfile,
+  opts: { canCreate: boolean } = { canCreate: true },
+): Promise<FindOrCreateResult> {
+  const {
+    provider,
+    providerAccountId,
+    email,
+    emailVerified,
+    firstName,
+    lastName,
+    picture,
+    tokens,
+    ipAddress,
+  } = profile;
 
   // ------------------------------------------------------------------
   // A) Account OAuth già presente → aggiorna tokens e ritorna l'utente
@@ -57,12 +91,17 @@ export async function findOrCreateOAuthUser(profile: OAuthProfile) {
         ),
       );
 
-    // Aggiorna avatar_url se Google ne ha uno nuovo
     if (picture) {
+      // Aggiorna avatar_url solo se l'utente non ne ha già caricato uno suo
       await db
         .update(userProfiles)
         .set({ avatarUrl: picture, updatedAt: new Date() })
-        .where(eq(userProfiles.userId, existingOAuth.userId));
+        .where(
+          and(
+            eq(userProfiles.userId, existingOAuth.userId),
+            isNull(userProfiles.avatarUrl),
+          ),
+        );
     }
 
     const [user] = await db
@@ -71,7 +110,7 @@ export async function findOrCreateOAuthUser(profile: OAuthProfile) {
       .where(eq(users.id, existingOAuth.userId))
       .limit(1);
 
-    return user ?? null;
+    return user ? { status: "ok", user, created: false } : { status: "error" };
   }
 
   // ------------------------------------------------------------------
@@ -94,7 +133,6 @@ export async function findOrCreateOAuthUser(profile: OAuthProfile) {
       scope:             tokens.scope,
     });
 
-    // Aggiorna avatar_url solo se l'utente non ne ha già uno
     if (picture) {
       await db
         .update(userProfiles)
@@ -102,17 +140,9 @@ export async function findOrCreateOAuthUser(profile: OAuthProfile) {
         .where(
           and(
             eq(userProfiles.userId, existingUser.id),
-            // Non sovrascrivere un avatar già caricato manualmente
-            // (avatarUrl IS NULL)
+            isNull(userProfiles.avatarUrl),
           ),
         );
-      // Nota: per non sovrascrivere avatar esistenti usiamo una query condizionale
-      await db.execute(
-        // SQL raw: UPDATE solo se avatar_url IS NULL
-        // Drizzle non ha .whereNull() nativo senza import extra
-        // Uso query diretta per semplicità
-        `UPDATE user_profiles SET avatar_url = $1, updated_at = NOW() WHERE user_id = $2 AND avatar_url IS NULL`,
-      );
     }
 
     const [user] = await db
@@ -121,20 +151,38 @@ export async function findOrCreateOAuthUser(profile: OAuthProfile) {
       .where(eq(users.id, existingUser.id))
       .limit(1);
 
-    return user ?? null;
+    return user ? { status: "ok", user, created: false } : { status: "error" };
+  }
+
+  // ------------------------------------------------------------------
+  // Caso C: serve creare un nuovo account
+  // Verifica se le registrazioni sono abilitate prima di procedere
+  // ------------------------------------------------------------------
+  if (!opts.canCreate) {
+    return { status: "blocked", reason: "registrations_disabled" };
   }
 
   // ------------------------------------------------------------------
   // C) Nessun match → crea user + profile + oauth_account
+  //    Consenso T&S/Privacy implicito (Google ha già mostrato i nostri link
+  //    nella consent screen). Il marketing rimane null: opt-in esplicito
+  //    richiesto, l'utente può attivarlo in seguito dalla pagina profilo.
   // ------------------------------------------------------------------
+  const { termsVersion, privacyVersion } = await getConsentVersions();
+  const now = new Date();
+
   const [newUser] = await db
     .insert(users)
     .values({
       email,
-      passwordHash:  "",
-      role:          "member",
-      isAdmin:       false,
-      emailVerified: profile.emailVerified,
+      passwordHash:           null,
+      role:                   "member",
+      isAdmin:                false,
+      emailVerified,
+      acceptedTermsAt:        now,
+      acceptedTermsVersion:   termsVersion,
+      acceptedPrivacyAt:      now,
+      acceptedPrivacyVersion: privacyVersion,
     })
     .returning();
 
@@ -145,7 +193,7 @@ export async function findOrCreateOAuthUser(profile: OAuthProfile) {
     firstName: firstName ?? null,
     lastName:  lastName  ?? null,
     avatarUrl: picture   ?? null,
-    // username: null — l'utente lo imposterà dal profilo
+    // username: null — l'utente lo sceglierà nel wizard di onboarding
   });
 
   await db.insert(oauthAccounts).values({
@@ -158,5 +206,20 @@ export async function findOrCreateOAuthUser(profile: OAuthProfile) {
     scope:             tokens.scope,
   });
 
-  return newUser;
+  // Tieni il bloom filter delle email allineato al nuovo signup
+  try {
+    await addEmailToBloom(newUser.email);
+  } catch (err) {
+    console.error("[oauth] addEmailToBloom failed (non critico):", err);
+  }
+
+  // Log SIGN_UP per i nuovi account OAuth
+  const log: NewActivityLog = {
+    userId:    newUser.id,
+    action:    ActivityType.SIGN_UP,
+    ipAddress: ipAddress ?? "",
+  };
+  await db.insert(activityLogs).values(log);
+
+  return { status: "ok", user: newUser, created: true };
 }
