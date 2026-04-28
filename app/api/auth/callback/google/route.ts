@@ -1,15 +1,26 @@
 // app/api/auth/callback/google/route.ts
 // GET /api/auth/callback/google?code=...&state=...
 //
-// 1. Verifica state + PKCE (dentro handleGoogleCallback)
-// 2. Chiama findOrCreateOAuthUser → trova/crea utente nel DB
-// 3. Controlla blacklist IP (stessa logica del login password)
-// 4. Crea sessione custom → redirect a / (o /admin per gli admin)
+// Pipeline:
+//   1. blacklist IP
+//   2. validazione query params (code, state)
+//   3. token exchange + userinfo (handleGoogleCallback)
+//   4. blacklist dominio email
+//   5. canCreate = registrations_enabled
+//   6. findOrCreateOAuthUser → ok | blocked | error
+//   7. ban check
+//   8. maintenance check (solo non-admin)
+//   9. log SIGN_IN se utente esistente (SIGN_UP loggato dentro findOrCreateOAuthUser)
+//  10. crea sessione
+//  11. redirect: /onboarding se incompleto, altrimenti / o /admin
 
-import { isIpBlacklisted } from "@/lib/auth/blacklist";
+import { isDomainBlacklisted, isIpBlacklisted } from "@/lib/auth/blacklist";
 import { handleGoogleCallback } from "@/lib/auth/oauth/google";
 import { findOrCreateOAuthUser } from "@/lib/auth/oauth/index";
 import { createSession } from "@/lib/auth/session";
+import { db } from "@/lib/db/drizzle";
+import { activityLogs, ActivityType } from "@/lib/db/schema";
+import { getAppSettings } from "@/lib/db/settings-queries";
 import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -26,15 +37,9 @@ export async function GET(req: NextRequest) {
   const error = searchParams.get("error");
 
   // Google ha rifiutato (es. utente ha premuto Annulla)
-  if (error) {
-    return redirect("/sign-in?error=oauth_denied");
-  }
+  if (error)             return redirect("/sign-in?error=oauth_denied");
+  if (!code || !state)   return redirect("/sign-in?error=oauth_invalid");
 
-  if (!code || !state) {
-    return redirect("/sign-in?error=oauth_invalid");
-  }
-
-  // Controlla blacklist IP prima di qualsiasi operazione
   const headersList = await headers();
   const ip =
     headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ??
@@ -48,30 +53,62 @@ export async function GET(req: NextRequest) {
   try {
     const { user: googleUser, tokens } = await handleGoogleCallback(code, state);
 
-    const dbUser = await findOrCreateOAuthUser({
-      provider:          "google",
-      providerAccountId: googleUser.sub,
-      email:             googleUser.email,
-      emailVerified:     googleUser.email_verified,
-      firstName:         googleUser.given_name ?? null,
-      lastName:          googleUser.family_name ?? null,
-      picture:           googleUser.picture ?? null,
-      tokens,
-    });
+    if (await isDomainBlacklisted(googleUser.email)) {
+      return redirect("/sign-in?error=oauth_domain_blocked");
+    }
 
-    if (!dbUser) {
+    const settings = await getAppSettings();
+    const canCreate = settings.registrations_enabled !== "false";
+
+    const result = await findOrCreateOAuthUser(
+      {
+        provider:          "google",
+        providerAccountId: googleUser.sub,
+        email:             googleUser.email,
+        emailVerified:     googleUser.email_verified,
+        firstName:         googleUser.given_name ?? null,
+        lastName:          googleUser.family_name ?? null,
+        picture:           googleUser.picture     ?? null,
+        tokens,
+        ipAddress:         ip,
+      },
+      { canCreate },
+    );
+
+    if (result.status === "blocked") {
+      return redirect("/sign-in?error=registrations_disabled");
+    }
+    if (result.status === "error") {
       return redirect("/sign-in?error=oauth_user_failed");
     }
 
-    // Utente bannato
+    const { user: dbUser, created } = result;
+
     if (dbUser.bannedAt) {
       return redirect("/sign-in?error=banned");
     }
 
-    // Crea la sessione custom (stesso meccanismo del login password)
+    if (dbUser.role !== "admin" && settings.maintenance_mode === "true") {
+      return redirect("/sign-in?error=maintenance");
+    }
+
+    // SIGN_UP è già loggato in findOrCreateOAuthUser; qui logghiamo SIGN_IN
+    // per gli utenti esistenti (login OAuth oppure linking di un nuovo provider
+    // a un account email pre-esistente).
+    if (!created) {
+      await db.insert(activityLogs).values({
+        userId:    dbUser.id,
+        action:    ActivityType.SIGN_IN,
+        ipAddress: ip,
+      });
+    }
+
     await createSession(dbUser.id, dbUser.role);
 
-    // Coerente con signIn: admin → /admin, tutti gli altri → home
+    if (!dbUser.onboardingCompletedAt) {
+      return redirect("/onboarding");
+    }
+
     return redirect(dbUser.role === "admin" ? "/admin" : "/");
   } catch (err) {
     console.error("[auth/callback/google] error:", err);

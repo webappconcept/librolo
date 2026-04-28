@@ -12,8 +12,12 @@ import { updateAppSetting } from "@/lib/db/settings-queries";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
-// Regex identica al form sign-up (signUpSchema)
-const USERNAME_REGEX = /^[a-zA-Z0-9_]+$/;
+// Regex permissiva per il core di un blocked username/pattern.
+// NB: qui *non* applichiamo le regole strict del form sign-up sui punti
+// (no leading/trailing/consecutive) perché un pattern come "marco.*" ha
+// core "marco." con trailing dot, e va consentito per poter bloccare i
+// nick che iniziano con "marco.".
+const USERNAME_CORE_REGEX = /^[a-zA-Z0-9_.]+$/;
 const USERNAME_MIN = 3;
 const USERNAME_MAX = 50;
 
@@ -32,8 +36,8 @@ function validateBlockedEntry(raw: string): { error: string } | { isPattern: boo
     return { error: `Core troppo corto (min ${USERNAME_MIN} caratteri).` };
   if (core.length > USERNAME_MAX)
     return { error: `Core troppo lungo (max ${USERNAME_MAX} caratteri).` };
-  if (!USERNAME_REGEX.test(core))
-    return { error: "Solo lettere, numeri e underscore (_) nel core." };
+  if (!USERNAME_CORE_REGEX.test(core))
+    return { error: "Solo lettere, numeri, punto (.) e underscore (_) nel core." };
 
   return { isPattern };
 }

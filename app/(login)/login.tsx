@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ActionState } from "@/lib/auth/middleware";
+import { validateUsernameFormat } from "@/lib/auth/username-validator";
 import { Check, Eye, EyeOff, Loader2, X } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -137,13 +138,16 @@ export function Login({
   // Messaggio errore OAuth da searchParams
   const oauthError = searchParams.get("error");
   const oauthErrorMessages: Record<string, string> = {
-    oauth_denied:      "Accesso con Google annullato.",
-    oauth_invalid:     "Parametri OAuth non validi. Riprova.",
-    oauth_failed:      "Errore durante l'accesso con Google. Riprova.",
-    oauth_init_failed: "Impossibile avviare il login con Google. Riprova.",
-    oauth_user_failed: "Impossibile creare o trovare l'account. Riprova.",
-    blocked:           "Il tuo IP è stato bloccato. Contatta il supporto.",
-    banned:            "Il tuo account è stato sospeso.",
+    oauth_denied:           "Accesso con Google annullato.",
+    oauth_invalid:          "Parametri OAuth non validi. Riprova.",
+    oauth_failed:           "Errore durante l'accesso con Google. Riprova.",
+    oauth_init_failed:      "Impossibile avviare il login con Google. Riprova.",
+    oauth_user_failed:      "Impossibile creare o trovare l'account. Riprova.",
+    oauth_domain_blocked:   "Non accettiamo registrazioni con questo provider email.",
+    registrations_disabled: "Le registrazioni sono temporaneamente chiuse.",
+    maintenance:            "Il sito è in manutenzione. Solo gli amministratori possono accedere.",
+    blocked:                "Il tuo IP è stato bloccato. Contatta il supporto.",
+    banned:                 "Il tuo account è stato sospeso.",
   };
   const oauthErrorMessage = oauthError ? (oauthErrorMessages[oauthError] ?? "Errore di autenticazione.") : null;
 
@@ -192,8 +196,9 @@ export function Login({
       setUsernameAvailable(false);
       return;
     }
-    if (!/^[a-zA-Z0-9_]+$/.test(value)) {
-      setUsernameError("Solo lettere, numeri e underscore (_)");
+    const formatCheck = validateUsernameFormat(value);
+    if (!formatCheck.ok) {
+      setUsernameError(formatCheck.error);
       setUsernameAvailable(false);
       return;
     }

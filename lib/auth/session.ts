@@ -11,10 +11,23 @@ export async function hashPassword(password: string) {
   return hash(password, SALT_ROUNDS);
 }
 
+/**
+ * Confronta password in chiaro con l'hash bcrypt salvato.
+ * Se hashedPassword è null (utente registrato solo via OAuth, senza password),
+ * esegue comunque un compare fittizio per non rivelare lo stato dell'account
+ * tramite timing attack, e ritorna false.
+ */
 export async function comparePasswords(
   plainTextPassword: string,
-  hashedPassword: string,
+  hashedPassword: string | null,
 ) {
+  if (hashedPassword === null) {
+    await compare(
+      plainTextPassword,
+      "$2b$12$dummyhashXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+    );
+    return false;
+  }
   return compare(plainTextPassword, hashedPassword);
 }
 

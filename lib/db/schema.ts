@@ -1,4 +1,4 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
   boolean,
   integer,
@@ -15,7 +15,8 @@ import {
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   email: varchar("email", { length: 255 }).notNull().unique(),
-  passwordHash: text("password_hash").notNull(),
+  // Nullable: gli utenti registrati via OAuth non hanno password
+  passwordHash: text("password_hash"),
   role: varchar("role", { length: 50 }).notNull().default("member"),
   isAdmin: boolean("is_admin").notNull().default(false),
   bannedAt: timestamp("banned_at"),
@@ -27,6 +28,8 @@ export const users = pgTable("users", {
   acceptedPrivacyVersion: text("accepted_privacy_version"),
   acceptedMarketingAt: timestamp("accepted_marketing_at"),
   acceptedMarketingVersion: text("accepted_marketing_version"),
+  // Null = onboarding non completato (deve compilarlo prima di usare l'app)
+  onboardingCompletedAt: timestamp("onboarding_completed_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
   deletedAt: timestamp("deleted_at"),
@@ -43,6 +46,8 @@ export const userProfiles = pgTable("user_profiles", {
   username: varchar("username", { length: 50 }).unique(),
   // Avatar: URL immagine profilo (caricata dall'utente o importata da OAuth)
   avatarUrl: text("avatar_url"),
+  // Interessi crypto scelti durante l'onboarding (mock — implementazione vera in seguito)
+  interests: text("interests").array().notNull().default(sql`'{}'::text[]`),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
