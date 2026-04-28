@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Check, Loader2, PartyPopper, Sparkles, X } from "lucide-react";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { checkUsernameAction } from "@/app/(login)/actions";
 import {
   completeOnboarding,
@@ -123,38 +123,52 @@ function UsernameStep({
   const [submitError, setSubmitError]           = useState("");
   const [pending, startTransition]              = useTransition();
 
+  // Request-id pattern: scarta i risultati delle chiamate stale (l'utente
+  // ha già digitato altro). I server action non sono cancellabili via
+  // AbortController, ma possiamo ignorare le loro risposte.
+  const requestIdRef = useRef(0);
+
   // Live availability check (debounce 400ms)
   useEffect(() => {
     setSubmitError("");
 
     if (!username) {
+      requestIdRef.current++;
       setValidationError("");
       setAvailable(false);
+      setChecking(false);
       return;
     }
     if (username.length < 3 || username.length > 50) {
+      requestIdRef.current++;
       setValidationError("Username tra 3 e 50 caratteri");
       setAvailable(false);
+      setChecking(false);
       return;
     }
     if (!USERNAME_REGEX.test(username)) {
+      requestIdRef.current++;
       setValidationError("Solo lettere, numeri e underscore (_)");
       setAvailable(false);
+      setChecking(false);
       return;
     }
     setValidationError("");
 
     const handle = setTimeout(async () => {
+      const myId = ++requestIdRef.current;
       setChecking(true);
       try {
         const res = await checkUsernameAction(username);
+        if (requestIdRef.current !== myId) return;
         setAvailable(Boolean(res.available));
         setValidationError(res.error ?? "");
       } catch {
+        if (requestIdRef.current !== myId) return;
         setValidationError("Impossibile verificare lo username");
         setAvailable(false);
       } finally {
-        setChecking(false);
+        if (requestIdRef.current === myId) setChecking(false);
       }
     }, 400);
 

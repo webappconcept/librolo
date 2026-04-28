@@ -48,6 +48,11 @@ export function invalidateRedisConfigCache(): void {
 }
 
 // ─── Redis REST client ────────────────────────────────────────────────────
+// Timeout fisso a 2s: se Upstash rallenta o non risponde, abort → il chiamante
+// fa fallback al DB invece di tenere appesa la richiesta per ~40s (default
+// fetch su Node senza signal). Stessa policy di rate-limit-redis.ts.
+const REDIS_TIMEOUT_MS = 2000;
+
 async function redisCommand<T = unknown>(
   command: (string | number)[],
 ): Promise<T> {
@@ -59,6 +64,7 @@ async function redisCommand<T = unknown>(
       "Content-Type": "application/json",
     },
     body: JSON.stringify(command),
+    signal: AbortSignal.timeout(REDIS_TIMEOUT_MS),
   });
   if (!res.ok) {
     const text = await res.text();
@@ -81,6 +87,7 @@ async function redisPipeline(
       "Content-Type": "application/json",
     },
     body: JSON.stringify(commands),
+    signal: AbortSignal.timeout(REDIS_TIMEOUT_MS),
   });
   if (!res.ok) {
     const text = await res.text();
