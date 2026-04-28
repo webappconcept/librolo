@@ -300,6 +300,13 @@ export const ADMIN_NAV: NavItem[] = [
         icon: "LogIn",
         permission: "admin:settings",
       },
+      {
+        key: "settings-github",
+        href: "/admin/settings/github",
+        label: "GitHub CI",
+        icon: "GitMerge",
+        permission: "admin:settings",
+      },
     ],
   },
   {

@@ -345,6 +345,88 @@ export async function testGoogleOAuthSettings(
 }
 
 // ---------------------------------------------------------------------------
+// GitHub CI (vitest report dal branch ci-results)
+// ---------------------------------------------------------------------------
+
+export async function saveGitHubCISettings(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  try {
+    const repo   = ((formData.get("github_repo")      as string) ?? "").trim();
+    const pat    = ((formData.get("github_pat")       as string) ?? "").trim();
+    const branch = ((formData.get("github_ci_branch") as string) ?? "").trim();
+
+    // Validazione formato "owner/repo" se presente
+    if (repo && !/^[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+$/.test(repo)) {
+      return {
+        error: 'Formato repo non valido. Usa "owner/repo" (es. webappconcept/librolo).',
+        timestamp: Date.now(),
+      };
+    }
+
+    await updateAppSetting("github_repo",      repo   || null);
+    await updateAppSetting("github_pat",       pat    || null);
+    await updateAppSetting("github_ci_branch", branch || null);
+
+    revalidatePath(getAdminPath("settings-github"));
+    revalidatePath("/admin/tests");
+    return { success: "Configurazione GitHub CI salvata.", timestamp: Date.now() };
+  } catch {
+    return { error: "Errore durante il salvataggio.", timestamp: Date.now() };
+  }
+}
+
+export async function testGitHubCISettings(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  try {
+    const repo   = ((formData.get("github_repo")      as string | null) ?? "").trim();
+    const pat    = ((formData.get("github_pat")       as string | null) ?? "").trim();
+    const branch = (((formData.get("github_ci_branch") as string | null) ?? "").trim() || "ci-results");
+
+    if (!repo || !pat) {
+      return { error: "Compila almeno repo e token prima di testare.", timestamp: Date.now() };
+    }
+
+    // Verifica accesso al file vitest-results.json sul branch
+    const url = `https://api.github.com/repos/${repo}/contents/vitest-results.json?ref=${branch}`;
+    const res = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${pat}`,
+        Accept: "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+      },
+      cache: "no-store",
+    });
+
+    if (res.status === 401) {
+      return { error: "Token non valido o scaduto.", timestamp: Date.now() };
+    }
+    if (res.status === 403) {
+      return { error: "Token senza permessi sufficienti (serve Contents:Read).", timestamp: Date.now() };
+    }
+    if (res.status === 404) {
+      return {
+        error: `Branch "${branch}" o file vitest-results.json non trovato. Il primo run del CI lo creerà.`,
+        timestamp: Date.now(),
+      };
+    }
+    if (!res.ok) {
+      return { error: `GitHub API ha risposto ${res.status}.`, timestamp: Date.now() };
+    }
+
+    return {
+      success: `Connessione OK · branch "${branch}" raggiungibile.`,
+      timestamp: Date.now(),
+    };
+  } catch {
+    return { error: "Errore durante la verifica. Controlla la connessione.", timestamp: Date.now() };
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Blocked Domains
 // ---------------------------------------------------------------------------
 
