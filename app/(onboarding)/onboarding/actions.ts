@@ -10,6 +10,7 @@
 
 import { isUsernameBlacklisted } from "@/lib/auth/blacklist";
 import { isUniqueConstraintError } from "@/lib/auth/race-condition";
+import { validateUsernameFormat } from "@/lib/auth/username-validator";
 import {
   addUsernameToBloom,
   checkUsernameAvailability,
@@ -22,8 +23,6 @@ import { redirect } from "next/navigation";
 
 export type OnboardingActionState =
   | { error?: string; success?: boolean };
-
-const USERNAME_REGEX = /^[a-zA-Z0-9_]+$/;
 
 // ---------------------------------------------------------------------------
 // Step 1 — username
@@ -40,8 +39,9 @@ export async function setOnboardingUsername(
   if (clean.length < 3 || clean.length > 50) {
     return { error: "Username tra 3 e 50 caratteri." };
   }
-  if (!USERNAME_REGEX.test(clean)) {
-    return { error: "Solo lettere, numeri e underscore (_)." };
+  const formatCheck = validateUsernameFormat(clean);
+  if (!formatCheck.ok) {
+    return { error: formatCheck.error };
   }
   if (await isUsernameBlacklisted(clean)) {
     return { error: "Questo username non è disponibile. Scegline un altro." };

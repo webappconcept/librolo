@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ActionState } from "@/lib/auth/middleware";
+import { validateUsernameFormat } from "@/lib/auth/username-validator";
 import { Check, Eye, EyeOff, Loader2, X } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -195,8 +196,9 @@ export function Login({
       setUsernameAvailable(false);
       return;
     }
-    if (!/^[a-zA-Z0-9_]+$/.test(value)) {
-      setUsernameError("Solo lettere, numeri e underscore (_)");
+    const formatCheck = validateUsernameFormat(value);
+    if (!formatCheck.ok) {
+      setUsernameError(formatCheck.error);
       setUsernameAvailable(false);
       return;
     }
