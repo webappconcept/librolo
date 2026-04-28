@@ -6,6 +6,21 @@ on:
   pull_request:
     branches: [main]
 
+# Permessi espliciti per il GITHUB_TOKEN: serve `contents: write` allo
+# step "Commit test report" per poter fare push del JSON aggiornato su main.
+# Senza questo blocco si eredita il default org/repo, che a volte è read-only
+# e fa fallire il push silenziosamente.
+permissions:
+  contents: write
+
+# Evita run in parallelo sulla stessa ref. Se durante l'esecuzione arriva un
+# nuovo merge su main, il run vecchio viene annullato: solo l'ultimo finisce
+# e committa i risultati. Per le PR (event_name diverso) è gestito a parte
+# così i merge su main non killano i check dei PR aperti.
+concurrency:
+  group: test-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     name: Vitest
