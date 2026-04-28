@@ -1,0 +1,35 @@
+// app/(onboarding)/layout.tsx
+//
+// Guard del flow di onboarding:
+// - Se non c'è sessione → /sign-in
+// - Se l'utente ha già completato l'onboarding → home (o /admin per gli admin)
+// - Altrimenti renderizza il wizard
+
+import { db } from "@/lib/db/drizzle";
+import { getUser } from "@/lib/db/queries";
+import { users } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
+import { redirect } from "next/navigation";
+
+export default async function OnboardingLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const user = await getUser();
+  if (!user) {
+    redirect("/sign-in");
+  }
+
+  const [row] = await db
+    .select({ completedAt: users.onboardingCompletedAt })
+    .from(users)
+    .where(eq(users.id, user.id))
+    .limit(1);
+
+  if (row?.completedAt) {
+    redirect(user.role === "admin" ? "/admin" : "/");
+  }
+
+  return <>{children}</>;
+}
