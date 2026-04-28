@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Check, Loader2, PartyPopper, Sparkles, X } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { checkUsernameAction } from "@/app/(login)/actions";
+import { validateUsernameFormat } from "@/lib/auth/username-validator";
 import {
   completeOnboarding,
   setOnboardingInterests,
@@ -39,7 +40,6 @@ const CRYPTO_OPTIONS = [
 ];
 
 const MIN_INTERESTS = 3;
-const USERNAME_REGEX = /^[a-zA-Z0-9_]+$/;
 
 // ---------------------------------------------------------------------------
 // Progress indicator
@@ -146,9 +146,10 @@ function UsernameStep({
       setChecking(false);
       return;
     }
-    if (!USERNAME_REGEX.test(username)) {
+    const formatCheck = validateUsernameFormat(username);
+    if (!formatCheck.ok) {
       requestIdRef.current++;
-      setValidationError("Solo lettere, numeri e underscore (_)");
+      setValidationError(formatCheck.error);
       setAvailable(false);
       setChecking(false);
       return;
@@ -234,7 +235,7 @@ function UsernameStep({
           <p className="text-xs text-brand-destructive">{validationError}</p>
         ) : (
           <p className="text-xs text-brand-text-muted">
-            3-50 caratteri, solo lettere, numeri e underscore
+            3-50 caratteri, lettere, numeri, punto (.) e underscore (_)
           </p>
         )}
       </div>

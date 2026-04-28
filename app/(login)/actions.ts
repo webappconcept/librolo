@@ -24,6 +24,7 @@ import {
   recordSignupAttempt,
 } from "@/lib/auth/rate-limit";
 import { comparePasswords, hashPassword, setSession } from "@/lib/auth/session";
+import { validateUsernameFormat } from "@/lib/auth/username-validator";
 import {
   addEmailToBloom,
   addUsernameToBloom,
@@ -154,7 +155,12 @@ const signUpSchema = z
       .string()
       .min(3, "Username minimo 3 caratteri")
       .max(50, "Username massimo 50 caratteri")
-      .regex(/^[a-zA-Z0-9_]+$/, "Solo lettere, numeri e underscore (_)"),
+      .superRefine((value, ctx) => {
+        const result = validateUsernameFormat(value);
+        if (!result.ok) {
+          ctx.addIssue({ code: "custom", message: result.error });
+        }
+      }),
     email: z.email("Email non valida"),
     password: z
       .string()
